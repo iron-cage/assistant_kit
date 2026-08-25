@@ -488,12 +488,11 @@ fn manual_doc_has_no_cd_then_cargo_run_pattern()
 /// prohibition the convention does not actually state.
 ///
 /// # Pitfall
-/// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently —
-/// "refer to" in place of "see", or a bare `-plan.md` sitting on its own line — slips through.
-/// That is the accepted trade: a broader pattern collides with legitimate CLI-flag prose. Five
-/// lines under `docs/claude_params/` mention flags in precisely the shape this predicate scans
-/// for, which is why both the `--` rejection and the required `.` exist. Widen the predicate
-/// only alongside a re-check of those five.
+/// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently
+/// (`` refer to `-notes.md` ``, or a bare `-plan.md` on its own line) slips through. That is the
+/// accepted trade: a broader pattern collides with legitimate CLI-flag prose — `` see
+/// `--quiet` `` and four siblings under `docs/claude_params/` are why the `--`-rejection and
+/// the required `.` both exist. Widen the predicate only alongside a re-check of those.
 #[ test ]
 fn no_temp_file_pointers_in_committed_docs()
 {

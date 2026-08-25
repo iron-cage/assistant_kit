@@ -1,4 +1,4 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-34.
+//! Integration tests for the `clj` binary — EC-1 through EC-38.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
@@ -9,6 +9,11 @@
 //! sort field reproduces the order its events were appended in — against a
 //! date-ordered fixture, a `sort::` that ignored its argument entirely would
 //! satisfy every assertion.
+//!
+//! EC-36 and EC-37 walk the parameter tables in `docs/cli/type/08_boolean.md`
+//! and `docs/cli/type/04_integer.md` rather than naming sites individually, so
+//! a parameter added to a type page without a matching implementation is a
+//! failing test rather than a quiet gap.
 
 #![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
@@ -240,14 +245,15 @@ fn ec7_status_shows_health_report()
   let out = run_clj( &[ ".status" ], dir.path() );
   assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
 
+  // The five lines `docs/cli/command/07_status.md` documents, in its wording —
+  // including `Journal level:`, which backs the "and configuration" half of that
+  // page's own one-line summary of what `.status` reports.
   let stdout = stdout_str( &out );
-  assert!( stdout.contains( "dir:" ),    "missing dir: {stdout}" );
-  assert!( stdout.contains( "files:" ),  "missing files: {stdout}" );
-  assert!( stdout.contains( "size:" ),   "missing size: {stdout}" );
-  assert!( stdout.contains( "oldest:" ), "missing oldest: {stdout}" );
-  assert!( stdout.contains( "newest:" ), "missing newest: {stdout}" );
-  // Should show at least 1 file
-  assert!( stdout.contains( "files:  1" ), "expected 1 file: {stdout}" );
+  for line in [ "Journal directory:", "Files:", "Total size:", "Date range:", "Journal level:" ]
+  {
+    assert!( stdout.contains( line ), "missing `{line}` line: {stdout}" );
+  }
+  assert!( stdout.contains( "Files: 1" ), "expected 1 file: {stdout}" );
 }
 
 // ── EC-8 : .export format::json creates file ─────────────────────────────────
@@ -465,17 +471,19 @@ fn ec15_chart_custom_out_path()
   assert!( out_path.exists(), "expected custom.svg to exist at {}", out_path.display() );
 }
 
-// ── EC-16 : .chart open::true — browser-open failure is non-fatal ────────────
+// ── EC-16 : .chart open::1 — browser-open failure is non-fatal ───────────────
 
 #[ test ]
-fn ec16_chart_open_true_failure_is_non_fatal()
+fn ec16_chart_open_failure_is_non_fatal()
 {
   let dir      = tempfile::TempDir::new().unwrap();
   write_fixture_events( dir.path() );
   let outdir   = tempfile::TempDir::new().unwrap();
   let out_path = outdir.path().join( "chart.svg" );
 
-  let out = run_clj( &[ ".chart", &format!( "out::{}", out_path.display() ), "open::true" ], dir.path() );
+  // `open::1`, not `open::true` — `true` is no longer a documented boolean and
+  // now exits 1, which would make this case pass for the wrong reason.
+  let out = run_clj( &[ ".chart", &format!( "out::{}", out_path.display() ), "open::1" ], dir.path() );
   assert!(
     out.status.success(),
     "exit non-zero even though SVG write should succeed regardless of browser-open outcome: {}",
@@ -835,6 +843,10 @@ fn ec27_dir_param_filters_by_event_working_directory()
 }
 
 /// EC-28 — an unrecognised parameter exits 1 instead of being ignored.
+///
+/// Also the behavioural pin for every *retraction*: a parameter that once had a
+/// page, or was once accepted and applied to nothing, has to be rejected by the
+/// binary and not merely absent from a table somewhere.
 #[ test ]
 fn ec28_unknown_param_exits_1()
 {
@@ -850,9 +862,18 @@ fn ec28_unknown_param_exits_1()
   assert!( stderr.contains( "exit_code" ), "diagnostic must name the offending key: {stderr}" );
   assert!( stderr.contains( "Accepted:" ), "diagnostic must list what is accepted: {stderr}" );
 
-  // A param valid for another command is still rejected for this one.
-  let out = run_clj( &[ ".list", "by::model" ], dir.path() );
-  assert!( !out.status.success(), "`by::` belongs to .stats, not .list" );
+  // A param valid for another command is still rejected for this one — including
+  // `output::`, whose silent acceptance would read as "wrote the file" while
+  // `.list` printed to stdout and created nothing.
+  for ( param, owner ) in [ ( "by::model", ".stats" ), ( "output::/tmp/should_not_be_used.txt", ".export" ) ]
+  {
+    let out = run_clj( &[ ".list", param ], dir.path() );
+    assert!( !out.status.success(), "`{param}` belongs to {owner}, not .list" );
+  }
+  assert!(
+    !std::path::Path::new( "/tmp/should_not_be_used.txt" ).exists(),
+    "a rejected `output::` must not have written its file",
+  );
 
   // An unknown *command* outranks an unknown param — the command is the real error.
   let out = run_clj( &[ ".bogus", "since::1d" ], dir.path() );
@@ -863,21 +884,67 @@ fn ec28_unknown_param_exits_1()
     stderr_str( &out ),
   );
 
-  // A param the docs declare but no code reads gets its own diagnostic: the user
-  // followed the documentation, so "unknown" would be a lie about the parameter
-  // rather than the truth about the feature.
-  let out = run_clj( &[ ".list", "wide::1" ], dir.path() );
-  assert!( !out.status.success(), "an unimplemented param must exit non-zero" );
-  let stderr = stderr_str( &out );
-  assert!( stderr.contains( "not implemented" ), "wrong diagnostic class: {stderr}" );
-  assert!( !stderr.contains( "unknown parameter" ), "must not also claim it is unknown: {stderr}" );
+  // A retracted param is an unknown one, with no separate diagnostic class.
+  // `wide::` and `columns::` had parameter pages describing a renderer that was
+  // never built; the pages are gone, so the only honest answer left is the list
+  // of what `.list` does accept.
+  for retracted in [ "wide::1", "columns::time,cost" ]
+  {
+    let out = run_clj( &[ ".list", retracted ], dir.path() );
+    assert!( !out.status.success(), "`{retracted}` must exit non-zero" );
+    let stderr = stderr_str( &out );
+    assert!( stderr.contains( "unknown parameter" ), "wrong diagnostic for {retracted}: {stderr}" );
+    assert!( stderr.contains( "Accepted:" ), "must list the accepted set for {retracted}: {stderr}" );
+  }
 
-  // `.status` accepts the global params and nothing else — verbosity:: is declared
-  // in its docs but unimplemented, while journal_dir:: alone succeeds.
-  let out = run_clj( &[ ".status", "verbosity::2" ], dir.path() );
-  assert!( !out.status.success() );
-  assert!( stderr_str( &out ).contains( "not implemented" ), "{}", stderr_str( &out ) );
-  assert!( run_clj( &[ ".status" ], dir.path() ).status.success(), "bare .status must still work" );
+  // `.stats verbosity::` was retracted alongside them, so it is unknown *there*
+  // even though `.status` now implements the same key — the accepted set is
+  // per-command, and this pins that it stayed that way.
+  let out = run_clj( &[ ".stats", "verbosity::2" ], dir.path() );
+  assert!( !out.status.success(), "`.stats verbosity::` was retracted" );
+  assert!( stderr_str( &out ).contains( "unknown parameter" ), "{}", stderr_str( &out ) );
+
+  // Fix(param-inert-accept): pin the two retractions that closed the gap between
+  //   what the docs promised and what any command actually applies.
+  // Root cause: a parameter can be inert in two different ways. `include_stdout`
+  //   was wired to no command at all while a page, a type-table row, a group
+  //   membership and two user-story recipes described it as widening `.search` —
+  //   which already searches stdout unconditionally. `.tail since::`/`limit::`
+  //   were the opposite: accepted, parsed, and then never consulted, because
+  //   `TailIter` calls `event_matches` with `since_cutoff : None` and never reads
+  //   `filter.limit`. The first exited 1 on a documented recipe; the second
+  //   exited 0 having done nothing.
+  // Pitfall: `tests/cli_doc_consistency.rs` proves the docs and the binary agree
+  //   on what is accepted, but it cannot prove a rejection is still enforced —
+  //   it reads that same accepted set to decide what to compare against. This is
+  //   the behavioural half, and the two are not substitutes for each other.
+  let out = run_clj( &[ ".search", "pattern::x", "include_stdout::1" ], dir.path() );
+  assert!( !out.status.success(), "`include_stdout::` is superseded, not accepted" );
+  assert!( stderr_str( &out ).contains( "unknown parameter" ), "{}", stderr_str( &out ) );
+
+  // `.tail` is bounded on wall-clock time rather than asserted on directly: if
+  // the rejection regresses, `.tail` starts following the journal and `output()`
+  // would wait on it forever, so the regression would present as a silent hung
+  // suite instead of as this failure.
+  for retracted in [ "since::1h", "limit::5" ]
+  {
+    let mut child  = spawn_tail( &[ retracted ], dir.path() );
+    let mut exited = None;
+    for _ in 0..50
+    {
+      if let Some( status ) = child.try_wait().expect( "try_wait failed" ) { exited = Some( status ); break; }
+      std::thread::sleep( core::time::Duration::from_millis( 100 ) );
+    }
+    let status = exited.unwrap_or_else( ||
+    {
+      kill_child( &mut child );
+      panic!( "`.tail {retracted}` did not exit within 5s — it is being followed, not rejected" );
+    } );
+    assert!( !status.success(), "`.tail {retracted}` must exit non-zero" );
+    let mut stderr = String::new();
+    std::io::Read::read_to_string( child.stderr.as_mut().expect( "no stderr pipe" ), &mut stderr ).ok();
+    assert!( stderr.contains( "unknown parameter" ), "wrong diagnostic for `.tail {retracted}`: {stderr}" );
+  }
 }
 
 /// EC-29 — `no_color::1` suppresses ANSI, matching the `NO_COLOR` env var.
@@ -1256,4 +1323,314 @@ fn ec34_tail_format_renders_and_rejects_before_blocking()
     assert!( value.is_object(), "`.tail format::{format}` must emit one object per line, got: {value}" );
     assert!( value.get( "type" ).is_some(), "`.tail format::{format}` object missing 'type': {value}" );
   }
+}
+
+// ── EC-35 : .status verbosity:: renders three levels and clamps above 2 ───────
+
+/// Write two dated journal files with exactly known, clearly distinct sizes.
+///
+/// Sizes are chosen so the two per-file figures and the total all render
+/// differently — `128 B`, `5.0 KB`, `5.1 KB`. A fixture where any two collided
+/// would let a breakdown that printed the total on every row pass.
+///
+/// Neither file is today's, so the reported date range is fixed rather than
+/// drifting with the calendar.
+fn write_sized_journal_files( dir : &Path )
+{
+  // 8 bytes per line, so a line count sets the byte count exactly.
+  let line = "{\"v\":1}\n";
+  std::fs::write( dir.join( "2020-01-01.jsonl" ), line.repeat( 16 ) ).unwrap();
+  std::fs::write( dir.join( "2020-06-15.jsonl" ), line.repeat( 640 ) ).unwrap();
+}
+
+/// EC-35 — `.status verbosity::` selects among three documented detail levels.
+#[ test ]
+fn ec35_status_verbosity_levels_and_clamping()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_sized_journal_files( dir.path() );
+
+  let run = | args : &[ &str ] |
+  {
+    let out = run_clj( args, dir.path() );
+    assert!( out.status.success(), "`.status {}` failed: {}", args.join( " " ), stderr_str( &out ) );
+    stdout_str( &out )
+  };
+
+  // Level 0 — one line, and specifically *not* the multi-line report.
+  let compact = run( &[ ".status", "verbosity::0" ] );
+  assert_eq!( compact.trim().lines().count(), 1, "verbosity::0 must be one line: {compact}" );
+  assert!( compact.contains( "2 files" ),  "missing file count: {compact}" );
+  assert!( compact.contains( "5.1 KB" ),   "missing total size: {compact}" );
+  assert!( compact.contains( "2020-01-01 to 2020-06-15" ), "missing date range: {compact}" );
+  assert!( !compact.contains( "Journal directory:" ), "verbosity::0 must not print the full report: {compact}" );
+
+  // Level 1 is the documented default, so it must be exactly what bare `.status` prints.
+  assert_eq!( run( &[ ".status", "verbosity::1" ] ), run( &[ ".status" ] ),
+    "verbosity::1 must be identical to the default" );
+
+  // Level 2 — the level-1 report plus one row per file, each with its own size.
+  let detailed = run( &[ ".status", "verbosity::2" ] );
+  assert!( detailed.contains( "Total size: 5.1 KB" ), "level 2 must keep the totals: {detailed}" );
+  assert!( detailed.contains( "DATE" ) && detailed.contains( "SIZE" ), "missing breakdown header: {detailed}" );
+  for ( date, size ) in [ ( "2020-01-01", "128 B" ), ( "2020-06-15", "5.0 KB" ) ]
+  {
+    let row = detailed.lines().find( | l | l.starts_with( date ) )
+      .unwrap_or_else( || panic!( "no breakdown row for {date}: {detailed}" ) );
+    assert!( row.contains( size ), "row for {date} must show its own size {size}, got: {row}" );
+  }
+
+  // Above the documented range clamps to 2 rather than erroring — asking for more
+  // detail than exists is answered by the most detailed level there is.
+  assert_eq!( run( &[ ".status", "verbosity::9" ] ), detailed, "verbosity::9 must clamp to level 2" );
+
+  // Clamping applies to too-large values only. Garbage and negatives are typos,
+  // and `docs/cli/type/04_integer.md` makes both exit 1 — without these two the
+  // clamp above would be indistinguishable from "accept anything".
+  for bad in [ "verbosity::abc", "verbosity::-1", "verbosity::1.5" ]
+  {
+    let out = run_clj( &[ ".status", bad ], dir.path() );
+    assert!( !out.status.success(), "`.status {bad}` must exit non-zero" );
+    let stderr = stderr_str( &out );
+    assert!( stderr.contains( "invalid integer" ), "wrong diagnostic for {bad}: {stderr}" );
+    assert!( stderr.contains( "verbosity" ), "diagnostic must name the param for {bad}: {stderr}" );
+  }
+
+  // An empty journal still reports at every level, and level 2 says so outright
+  // rather than printing a `DATE`/`SIZE` header above zero rows.
+  let empty = tempfile::TempDir::new().unwrap();
+  let out   = run_clj( &[ ".status", "verbosity::2" ], empty.path() );
+  assert!( out.status.success(), "`.status` on an empty journal must succeed: {}", stderr_str( &out ) );
+  let empty_detailed = stdout_str( &out );
+  assert!( empty_detailed.contains( "Files: 0" ),        "missing zero count: {empty_detailed}" );
+  assert!( empty_detailed.contains( "Date range: no events" ), "an empty journal has no range: {empty_detailed}" );
+  assert!( empty_detailed.contains( "(no journal files)" ),    "missing empty-breakdown notice: {empty_detailed}" );
+  assert!( !empty_detailed.contains( "DATE" ), "no column header without rows: {empty_detailed}" );
+
+  let empty_compact = stdout_str( &run_clj( &[ ".status", "verbosity::0" ], empty.path() ) );
+  assert!( empty_compact.contains( "0 files" ) && empty_compact.contains( "no events" ),
+    "level 0 must degrade cleanly on an empty journal: {empty_compact}" );
+}
+
+// ── EC-36 : every documented Boolean param takes 0/1 and nothing else ─────────
+
+/// EC-36 — the `Boolean` contract holds at every site that claims it.
+///
+/// ## Root Cause
+/// `docs/cli/type/08_boolean.md` has always said only `0` and `1` are accepted,
+/// but four of the five read sites did not enforce it. Three of them
+/// (`.serve open::`, `.chart open::`, `no_color::`) matched `"1" | "true"` and
+/// treated everything else as `false`, so `open::banana` exited 0 having done
+/// nothing. The fourth (`.prune dry_run::`) did reject, but on a wider grammar
+/// (`true`/`false` too) and with a message of its own invention.
+///
+/// ## Why Not Caught
+/// Each site had a case proving the *enabled* path worked — `open::1` opens,
+/// `dry_run::1` previews. None passed a value outside the grammar, so the
+/// silent-false branch was never once observed.
+///
+/// ## Prevention
+/// Every parameter the type page lists is exercised with values outside the
+/// grammar, asserting the documented sentence verbatim rather than a substring
+/// — and with `0`/`1`, so a parser that rejects everything cannot pass either.
+#[ test ]
+fn ec36_boolean_params_accept_only_0_and_1()
+{
+  let probe = | command : &str, param : &str, value : &str | -> std::process::Output
+  {
+    let dir = tempfile::TempDir::new().unwrap();
+    write_fixture_events( dir.path() );
+
+    let mut args : Vec< String > = vec![ command.to_owned(), format!( "{param}::{value}" ) ];
+    // `.chart` defaults to `usage.svg` in the process cwd; keep the artifact
+    // inside the temp dir so a passing run leaves nothing behind.
+    if command == ".chart" { args.push( format!( "out::{}", dir.path().join( "ec36.svg" ).display() ) ); }
+
+    let refs : Vec< &str > = args.iter().map( String::as_str ).collect();
+    run_clj( &refs, dir.path() )
+  };
+
+  // Each parameter in `docs/cli/type/08_boolean.md`'s Referenced Parameters
+  // table, reached through a command that reads it. `open` also appears on
+  // `.serve`, which needs a bound port — that side is serve_test's FT-14.
+  for ( command, param ) in [ ( ".list", "reverse" ), ( ".prune", "dry_run" ), ( ".list", "no_color" ), ( ".chart", "open" ) ]
+  {
+    // `true`/`false` are in the list deliberately: they used to be accepted at
+    // some sites and silently ignored at others, which is the divergence this
+    // case pins shut.
+    for bad in [ "true", "false", "yes", "banana", "2", "-1", "" ]
+    {
+      let out = probe( command, param, bad );
+      assert_eq!(
+        out.status.code(), Some( 1 ),
+        "`{command} {param}::{bad}` must exit 1, got {:?}", out.status.code(),
+      );
+      let want = format!( "Error: invalid boolean '{bad}' for parameter '{param}' — expected 0 or 1" );
+      assert!(
+        stderr_str( &out ).contains( &want ),
+        "`{command} {param}::{bad}` must print the documented message.\n  want: {want}\n  got:  {}",
+        stderr_str( &out ).trim(),
+      );
+    }
+
+    for good in [ "0", "1" ]
+    {
+      let out = probe( command, param, good );
+      assert!(
+        out.status.success(),
+        "`{command} {param}::{good}` is inside the documented grammar and must succeed: {}",
+        stderr_str( &out ).trim(),
+      );
+    }
+  }
+}
+
+// ── EC-37 : every documented Integer param honours its documented range ──────
+
+/// EC-37 — the `Integer` contract holds at every site that claims it.
+///
+/// ## Root Cause
+/// `docs/cli/type/04_integer.md` specifies one message and a non-negative
+/// domain, but `limit` and `exit` each carried ad-hoc wording, and `exit`
+/// parsed as `i32` — so `exit::-1` was accepted and then matched nothing,
+/// reading as "no failures" rather than "that is not an exit code".
+///
+/// ## Why Not Caught
+/// The existing parse-time case asserted only `!status.success()` for one
+/// non-numeric input per parameter. A wrong-but-present message and an
+/// out-of-domain value that parses cleanly both satisfy that.
+///
+/// ## Prevention
+/// Each parameter is checked against the documented sentence verbatim, and
+/// `exit` additionally against its documented 0-255 ceiling — the bound that
+/// made a negative value meaningful in the first place.
+#[ test ]
+fn ec37_integer_params_honour_documented_domain()
+{
+  let probe = | command : &str, param : &str, value : &str | -> std::process::Output
+  {
+    let dir = tempfile::TempDir::new().unwrap();
+    write_fixture_events( dir.path() );
+    run_clj( &[ command, &format!( "{param}::{value}" ) ], dir.path() )
+  };
+
+  // `refresh` is the fourth parameter on the type page; it is `.serve`-only and
+  // is covered by serve_test's FT-11.
+  for ( command, param ) in [ ( ".list", "exit" ), ( ".list", "limit" ), ( ".status", "verbosity" ) ]
+  {
+    for bad in [ "abc", "-1", "1.5", "" ]
+    {
+      let out = probe( command, param, bad );
+      assert_eq!(
+        out.status.code(), Some( 1 ),
+        "`{command} {param}::{bad}` must exit 1, got {:?}", out.status.code(),
+      );
+      let want = format!( "Error: invalid integer '{bad}' for parameter '{param}'" );
+      assert!(
+        stderr_str( &out ).contains( &want ),
+        "`{command} {param}::{bad}` must print the documented message.\n  want: {want}\n  got:  {}",
+        stderr_str( &out ).trim(),
+      );
+    }
+
+    for good in [ "0", "1" ]
+    {
+      let out = probe( command, param, good );
+      assert!(
+        out.status.success(),
+        "`{command} {param}::{good}` is inside the documented domain and must succeed: {}",
+        stderr_str( &out ).trim(),
+      );
+    }
+  }
+
+  // `exit`'s documented range is 0-255 — a Unix wait status is one byte, so 256
+  // is not a smaller-than-expected result set, it is not an exit code at all.
+  // `verbosity` deliberately clamps instead (EC-35); the two are not the same
+  // rule, which is why the ceiling is asserted here and not in the loop above.
+  for over in [ "256", "300" ]
+  {
+    let out = probe( ".list", "exit", over );
+    assert_eq!(
+      out.status.code(), Some( 1 ),
+      "`.list exit::{over}` is above the documented 0-255 range and must exit 1",
+    );
+  }
+  let out = probe( ".list", "exit", "255" );
+  assert!( out.status.success(), "`.list exit::255` is the documented ceiling and must succeed: {}", stderr_str( &out ).trim() );
+}
+
+/// EC-38 — `.search` reads the prompt (`message`), and reads only the six
+/// documented fields.
+///
+/// ## Root Cause
+/// `search_output`'s match set was assembled from what the runner *captures*
+/// (`stdout`, `stderr`, `error_message`) plus two identifiers (`model`,
+/// `command`). `message` — the prompt the event was launched with, an
+/// `EventFields` member since the schema was written and the explicit subject
+/// of `feature/001_cli_viewing.md` AC-006 — was never added, so the one query a
+/// caller is most likely to type reached no code path.
+///
+/// ## Why Not Caught
+/// A missing field is invisible from outside. `.search` answered exit 0 with
+/// `No events matching '<pattern>'` — character-for-character what it says for a
+/// phrase genuinely absent from the journal. Every existing `.search` case put
+/// its needle in `stdout` and passed.
+///
+/// ## Fix Applied
+/// `message` added to the match set in `output.rs::search_output`, ahead of the
+/// captured-output fields.
+///
+/// ## Prevention
+/// The fixture places one phrase in `message` on one event and the *same*
+/// phrase in `dir` — filterable, deliberately not searched — on another. The
+/// single `1 match` assertion then fails in both directions: `0` if `message`
+/// stops being read, `2` if the match set ever silently widens to `dir`. A
+/// fixture with the phrase in only one place could not detect the second.
+///
+/// ## Pitfall
+/// `.search` accepts `dir::` as a filter, which makes "`dir` is searchable" an
+/// easy assumption. Filtering and matching are different sets: `dir::` narrows
+/// which events are considered, and only the six fields above decide whether
+/// `pattern` hit.
+#[ test ]
+fn ec38_search_reads_prompt_and_only_documented_fields()
+{
+  assert_container();
+  let dir    = tempfile::TempDir::new().unwrap();
+  let writer = JournalWriter::new( dir.path().to_path_buf() );
+
+  let mut prompt_ev = EventRecord::new( EventType::Execution );
+  prompt_ev.fields.command   = Some( "ask".to_owned() );
+  prompt_ev.fields.exit_code = Some( 0 );
+  prompt_ev.fields.message   = Some( "refactor the parser".to_owned() );
+  prompt_ev.fields.stdout    = Some( "done".to_owned() );
+  writer.append( &prompt_ev ).expect( "append prompt_ev" );
+
+  let mut dir_ev = EventRecord::new( EventType::Execution );
+  dir_ev.fields.command   = Some( "run".to_owned() );
+  dir_ev.fields.exit_code = Some( 0 );
+  dir_ev.fields.dir       = Some( "/w/refactor the parser".to_owned() );
+  dir_ev.fields.stdout    = Some( "done".to_owned() );
+  writer.append( &dir_ev ).expect( "append dir_ev" );
+
+  let out = run_clj( &[ ".search", "pattern::refactor the parser" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "1 match" ),
+    "expected exactly the prompt event — 0 means `message` went unread, \
+     2 means `dir` leaked into the searched set: {stdout}",
+  );
+  assert!( stdout.contains( "ask" ), "the match must be the prompt event, not the dir event: {stdout}" );
+
+  // The negative half stated on its own, so a regression names its own direction
+  // instead of only moving the count above.
+  let out = run_clj( &[ ".search", "pattern::/w/refactor" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  assert!(
+    stdout_str( &out ).contains( "No events matching" ),
+    "`dir` is a filter, never a searched field: {}", stdout_str( &out ),
+  );
 }

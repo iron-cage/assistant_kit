@@ -93,14 +93,16 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 ///
 /// # Errors
 ///
-/// Infallible in practice; signature satisfies the unilang routine trait.
+/// Returns `Err` when `verbosity::` is not a non-negative integer.
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let params = extract_params( &cmd );
   let dir    = output::resolve_journal_dir( &params );
-  Ok( OutputData::new( output::status_output( dir ) + "\n", "text" ) )
+  output::status_output( &params, dir )
+    .map( | s | OutputData::new( s + "\n", "text" ) )
+    .map_err( | e | err( format!( "Error: {e}" ) ) )
 }
 
 /// `.journal.export` — export events to a file.

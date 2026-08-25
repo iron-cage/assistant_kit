@@ -13,10 +13,13 @@
 
 use claude_journal_viewer::output::
 {
-  bold, build_filter, health_data, parse_query_string, resolve_journal_dir, stats_data, StreamFormat,
+  bold, build_filter, health_data, parse_bool_param, parse_int_param, parse_query_string,
+  resolve_journal_dir, stats_data, StreamFormat,
 };
 use claude_journal::JournalReader;
-use std::{ collections::HashMap, path::{ Path, PathBuf } };
+use signal_hook::consts::{ SIGINT, SIGTERM };
+use core::{ sync::atomic::{ AtomicBool, Ordering }, time::Duration };
+use std::{ collections::HashMap, path::{ Path, PathBuf }, sync::Arc };
 
 // ── Embedded web dashboard ────────────────────────────────────────────────────
 
@@ -113,53 +116,77 @@ fn parse_params( args : &[ String ] ) -> HashMap< String, String >
   map
 }
 
+/// Unwrap a parsed param, or report it and exit 1.
+///
+/// `.serve` and the `no_color::` preamble resolve params in places that have no
+/// `Result` to return, so they report through this rather than growing a second
+/// error shape — the `Error: {e}` prefix is the one every `Result`-returning
+/// command already prints.
+fn or_exit< T >( parsed : Result< T, String > ) -> T
+{
+  match parsed
+  {
+    Ok( v )  => v,
+    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+  }
+}
+
 /// Params every command accepts — journal location and color suppression.
 const GLOBAL_PARAMS : &[ &str ] = &[ "journal_dir", "no_color" ];
 
-/// Event-selection params, accepted by the commands that read events.
+/// Event-selection params, accepted by the commands that read a finite result set.
 const FILTER_PARAMS : &[ &str ] =
   &[ "since", "until", "type", "command", "exit", "model", "dir", "creds", "limit" ];
 
+/// The subset of [`FILTER_PARAMS`] that `.tail` actually applies.
+///
+/// Fix(tail-inert-filters): drop `since` and `limit` from `.tail`'s vocabulary
+/// Root cause: `.tail` took the whole of [`FILTER_PARAMS`], but `TailIter` calls
+///   `event_matches` with `since_cutoff : None` and never consults `filter.limit`
+///   — it follows the journal forward from now, so there is no earlier event for
+///   `since::` to exclude and no end for `limit::` to stop at. Both parsed
+///   cleanly, applied to nothing, and exited 0.
+/// Pitfall: this is the same shape as `Fix(param-silent-accept)` below, one level
+///   in — the param is not unknown to the *command*, it is unknown to the
+///   *iterator the command runs*. Accepting a param is a claim about behavior,
+///   and the set has to be narrowed wherever that claim stops being true.
+const TAIL_FILTER_PARAMS : &[ &str ] =
+  &[ "until", "type", "command", "exit", "model", "dir", "creds" ];
+
 /// The full set of params `command` accepts, sorted — always at least
 /// [`GLOBAL_PARAMS`].
+///
+/// This is the set `docs/cli/param/NN_*.md`'s Referenced Commands tables are
+/// pinned against by `tests/cli_doc_consistency.rs`, so a param moved between
+/// commands here fails that test until its page follows.
 fn known_params( command : &str ) -> Vec< &'static str >
 {
-  let ( takes_filters, own ) : ( bool, &[ &'static str ] ) = match command
+  let ( filters, own ) : ( &[ &'static str ], &[ &'static str ] ) = match command
   {
-    ".list"   => ( true,  &[ "format", "reverse", "sort" ] ),
-    ".tail"   => ( true,  &[ "format" ] ),
-    ".stats"  => ( true,  &[ "by" ] ),
-    ".search" => ( true,  &[ "pattern" ] ),
-    ".export" => ( true,  &[ "output", "format" ] ),
-    ".serve"  => ( false, &[ "port", "bind", "open", "refresh" ] ),
-    ".prune"  => ( false, &[ "keep", "dry_run" ] ),
-    ".chart"  => ( false, &[ "out", "open" ] ),
-    _         => ( false, &[] ),
+    ".list"   => ( FILTER_PARAMS,      &[ "format", "reverse", "sort" ] ),
+    ".tail"   => ( TAIL_FILTER_PARAMS, &[ "format" ] ),
+    ".stats"  => ( FILTER_PARAMS,      &[ "by" ] ),
+    ".search" => ( FILTER_PARAMS,      &[ "pattern" ] ),
+    ".export" => ( FILTER_PARAMS,      &[ "output", "format" ] ),
+    ".serve"  => ( &[],                &[ "port", "bind", "open", "refresh" ] ),
+    ".prune"  => ( &[],                &[ "keep", "dry_run" ] ),
+    ".status" => ( &[],                &[ "verbosity" ] ),
+    ".chart"  => ( &[],                &[ "out", "open" ] ),
+    _         => ( &[],                &[] ),
   };
   let mut all : Vec< &'static str > = GLOBAL_PARAMS.to_vec();
-  if takes_filters { all.extend_from_slice( FILTER_PARAMS ); }
+  all.extend_from_slice( filters );
   all.extend_from_slice( own );
   all.sort_unstable();
   all
 }
 
-/// Params the command's docs declare but no code reads yet.
-///
-/// Kept separate from "unknown" so a user following the documentation gets an
-/// answer about the *feature* rather than being told the parameter does not
-/// exist. Each entry is a debt against `docs/cli/param/`, not a typo.
-fn unimplemented_params( command : &str ) -> &'static [ &'static str ]
-{
-  match command
-  {
-    ".list"   => &[ "columns", "wide" ],
-    ".stats"  => &[ "verbosity", "wide" ],
-    ".status" => &[ "verbosity" ],
-    _         => &[],
-  }
-}
-
 /// Reject any `key::value` the command does not accept, exiting 1.
+///
+/// Every param in `docs/cli/param/` is now either accepted by [`known_params`]
+/// or retracted from the docs, so there is no third "documented but not wired
+/// up" category to report — an unrecognised key is a typo or a retracted
+/// feature, and both are answered by listing what the command does accept.
 ///
 /// Fix(param-silent-accept): reject unknown params instead of ignoring them
 /// Root cause: `parse_params` collected every `key::value` into one map and each
@@ -173,38 +200,22 @@ fn unimplemented_params( command : &str ) -> &'static [ &'static str ]
 ///   *narrowed* the output.
 fn reject_unknown_params( command : &str, params : &HashMap< String, String > )
 {
-  let known   = known_params( command );
-  let pending = unimplemented_params( command );
+  let known = known_params( command );
 
-  let mut unknown : Vec< &str > = Vec::new();
-  let mut planned : Vec< &str > = Vec::new();
-  for key in params.keys().map( String::as_str )
-  {
-    if known.contains( &key ) { continue; }
-    if pending.contains( &key ) { planned.push( key ); } else { unknown.push( key ); }
-  }
-  if unknown.is_empty() && planned.is_empty() { return; }
+  let mut unknown : Vec< &str > = params
+    .keys()
+    .map( String::as_str )
+    .filter( | key | !known.contains( key ) )
+    .collect();
+  if unknown.is_empty() { return; }
 
   unknown.sort_unstable();
-  planned.sort_unstable();
-  if !unknown.is_empty()
-  {
-    eprintln!(
-      "Error: unknown parameter{} for {command}: {}",
-      if unknown.len() == 1 { "" } else { "s" },
-      unknown.join( ", " ),
-    );
-    eprintln!( "Accepted: {}", known.join( ", " ) );
-  }
-  if !planned.is_empty()
-  {
-    eprintln!(
-      "Error: parameter{} not implemented for {command}: {}",
-      if planned.len() == 1 { "" } else { "s" },
-      planned.join( ", " ),
-    );
-    eprintln!( "Documented in docs/cli/param/ but not yet wired up — see that parameter's page." );
-  }
+  eprintln!(
+    "Error: unknown parameter{} for {command}: {}",
+    if unknown.len() == 1 { "" } else { "s" },
+    unknown.join( ", " ),
+  );
+  eprintln!( "Accepted: {}", known.join( ", " ) );
   std::process::exit( 1 );
 }
 
@@ -283,9 +294,13 @@ fn cmd_prune( params : &HashMap< String, String >, dir : PathBuf )
 }
 
 /// `.status` — show journal health: file count, total size, oldest/newest dates.
-fn cmd_status( _params : &HashMap< String, String >, dir : PathBuf )
+fn cmd_status( params : &HashMap< String, String >, dir : PathBuf )
 {
-  println!( "{}", claude_journal_viewer::output::status_output( dir ) );
+  match claude_journal_viewer::output::status_output( params, dir )
+  {
+    Ok( s )  => println!( "{s}" ),
+    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+  }
 }
 
 /// `.export` — export filtered events to a file.
@@ -434,12 +449,21 @@ fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
     .get( "port" )
     .cloned()
     .unwrap_or_else( || std::env::var( "CLJ_PORT" ).unwrap_or_else( | _ | "0".to_owned() ) );
-  let port : u16 = port_str.parse().unwrap_or( 0 );
-  let refresh : u32 = params.get( "refresh" ).map_or( 10, | s | s.parse().unwrap_or_else( | _ |
-  {
-    eprintln!( "Error: invalid refresh '{s}' (expected non-negative integer seconds; 0 disables)" );
-    std::process::exit( 1 );
-  } ) );
+  // Both reject rather than fall back. `port_str.parse().unwrap_or( 0 )` used to
+  // turn `port::99999` into an OS-assigned port and then report that port on the
+  // startup line — the server came up, on the wrong port, saying so in a line
+  // most callers do not re-read. `CLJ_PORT` resolves into the same value, so a
+  // bad one fails here too (`docs/cli/param/15_port.md`).
+  let port : u16 = or_exit( parse_int_param( &port_str, "port", 65535 ) );
+  let refresh : u32 = or_exit( parse_int_param(
+    params.get( "refresh" ).map_or( "10", String::as_str ),
+    "refresh",
+    u64::from( u32::MAX ),
+  ) );
+  // Resolved here rather than at its point of use below, so every param is
+  // validated before the port is bound. Rejecting `open::` after the socket is
+  // open would leave a server briefly listening on the way to exit 1.
+  let open_requested = or_exit( parse_bool_param( params.get( "open" ).map( String::as_str ), "open" ) );
 
   let addr   = format!( "{bind}:{port}" );
   let server = match tiny_http::Server::http( &addr )
@@ -468,7 +492,7 @@ fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
   // Flush stdout so piped readers (e.g. integration test harness) see the port immediately.
   std::io::Write::flush( &mut std::io::stdout() ).ok();
 
-  if matches!( params.get( "open" ).map( String::as_str ), Some( "1" | "true" ) )
+  if open_requested
   {
     if let Err( e ) = open::that( &url )
     {
@@ -476,11 +500,38 @@ fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
     }
   }
 
+  // AC-009: SIGTERM/SIGINT flip a flag the accept loop checks between requests,
+  // so shutdown is an ordinary loop exit rather than the default disposition
+  // tearing the process down mid-response. `flag::register` is a safe API, so
+  // no exception to the workspace's `unsafe-code = "deny"` is needed.
+  //
+  // A failed registration is a warning, not a fatal error: the server is
+  // otherwise fully working, and refusing to serve because it could not arrange
+  // a *tidier* exit would trade a real capability for a cosmetic one. The
+  // fallback is the previous behaviour — the default signal disposition.
+  let shutdown = Arc::new( AtomicBool::new( false ) );
+  for ( sig, name ) in [ ( SIGINT, "SIGINT" ), ( SIGTERM, "SIGTERM" ) ]
+  {
+    if let Err( e ) = signal_hook::flag::register( sig, Arc::clone( &shutdown ) )
+    {
+      eprintln!( "Warning: could not install {name} handler ({e}); falling back to default shutdown" );
+    }
+  }
+
   let page   = index_html( refresh );
   let reader = JournalReader::open( dir.clone() );
-  loop
+  while !shutdown.load( Ordering::Relaxed )
   {
-    let Ok( req ) = server.recv() else { continue; };
+    // `recv_timeout` rather than `recv` so an idle server still reaches the
+    // condition above. A blocking `recv` sits in the syscall until the *next*
+    // request arrives, which on an idle server is never — the flag would be set
+    // and never read, so the server would only shut down when someone happened
+    // to poke it.
+    //
+    // Both non-request outcomes loop back through that check instead of
+    // retrying in place: `Ok( None )` is the ordinary idle timeout, and a
+    // connection-level `Err` kills one connection, not the server.
+    let Ok( Some( req ) ) = server.recv_timeout( Duration::from_millis( 200 ) ) else { continue };
     let full = req.url().to_owned();
     let ( path, query ) = full.split_once( '?' ).unwrap_or( ( full.as_str(), "" ) );
     match path
@@ -495,6 +546,13 @@ fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
       _ => respond_html( req, &page ),
     }
   }
+
+  // On stderr, not stdout: a consumer parsing stdout for the `Listening on`
+  // line (the test harness among them) should not have to filter a farewell
+  // out of the same stream. Dropping `server` here closes the listener before
+  // the process exits, which is the observable part of "cleanly".
+  eprintln!( "Shutting down" );
+  drop( server );
 }
 
 /// `.chart` — render a usage SVG chart, optionally opened in the default browser.
@@ -547,6 +605,7 @@ fn print_help()
   println!( "           sort::time|cost|duration|exit|model|command  reverse::0|1" );
   println!( "  .tail    format::table|json|jsonl|csv  (json == jsonl: a stream has no closing bracket)" );
   println!( "  .stats   by::day|model|dir|agent" );
+  println!( "  .status  verbosity::0|1|2             (0 one line, 1 report, 2 per-file)" );
   println!( "  .search  pattern::<str>               (required)" );
   println!( "  .prune   keep::<dur>  dry_run::0|1" );
   println!( "  .export  output::<path>  format::json|jsonl|csv|table" );
@@ -574,7 +633,7 @@ fn main()
     &[ ".list", ".tail", ".stats", ".search", ".serve", ".prune", ".status", ".export", ".chart" ];
   if COMMANDS.contains( &command ) { reject_unknown_params( command, &params ); }
 
-  if matches!( params.get( "no_color" ).map( String::as_str ), Some( "1" | "true" ) )
+  if or_exit( parse_bool_param( params.get( "no_color" ).map( String::as_str ), "no_color" ) )
   {
     claude_journal_viewer::output::force_no_color();
   }

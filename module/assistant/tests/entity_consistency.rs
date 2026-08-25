@@ -2,11 +2,16 @@
 //!
 //! ## Purpose
 //!
-//! Verify every `entity.md` module index in the workspace stays consistent
-//! with the doc instance files actually on disk. The indexes silently drift
-//! as documentation evolves — wrong `Instances` counts, deleted files still
+//! Verify every doc entity registry in the workspace stays consistent with the
+//! doc instance files actually on disk. The indexes silently drift as
+//! documentation evolves — wrong `Instances` counts, deleted files still
 //! listed, new files unregistered. All checks read Markdown and directory
 //! listings statically — no build artefacts or network access required.
+//!
+//! A registry is either `docs/entity.md` or `docs/entity/readme.md`; both
+//! shapes are in use and both are discovered. Looking for only the flat name
+//! is what let three crates' counts go unchecked while the suite reported
+//! green — see `entity_md_files`.
 //!
 //! ## Specification References
 //!
@@ -53,21 +58,38 @@ fn workspace_root() -> PathBuf
     .to_path_buf()
 }
 
-/// Discover every `entity.md` module index in the workspace:
-/// `docs/entity.md` plus each `module/*/docs/entity.md`.
+/// Discover every doc entity registry in the workspace, in both shapes it
+/// takes: `docs/entity.md` and `docs/entity/readme.md`, at the workspace root
+/// and under each `module/*/`.
 ///
 /// Discovery-based rather than a hardcoded path list — BUG-005 documented how
 /// a hand-maintained inventory in this test suite silently drifts stale when
 /// crates are added or removed.
+///
+/// Both shapes are searched because the workspace uses both. A registry that
+/// has grown into its own directory (`docs/entity/readme.md`) is the same
+/// registry as the flat file, and looking only for the flat name left three
+/// crates unchecked — `claude_journal`, `claude_journal_viewer`, and
+/// `claude_profile` — while the suite reported green. That is the same class of
+/// silent staleness BUG-005 is about, reached through the filename rather than
+/// through a hardcoded list, so it is fixed here rather than by renaming those
+/// three registries into the shape the test happened to look for.
 fn entity_md_files( workspace_root : &Path ) -> Vec< PathBuf >
 {
-  let mut found = Vec::new();
-
-  let ws_index = workspace_root.join( "docs" ).join( "entity.md" );
-  if ws_index.is_file()
+  // Fixed order, so a docs/ carrying both shapes reports deterministically
+  // rather than by readdir order. Both are collected rather than one shadowing
+  // the other: two registries for one crate is itself a defect, and DEI should
+  // hold each of them to its own contents rather than silently pick a winner.
+  let registries_under = | base : &Path | -> Vec< PathBuf >
   {
-    found.push( ws_index );
-  }
+    let docs = base.join( "docs" );
+    [ docs.join( "entity.md" ), docs.join( "entity" ).join( "readme.md" ) ]
+      .into_iter()
+      .filter( | candidate | candidate.is_file() )
+      .collect()
+  };
+
+  let mut found = registries_under( workspace_root );
 
   let module_dir = workspace_root.join( "module" );
   let entries = fs::read_dir( &module_dir )
@@ -77,18 +99,14 @@ fn entity_md_files( workspace_root : &Path ) -> Vec< PathBuf >
   {
     let entry = entry
       .unwrap_or_else( | e | panic!( "cannot enumerate {}: {e}", module_dir.display() ) );
-    let candidate = entry.path().join( "docs" ).join( "entity.md" );
-    if candidate.is_file()
-    {
-      module_hits.push( candidate );
-    }
+    module_hits.extend( registries_under( &entry.path() ) );
   }
   module_hits.sort();
   found.extend( module_hits );
 
   assert!(
     found.len() >= 2,
-    "entity.md discovery returned {} files — expected the workspace index plus \
+    "entity registry discovery returned {} files — expected the workspace index plus \
      at least one module index; the discovery pattern is likely broken and the \
      consistency checks would be vacuous",
     found.len(),
@@ -233,9 +251,14 @@ fn count_instance_files( dir : &Path ) -> usize
 
 // ---------- Invariant: Doc Entity Index Consistency (DEI-*) ----------
 
-/// DEI-1: Every entity row's `Instances` count in every `entity.md` equals
-/// the number of instance files actually present in that entity directory
+/// DEI-1: Every entity row's `Instances` count in every registry equals the
+/// number of instance files actually present in that entity directory
 /// (resolved via the row's own Master File link).
+///
+/// The count means files-on-disk, not live-instances. A registry that omits
+/// retired instances to make the figure mean "still in use" puts itself outside
+/// this check; annotate the row instead (see `claude_profile`'s own Instances
+/// convention note, which was rewritten for exactly this reason).
 #[test]
 fn dei1_entity_index_counts_match_files()
 {
@@ -273,15 +296,15 @@ fn dei1_entity_index_counts_match_files()
 
   assert!(
     violations.is_empty(),
-    "DEI-1: entity.md Instances counts diverge from instance files on disk \
+    "DEI-1: entity registry Instances counts diverge from instance files on disk \
      ({} violations):\n{}",
     violations.len(),
     violations.join( "\n" ),
   );
 }
 
-/// DEI-2: Every file listed in every `entity.md` Master Doc Instances Table
-/// `File` column exists on disk, resolved relative to the `entity.md`
+/// DEI-2: Every file listed in every registry's Master Doc Instances Table
+/// `File` column exists on disk, resolved relative to the registry's own
 /// parent directory.
 #[test]
 fn dei2_entity_index_files_exist()
@@ -316,7 +339,7 @@ fn dei2_entity_index_files_exist()
 
   assert!(
     violations.is_empty(),
-    "DEI-2: entity.md lists files missing on disk ({} violations):\n{}",
+    "DEI-2: entity registry lists files missing on disk ({} violations):\n{}",
     violations.len(),
     violations.join( "\n" ),
   );

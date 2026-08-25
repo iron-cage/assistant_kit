@@ -3,7 +3,7 @@
 List journal events with filtering and sort.
 
 -- **Parameters:** since::, until::, type::, command::, exit::, model::, dir::, creds::, limit::, format::, sort::, reverse::, journal_dir::, no_color::
--- **Exit Codes:** 0 (success), 1 (invalid, unknown, or unimplemented param)
+-- **Exit Codes:** 0 (success), 1 (invalid or unknown param)
 
 ### Syntax
 
@@ -41,9 +41,10 @@ Events missing the sort field sort below those that have it, so `reverse::1`
 leads with real values and leaves the unknowns at the bottom. Ties keep journal
 order in both directions.
 
-**Not yet implemented:** `wide::`, `columns::`. These have parameter pages under
-`docs/cli/param/` but no implementation; passing one exits 1 with a "not
-implemented" message rather than being silently ignored.
+The table above is the whole accepted set — every parameter in it is
+implemented. Column selection is not among them: `format::csv` or `format::json`
+plus `cut`/`jq` already does it, and better, so a table-only column vocabulary
+would be a second way to ask the same question.
 
 ### Unknown parameters
 

@@ -4,7 +4,7 @@ Render a usage SVG chart from journal events, optionally opened in the
 default browser.
 
 -- **Parameters:** out::, open::, journal_dir::, no_color::
--- **Exit Codes:** 0 (success), 1 (chart rendering or write failure)
+-- **Exit Codes:** 0 (success), 1 (invalid or unknown param, chart rendering or write failure)
 
 ### Syntax
 
@@ -17,18 +17,28 @@ clj .chart [out::PATH] [open::0|1] [journal_dir::PATH] [no_color::BOOL]
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
 | `out` | Path | usage.svg | No | Output SVG file path |
-| `open` | Bool | 0 | No | Open the rendered file in the default browser |
+| `open` | Boolean | 0 | No | Open the rendered file in the default browser |
 | `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override |
 | `no_color` | Boolean | 0 | No | Disable ANSI colors in the confirmation message |
 
 `.chart` renders every event in the journal; it accepts no event filters, so
 `dir::` (the event working-directory filter) is not valid here.
 
-**Algorithm (3 steps):**
+**Algorithm (4 steps):**
 
-1. Resolve the journal directory (`journal_dir::` > `CLR_JOURNAL_DIR` > default)
-2. Render the usage chart via `claude_journal_charts::generate_usage_chart` and write it to `out::`
-3. If `open::1`, open the file in the default browser — a failure to open is a non-fatal warning appended to the success message, never a command failure
+1. Validate `open::` as a [`Boolean`](../type/08_boolean.md); a value outside `0`/`1` exits 1
+2. Resolve the journal directory (`journal_dir::` > `CLR_JOURNAL_DIR` > default)
+3. Render the usage chart via `claude_journal_charts::generate_usage_chart` and write it to `out::`
+4. If `open::1`, open the file in the default browser — a failure to open is a non-fatal warning appended to the success message, never a command failure
+
+Step 1 precedes step 3 deliberately. Rejecting `open::` after the SVG is
+written would leave the command both failing and having had an effect, so a
+run that exits 1 here has written nothing:
+
+```bash
+rm -f usage.svg; clj .chart open::banana; echo "exit=$?"; ls usage.svg
+# exit=1, and `ls` reports no such file
+```
 
 ### Examples
 

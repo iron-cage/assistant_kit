@@ -9,6 +9,22 @@ actual port is reported on the startup line
 (`Listening on http://localhost:{port}`) — read it there rather than
 assuming a well-known number.
 
+A value that is not a port exits 1 with
+`Error: invalid integer '<input>' for parameter 'port'`, before anything
+binds. That applies to whichever source supplied it: `CLJ_PORT` resolves
+into the value of `port::`, so a bad one is rejected identically rather
+than falling through to an OS-assigned port.
+
+Only an *absent* `CLJ_PORT` reaches the `0` default. `CLJ_PORT=` — set but
+empty — is a value, and an empty string is not a port, so it exits 1 like
+any other bad one. Use `unset CLJ_PORT` to return to the default:
+
+```bash
+CLJ_PORT=nope clj .serve; echo "exit=$?"    # exit=1
+CLJ_PORT= clj .serve;     echo "exit=$?"    # exit=1 — empty is a value, not an absence
+unset CLJ_PORT; clj .serve                  # OS-assigned; read the startup line
+```
+
 - **Type:** [`Port`](../type/10_port.md)
 - **Default:** `0` (OS-assigned)
 - **Required:** No

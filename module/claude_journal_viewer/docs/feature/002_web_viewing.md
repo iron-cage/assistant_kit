@@ -61,6 +61,10 @@ Dashboard components:
 - Error class breakdown (pie/donut chart) — **not implemented**
 - Auto-refresh toggle — **partial**: the interval is configurable via `refresh::` (default 10 s, `0` disables) and both the `setInterval` guard and the status-line label are rendered from that one value, but there is no in-page toggle control
 
+These four components are what keeps this feature at `Status: Partial`. Every
+acceptance criterion below is met — AC-009 was the last one outstanding — so
+the gap is the dashboard UI, not the server.
+
 The embedded HTML is vanilla JavaScript + CSS — no framework dependencies. Total embedded HTML target: under 20KB.
 
 ## Acceptance Criteria
@@ -73,22 +77,42 @@ The embedded HTML is vanilla JavaScript + CSS — no framework dependencies. Tot
 - AC-006: `GET /api/health` returns `{ "files": N, "bytes": N, "oldest": "...", "newest": "..." }`, with `oldest`/`newest` as `null` (not a placeholder string) when the journal is empty
 - AC-007: The HTML page renders correctly without external network access (no CDN dependencies)
 - AC-008: Auto-refresh polls `/api/events` at the interval given by `refresh::` (default 10 s); `refresh::0` disables polling and the status line says so. A non-integer `refresh::` exits 1 at startup rather than silently falling back
-- AC-009 (⏳ pending): Server shuts down cleanly on SIGTERM/SIGINT. `cmd_serve()` runs an unconditional `loop` with no signal handler, so shutdown today is the default signal disposition — the process terminates promptly but runs no cleanup. See "AC-009 blocker" below
+- AC-009: Server shuts down cleanly on SIGTERM/SIGINT — the accept loop exits, the listener closes, `Shutting down` is written to stderr, and the process exits 0 rather than being killed by the signal. See "Graceful shutdown" below
 - AC-010: `open::1` opens the default browser after the server starts. A failed launch (no browser, headless host) degrades to a stderr warning and never aborts the server — matching `.chart`'s treatment of the same failure
 
-**AC-009 blocker.** Installing a SIGTERM/SIGINT handler needs either `libc::signal`,
-which the workspace-wide `unsafe-code = "deny"` lint forbids, or a new
-dependency (`ctrlc`/`signal-hook`) that the workspace does not currently carry.
-Both are workspace policy decisions rather than crate-local implementation
-choices, so AC-009 stays pending and this feature stays `Status: Partial`. The
-practical gap is narrow: the accept loop holds no unflushed state, so the
-default disposition already terminates without data loss — what is missing is
-an explicit, testable graceful path.
+**Graceful shutdown.** SIGTERM and SIGINT set an `AtomicBool` that the accept
+loop tests between requests. The handler is installed with
+`signal_hook::flag::register`, a **safe** API — so the workspace-wide
+`unsafe-code = "deny"` lint stands unchanged, and no exception was needed. The
+alternative, `libc::signal`, would have required one.
+
+The loop uses `recv_timeout( 200ms )` rather than `recv()`. A blocking `recv()`
+sits in the syscall until the next connection arrives, so on an idle server the
+flag would be set and never read — the server would appear to ignore the signal
+until someone happened to poke it. The 200 ms ceiling is the resulting shutdown
+latency.
+
+A failed handler registration is a warning, not a fatal error. The server is
+otherwise fully working, and refusing to serve because it could not arrange a
+tidier exit would trade a real capability for a cosmetic one; the fallback is
+the default signal disposition, which is what this AC previously relied on.
+
+The observable difference from that old behaviour is the exit status. A process
+killed by a signal carries no exit code at all, so `ExitStatus::code()` is
+`None`; exiting through the loop condition yields `Some( 0 )`. That is what
+FT-13 asserts, and it cannot pass under the default disposition:
+
+```bash
+clj .serve port::0 & sleep 1; kill -TERM $!; wait $!; echo "exit=$?"
+# exit=0, with `Shutting down` on stderr. Compare `kill -KILL`, which no
+# handler can intercept: exit=137, no message.
+```
 
 ## Sources
 
-- `src/cli_main.rs` `cmd_serve()` — parameter resolution, bind/exposure reporting, and the `tiny_http` request loop
+- `src/cli_main.rs` `cmd_serve()` — parameter resolution, bind/exposure reporting, signal-flag registration, and the `tiny_http` accept loop
+- `Cargo.toml` `signal-hook` — the shutdown flag's only dependency, `default-features = false` (nothing here consumes signals as a stream)
 - `src/cli_main.rs` `respond_events`/`respond_stats`/`respond_health`/`respond_json` — the API route handlers
 - `src/cli_main.rs` `INDEX_HTML_TEMPLATE` + `index_html()` — embedded dashboard HTML, a raw string literal with the refresh interval substituted in; there is no separate `src/web/` asset directory
 - `src/output.rs` `build_filter`/`parse_query_string`/`stats_data`/`health_data` — the computation shared with the CLI commands
-- `tests/serve_test.rs` — FT-1..FT-12 enforcement
+- `tests/serve_test.rs` — FT-1..FT-13 enforcement

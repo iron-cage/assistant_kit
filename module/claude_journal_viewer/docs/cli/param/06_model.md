@@ -31,6 +31,10 @@ clj .stats model::opus by::day       # Daily opus costs
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | All models |
+| 2 | [`.tail`](../command/02_tail.md) | -- | All models |
+| 3 | [`.stats`](../command/03_stats.md) | -- | Narrows what is aggregated, not how it is grouped |
+| 4 | [`.search`](../command/04_search.md) | -- | All models |
+| 8 | [`.export`](../command/08_export.md) | -- | All models |
 
 ### Referenced User Stories
 

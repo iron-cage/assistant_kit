@@ -1,9 +1,9 @@
 # CLI Parameter: include_stdout
 
 **Superseded — not a parameter.** `.search` searches `stdout` and `stderr`
-unconditionally, alongside `error_message`, `model`, and `command`. There is no
-narrower default for this flag to widen, so the parameter carries no meaning
-and is not accepted; passing it exits 1.
+unconditionally, alongside `message`, `error_message`, `model`, and `command`.
+There is no narrower default for this flag to widen, so the parameter carries no
+meaning and is not accepted; passing it exits 1.
 
 This page is retained because the surrounding documentation links to it. The
 behavior it describes is the *current, unconditional* behavior of

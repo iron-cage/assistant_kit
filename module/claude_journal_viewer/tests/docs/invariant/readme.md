@@ -15,3 +15,4 @@ Per-invariant-doc test case indices for `claude_journal_viewer`. See [invariant/
 |------|---------|--------|
 | `001_read_only.md` | Test cases for the read-only invariant | ✅ |
 | `002_localhost_only.md` | Test cases for the localhost-only invariant | ✅ |
+| `003_cli_surface_consistency.md` | Test cases for the CLI-surface-consistency invariant | ✅ |

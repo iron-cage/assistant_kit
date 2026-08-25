@@ -261,8 +261,11 @@ version = "^0.12"
 [workspace.dependencies.open]
 version = "^5"
 
-[workspace.dependencies.libc]
-version = "^0.2"
+# Only `flag::register` is used, which is a safe API — see docs/feature/002_web_viewing.md AC-009.
+# The default `channel`/`iterator` features are off; nothing here consumes signals as a stream.
+[workspace.dependencies.signal-hook]
+version = "^0.4"
+default-features = false
 
 [workspace.dependencies.gag]
 version = "^1"

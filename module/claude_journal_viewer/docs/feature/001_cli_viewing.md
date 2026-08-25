@@ -15,10 +15,10 @@ Nine CLI commands for exploring journal data using unilang `.command param::valu
 
 | # | Command | Purpose |
 |---|---------|---------|
-| 1 | `.list` | Display filtered event table with configurable columns and sort |
+| 1 | `.list` | Display filtered event table with configurable sort and output format |
 | 2 | `.tail` | Follow journal events in real-time (like `tail -f`) |
 | 3 | `.stats` | Aggregate statistics grouped by day, model, dir, or agent |
-| 4 | `.search` | Full-text regex search across event messages and optionally stdout |
+| 4 | `.search` | Literal substring search across the prompt and the captured output |
 | 5 | `.serve` | Start embedded HTTP server for web-based viewing |
 | 6 | `.prune` | Delete journal files older than an age window (filename date) |
 | 7 | `.status` | Show journal health: file count, total size, date range, config |
@@ -36,7 +36,7 @@ The `clj` binary operates standalone and also registers its commands into the `a
 - AC-003: `.list since::1h type::execution` applies time + type filter as AND conditions
 - AC-004: `.tail` blocks and emits new events as they are appended to the journal
 - AC-005: `.stats` without params shows daily aggregates for the last 7 days
-- AC-006: `.search pattern::"rate limit"` searches event messages using regex
+- AC-006: `.search pattern::"rate limit"` matches the literal substring against six fields — `message`, `stdout`, `stderr`, `error_message`, `model`, `command`. There is no regex engine: metacharacters are literal, and a regex-shaped pattern exits 0 having matched nothing rather than reporting itself as unusable
 - AC-007: `.prune keep::30d` deletes journal files whose `YYYY-MM-DD.jsonl` filename date is older than 30 days (today's file never deleted; `dry_run::1` previews; no confirmation prompt)
 - AC-008: `.status` reports file count, total bytes, oldest/newest dates, and configured journal dir
 - AC-009: `.export format::csv since::7d output::/tmp/events.csv` writes filtered events to file

@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Verify `.stats` aggregates journal events correctly across all grouping dimensions.
-- **Responsibility**: Test case coverage for all 6 `.stats` parameters and default aggregation behavior.
-- **In Scope**: Default time window/type, `by` grouping dimensions (model, day, error, command, hour), verbosity, journal_dir override.
+- **Responsibility**: Test case coverage for all 7 `.stats` parameters and default aggregation behavior.
+- **In Scope**: Default time window/type, `by` grouping dimensions (model, day, error, command, hour), journal_dir override.
 - **Out of Scope**: Raw event listing (-> `01_list.md`), export of aggregates (-> `08_export.md`).
 
 Test case planning for [command/03_stats.md](../../../../docs/cli/command/03_stats.md).

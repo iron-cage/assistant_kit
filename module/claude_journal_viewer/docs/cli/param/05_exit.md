@@ -15,6 +15,18 @@ clj .list exit::4 since::1d          # Timeouts in last day
 clj .list exit::1 command::ask       # Ask failures
 ```
 
+The documented `0-255` range is enforced, not advisory: a Unix wait status
+carries one byte, so `exit::300` is not a filter that happens to match
+nothing — it is not an exit code. Negative values are rejected for the same
+reason. Both exit 1 with
+`Error: invalid integer '<input>' for parameter 'exit'`:
+
+```bash
+clj .list exit::255   # the ceiling — accepted
+clj .list exit::256   # exit 1
+clj .list exit::-1    # exit 1
+```
+
 The parameter is `exit`; `exit_code` is the name of the *JSON field* it matches
 against (and the key in `format::json` output). Passing `exit_code::` on the
 command line is an error, not a synonym — see

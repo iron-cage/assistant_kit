@@ -4,19 +4,32 @@
 
 | # | Command | Params | Description | Example |
 |---|---------|-------:|-------------|---------|
-| 1 | `.list` | 12 | List journal events with filtering and sort | `clj .list since::1h` |
+| 1 | `.list` | 14 | List journal events with filtering and sort | `clj .list since::1h` |
 | 2 | `.tail` | 5 | Follow journal events in real-time | `clj .tail type::execution` |
-| 3 | `.stats` | 6 | Aggregate statistics (cost, tokens, success rate) | `clj .stats by::model since::7d` |
-| 4 | `.search` | 7 | Full-text regex search across event data | `clj .search pattern::"rate limit"` |
-| 5 | `.serve` | 4 | Start web viewer on localhost | `clj .serve port::8411` |
-| 6 | `.prune` | 2 | Delete journal files older than an age window | `clj .prune keep::30d` |
-| 7 | `.status` | 2 | Show journal health, size, configuration | `clj .status` |
-| 8 | `.export` | 6 | Export filtered events to file | `clj .export format::csv since::7d` |
-| 9 | `.chart` | 3 | Render a usage SVG chart, optionally opened in browser | `clj .chart out::usage.svg open::1` |
+| 3 | `.stats` | 7 | Aggregate statistics (cost, tokens, success rate) | `clj .stats by::model since::7d` |
+| 4 | `.search` | 7 | Literal substring search across prompt and captured output | `clj .search pattern::"rate limit"` |
+| 5 | `.serve` | 6 | Start web viewer on localhost | `clj .serve port::8411` |
+| 6 | `.prune` | 4 | Delete journal files older than an age window | `clj .prune keep::30d` |
+| 7 | `.status` | 3 | Show journal health, size, configuration | `clj .status` |
+| 8 | `.export` | 8 | Export filtered events to file | `clj .export format::csv since::7d` |
+| 9 | `.chart` | 4 | Render a usage SVG chart, optionally opened in browser | `clj .chart out::usage.svg open::1` |
+
+Each `Params` count is the number of rows in that command page's own Parameters
+table, including the two global params every command accepts. It is not the size
+of the set `known_params` accepts in `src/cli_main.rs`, which is deliberately
+wider — every event-reading command accepts the full filter vocabulary whether or
+not its page enumerates all of it.
 
 ### Quick Reference
 
 - **Total commands:** 9
-- **Total unique parameters:** 28
-- **Parameters without defaults:** 13 (since, until, type, command, exit, model, dir, creds, pattern, keep, columns, output, by)
-- **Most-used parameter:** `journal_dir` (8 commands), `since` (4 commands)
+- **Total unique parameters:** 25 across the command pages above
+- **Parameters without defaults:** 10 (since, until, type, command, exit, model, dir, creds, pattern, output)
+- **Most-used parameter:** `journal_dir` (9 commands), `no_color` (9 commands), `since` (4 commands)
+
+That 25 is the same 25 [`param/readme.md`](../param/readme.md) counts, and the
+same *set*. It was not always: `out` (`.chart`) appeared here with no parameter
+page of its own, and `include_stdout` had a page enumerated by no command page,
+so the two totals matched by coincidence while the sets differed by one each way.
+`out` now has [a page](../param/29_out.md), `include_stdout` is retracted to a
+tombstone, and `tests/cli_doc_consistency.rs` fails if either drifts again.

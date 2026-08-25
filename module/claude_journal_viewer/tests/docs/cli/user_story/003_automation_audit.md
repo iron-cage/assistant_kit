@@ -17,7 +17,7 @@ Test case planning for [user_story/003_automation_audit.md](../../../../docs/cli
 | US-2 | `.list dir::/ci/project since::1d` filters by project directory | Directory Filtering |
 | US-3 | `.list creds::automation.json` shows all runs with specific credentials | Credential Filtering |
 | US-4 | `.export format::csv since::7d output::/tmp/audit.csv` produces audit trail | Export |
-| US-5 | `.search pattern::"unexpected" include_stdout::1 since::7d` finds anomalies | Anomaly Search |
+| US-5 | `.search pattern::"unexpected" since::7d` finds anomalies | Anomaly Search |
 | US-6 | `.serve` dashboard allows visual inspection of automation patterns | Dashboard |
 | US-7 | Export includes all event fields for forensic analysis | Export |
 
@@ -74,12 +74,14 @@ Test case planning for [user_story/003_automation_audit.md](../../../../docs/cli
 
 ---
 
-### US-5: `.search pattern::"unexpected" include_stdout::1 since::7d` finds anomalies
+### US-5: `.search pattern::"unexpected" since::7d` finds anomalies
 
 - **Given:** journal with `full`-level events, at least one with "unexpected" in its captured stdout, within the last 7 days
-- **When:** `clj .search pattern::"unexpected" include_stdout::1 since::7d`
-- **Then:** exit 0; matching anomalous events are returned
+- **When:** `clj .search pattern::"unexpected" since::7d` — no flag
+- **Then:** exit 0; matching anomalous events are returned, because captured output is searched unconditionally
 - **Exit:** 0
+- **Note:** the recipe carried `include_stdout::1`, which was never an accepted parameter. As printed, an audit following this story exited 1 rather than finding zero anomalies — and an unattended audit reading only the exit code cannot tell those two apart
+- **Note:** an anomaly search is where the substring contract bites hardest. `pattern::"exit_code: [1-9]"` is not a character class; it matches that literal text, finds nothing, and exits 0 — indistinguishable from a clean week (→ [param_group/04_search.md](../param_group/04_search.md) CC-3)
 - **Source:** [user_story/003_automation_audit.md](../../../../docs/cli/user_story/003_automation_audit.md) AC-05
 
 ---

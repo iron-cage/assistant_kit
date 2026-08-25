@@ -13,15 +13,17 @@ Levels for `.status`:
 - `1`: Standard report (files, size, date range, journal level)
 - `2`: Per-file breakdown (individual file sizes and dates)
 
-Levels for `.stats`:
-- `0`: Totals only (one summary row)
-- `1`: Standard grouped table (default)
-- `2`: Extended table with percentile columns (p50/p90/p99 duration)
+`.status` is the only command that takes `verbosity`.
+
+Values above `2` clamp to `2` rather than erroring: asking for more detail than
+exists is a coherent request, and the highest level already answers it in full.
+Negative and non-numeric values are typos rather than requests, and exit 1 per
+[type/04_integer.md](../type/04_integer.md).
 
 ```bash
 clj .status verbosity::0             # One-line summary
 clj .status verbosity::2             # Per-file breakdown
-clj .stats verbosity::2              # Extended stats with percentiles
+clj .status verbosity::9             # Same as verbosity::2
 ```
 
 ### Referenced Type
@@ -40,7 +42,6 @@ clj .stats verbosity::2              # Extended stats with percentiles
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 3 | [`.stats`](../command/03_stats.md) | 1 | Standard grouped table |
 | 7 | [`.status`](../command/07_status.md) | 1 | Standard health report |
 
 ### Referenced User Stories
