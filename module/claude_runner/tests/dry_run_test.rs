@@ -212,7 +212,17 @@ fn dry_run_without_message_shows_bare_command()
 {
   let claude_home = tempfile::TempDir::new().expect( "create empty claude home" );
   let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
-  let out = run_cli_with_env( &[ "--dry-run" ], &[ ( "CLAUDE_HOME", claude_home_str ) ] );
+  // Fix(BUG-008) isolation: `CLAUDE_HOME` alone does not isolate this assertion — the composed
+  //   command's `--model` term resolves out of `$HOME/.claude.json`, not `$CLAUDE_HOME`. Pointing
+  //   HOME at the same empty temp dir is the pattern already used at the `--continue` test below.
+  // Root cause: on a host whose `~/.claude.json` carries a `"model"` key, the bare invocation
+  //   gains `--model <id>` between `--effort` and `--print`, and this exact-string assertion fails.
+  // Pitfall: the container hides this — its `$HOME` has no such key, so the gap stays invisible
+  //   until someone runs the suite on a real workstation via the `VERB_LAYER=l0` escape hatch.
+  let out = run_cli_with_env(
+    &[ "--dry-run" ],
+    &[ ( "CLAUDE_HOME", claude_home_str ), ( "HOME", claude_home_str ) ],
+  );
   let output = stdout_str( &out );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(

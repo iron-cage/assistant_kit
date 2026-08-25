@@ -11,9 +11,9 @@ Manual testing verifies crate functionality with real Claude Code binary executi
 | File | Responsibility |
 |------|----------------|
 | `readme.md` | Manual testing overview and procedures |
-| `-corner_cases_exhaustive.md` | Exhaustive corner case matrix |
 
-Note: Files prefixed with `-` are temporary/working files per project conventions.
+Note: Files prefixed with `-` are temporary/working files per project conventions, and are
+therefore never referenced from this readme — anything a reader needs lives here directly.
 
 ## Running Manual Tests
 
@@ -98,7 +98,7 @@ Manual testing follows this workflow:
 **Issues Found:** 0 functional issues
 **Pass Rate:** 20/20 (100%)
 
-See `-corner_cases_exhaustive.md` for complete corner case analysis.
+See "Corner Case Coverage" below for the complete corner case analysis.
 
 ### Control-Session Integration Tests (live)
 
