@@ -24,7 +24,14 @@ if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=1; shift; fi
 # there reintroduces the collision for that key alone.
 WILL_ARGS=()
 for kv in level::3 show_build::1; do
-  for a in "$@"; do [[ "$a" == "${kv%%::*}::"* ]] && continue 2; done
+  key="${kv%%::*}"
+  for a in "$@"; do
+    [[ "$a" == "$key::"* ]] && continue 2
+    # unilang folds an alias into the same argument vector as its canonical name, so
+    # `level::3 l::1` collides exactly as `level::3 level::1` does. Guarding the canonical
+    # name alone still emits a duplicate for a caller who used the short form.
+    [[ "$key" == "level" && "$a" == "l::"* ]] && continue 2
+  done
   WILL_ARGS+=( "$kv" )
 done
 WILL_ARGS+=( "$@" )
