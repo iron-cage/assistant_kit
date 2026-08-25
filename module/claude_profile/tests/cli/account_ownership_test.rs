@@ -313,8 +313,8 @@ fn ft01_save_does_not_stamp_owner()
 
 /// IT-20 (AC-19, Feat 002): `.account.save` does NOT modify the `owner` field.
 ///
-/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. After `.account.save`,
-/// `owner` must remain `"user1@host1"` — `account_save_routine()` passes `owner: None`
+/// Pre-seed `{name}.json` with `"owner": "devuser@host1"`. After `.account.save`,
+/// `owner` must remain `"devuser@host1"` — `account_save_routine()` passes `owner: None`
 /// to `save()`, preserving the existing value via read-merge.
 ///
 /// Spec: [`tests/docs/cli/command/04_account_save.md` IT-20]
@@ -326,7 +326,7 @@ fn as_save_does_not_modify_owner()
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
-  std::fs::write( store.join( "alice@acme.com.json" ), r#"{"owner":"user1@host1"}"# ).unwrap();
+  std::fs::write( store.join( "alice@acme.com.json" ), r#"{"owner":"devuser@host1"}"# ).unwrap();
   std::fs::write( store.join( "alice@acme.com.credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
 
   let dot_claude = dir.path().join( ".claude" );
@@ -343,7 +343,7 @@ fn as_save_does_not_modify_owner()
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
   assert_eq!(
-    owner, "user1@host1",
+    owner, "devuser@host1",
     "IT-20: .account.save must NOT modify owner — existing value must be preserved; got: {owner:?}",
   );
 }
@@ -352,7 +352,7 @@ fn as_save_does_not_modify_owner()
 
 /// FT-02 (AC-02, Feat 036/037): `.accounts owner::0 name::X` writes `owner: ""` — credential file NOT touched.
 ///
-/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.accounts unclaim::1 name::alice`.
+/// Pre-seed `{name}.json` with `"owner": "devuser@host1"`. Run `.accounts unclaim::1 name::alice`.
 /// Owner must be `""`. Credential file mtime must be unchanged (pure metadata operation).
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-02]
@@ -362,7 +362,7 @@ fn ft02_unclaim_clears_owner()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let cred_path = store.join( "alice@acme.com.credentials.json" );
@@ -370,7 +370,7 @@ fn ft02_unclaim_clears_owner()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -449,8 +449,8 @@ fn ft16_unclaim_g8_gate()
 
 /// FT-17 (AC-17, Feat 036/037): `.accounts unclaim::1 name::X dry::1` prints preview; files unchanged.
 ///
-/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.accounts unclaim::1 name::X dry::1`.
-/// Owner must remain `"user1@host1"` — dry-run must not write.
+/// Pre-seed `{name}.json` with `"owner": "devuser@host1"`. Run `.accounts unclaim::1 name::X dry::1`.
+/// Owner must remain `"devuser@host1"` — dry-run must not write.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-17]
 #[ test ]
@@ -459,7 +459,7 @@ fn ft17_unclaim_dry_run()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let meta_path = store.join( "alice@acme.com.json" );
@@ -467,7 +467,7 @@ fn ft17_unclaim_dry_run()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com", "dry::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -668,11 +668,11 @@ fn it01_unclaim_clears_owner()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -691,7 +691,7 @@ fn it02_unclaim_credential_not_touched()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let cred_path = store.join( "alice@acme.com.credentials.json" );
@@ -699,7 +699,7 @@ fn it02_unclaim_credential_not_touched()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -718,7 +718,7 @@ fn it03_unclaim_marker_not_touched()
   // write_account with make_active=true writes _active_{hostname}_{user} marker.
   // We set USER/HOSTNAME to known values so we can predict the marker filename.
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   // The marker file written by write_account uses the process's current env for hostname,
   // so just find any _active* file in the store.
@@ -732,7 +732,7 @@ fn it03_unclaim_marker_not_touched()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -786,7 +786,7 @@ fn it06_unclaim_dry_run()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@host1" );
 
   let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let meta_path = store.join( "alice@acme.com.json" );
@@ -794,7 +794,7 @@ fn it06_unclaim_dry_run()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com", "dry::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
   assert!( stdout( &out ).contains( "[dry-run]" ), "IT-6: stdout must contain [dry-run]" );
@@ -880,7 +880,7 @@ fn it11_unclaim_preserves_renewal_at()
   std::fs::create_dir_all( &store ).unwrap();
   std::fs::write(
     store.join( "alice@acme.com.json" ),
-    r#"{"_renewal_at":"2026-06-29T21:00:00Z","owner":"user1@host1"}"#,
+    r#"{"_renewal_at":"2026-06-29T21:00:00Z","owner":"devuser@host1"}"#,
   ).unwrap();
   std::fs::write(
     store.join( "alice@acme.com.credentials.json" ),
@@ -889,7 +889,7 @@ fn it11_unclaim_preserves_renewal_at()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
 

@@ -1,4 +1,4 @@
-//! Integration tests for the `clj` binary — EC-1 through EC-24.
+//! Integration tests for the `clj` binary — EC-1 through EC-29.
 //!
 //! Each test writes fixture events via `JournalWriter`, runs the `clj` binary
 //! against the temporary journal directory, and asserts on stdout/stderr/exit.
@@ -72,13 +72,13 @@ fn write_fixture_events( dir : &Path )
   writer.append( &ev4 ).expect( "append ev4" );
 }
 
-/// Run `clj` with the given args, always appending `dir::<dir>`.
+/// Run `clj` with the given args, always appending `journal_dir::<dir>`.
 fn run_clj( args : &[ &str ], dir : &Path ) -> std::process::Output
 {
   assert_container();
   Command::new( CLJ )
     .args( args )
-    .arg( format!( "dir::{}", dir.display() ) )
+    .arg( format!( "journal_dir::{}", dir.display() ) )
     .env_remove( "CLR_JOURNAL_DIR" )
     .env_remove( "NO_COLOR" )
     .output()
@@ -351,7 +351,7 @@ fn ec11_no_color_suppresses_ansi()
   // With NO_COLOR — no ANSI escape sequences
   let out_no_color = Command::new( CLJ )
     .args( [ ".list" ] )
-    .arg( format!( "dir::{}", dir.path().display() ) )
+    .arg( format!( "journal_dir::{}", dir.path().display() ) )
     .env( "NO_COLOR", "1" )
     .env_remove( "CLR_JOURNAL_DIR" )
     .output()
@@ -373,74 +373,8 @@ fn ec11_no_color_suppresses_ansi()
   );
 }
 
-// ── EC-12 : .serve HTTP GET / returns 200 with text/html ──────────────────────
-
-#[ test ]
-fn ec12_serve_http_returns_html()
-{
-  assert_container();
-  let dir = tempfile::TempDir::new().unwrap();
-  write_fixture_events( dir.path() );
-
-  let mut child = Command::new( CLJ )
-    .args( [ ".serve", &format!( "dir::{}", dir.path().display() ), "port::0" ] )
-    .env_remove( "CLR_JOURNAL_DIR" )
-    .env_remove( "CLJ_PORT" )
-    .stdout( Stdio::piped() )
-    .stderr( Stdio::null() )
-    .spawn()
-    .expect( "failed to spawn clj .serve" );
-
-  // Read the "Listening on http://localhost:PORT" line from stdout (explicitly
-  // flushed by cmd_serve after println).
-  use std::io::BufRead;
-  let stdout = child.stdout.take().expect( "no stdout pipe" );
-  let mut reader = std::io::BufReader::new( stdout );
-  let mut line   = String::new();
-  reader.read_line( &mut line ).expect( "failed to read server port line" );
-
-  // Parse port from "Listening on http://localhost:PORT"
-  let port : u16 = line
-    .trim()
-    .rsplit( ':' )
-    .next()
-    .and_then( | s | s.parse().ok() )
-    .unwrap_or_else( || panic!( "could not parse port from: '{}'", line.trim() ) );
-
-  // Connect with retries (server may not be ready instantly after printing)
-  use std::io::{ Read, Write };
-  let mut stream = None;
-  for _ in 0..20
-  {
-    match std::net::TcpStream::connect( format!( "127.0.0.1:{port}" ) )
-    {
-      Ok( s )  => { stream = Some( s ); break; }
-      Err( _ ) => std::thread::sleep( core::time::Duration::from_millis( 50 ) ),
-    }
-  }
-  let mut stream = stream.unwrap_or_else( || panic!( "could not connect to server on port {port}" ) );
-
-  // Send HTTP request
-  stream.write_all( b"GET / HTTP/1.0\r\nHost: localhost\r\n\r\n" )
-    .expect( "failed to write HTTP request" );
-  let mut response = String::new();
-  stream.read_to_string( &mut response ).expect( "failed to read HTTP response" );
-
-  // Cleanup
-  child.kill().ok();
-  child.wait().ok();
-
-  // Assertions
-  assert!( response.contains( "200" ), "expected 200 in response:\n{response}" );
-  assert!(
-    response.to_lowercase().contains( "text/html" ),
-    "expected text/html content-type in response:\n{response}"
-  );
-  assert!(
-    response.contains( "CLR Journal" ),
-    "expected HTML body with 'CLR Journal' title in response:\n{response}"
-  );
-}
+// EC-12 (`.serve` HTTP GET `/`) moved to `serve_test.rs` as FT-2 — all `.serve`
+// coverage shares one spawn/parse/connect harness there rather than two copies.
 
 // ── EC-13 : .tail starts and can be killed ────────────────────────────────────
 
@@ -459,7 +393,7 @@ fn ec13_tail_starts_and_can_be_killed()
 
   let mut child = Command::new( CLJ )
     .args( [ ".tail" ] )
-    .arg( format!( "dir::{}", dir.path().display() ) )
+    .arg( format!( "journal_dir::{}", dir.path().display() ) )
     .env_remove( "CLR_JOURNAL_DIR" )
     .stdout( Stdio::null() )
     .stderr( Stdio::piped() )
@@ -492,7 +426,7 @@ fn ec14_chart_default_writes_usage_svg_in_cwd()
 
   let out = Command::new( CLJ )
     .args( [ ".chart" ] )
-    .arg( format!( "dir::{}", dir.path().display() ) )
+    .arg( format!( "journal_dir::{}", dir.path().display() ) )
     .current_dir( cwd_dir.path() )
     .env_remove( "CLR_JOURNAL_DIR" )
     .output()
@@ -570,10 +504,10 @@ fn ec18_chart_empty_journal_produces_placeholder()
   assert!( svg.starts_with( "<svg" ), "expected valid svg output even for empty journal: {svg}" );
 }
 
-// ── EC-19 : .chart dir:: is resolved the same way as the other commands ──────
+// ── EC-19 : .chart journal_dir:: resolves the same way as the other commands ──
 
 #[ test ]
-fn ec19_chart_dir_param_resolution_nonexistent_dir_errors()
+fn ec19_chart_journal_dir_param_resolution_nonexistent_dir_errors()
 {
   assert_container();
   let base        = tempfile::TempDir::new().unwrap();
@@ -583,7 +517,7 @@ fn ec19_chart_dir_param_resolution_nonexistent_dir_errors()
 
   let out = Command::new( CLJ )
     .args( [ ".chart" ] )
-    .arg( format!( "dir::{}", nonexistent.display() ) )
+    .arg( format!( "journal_dir::{}", nonexistent.display() ) )
     .arg( format!( "out::{}", out_path.display() ) )
     .env_remove( "CLR_JOURNAL_DIR" )
     .output()
@@ -729,8 +663,9 @@ fn ec24_stats_by_bogus_lists_valid_values()
 /// under the invocation cwd instead of the documented absolute default.
 ///
 /// # Why Not Caught
-/// Every other integration test passes an explicit `dir::` (see `run_clj`), which
-/// short-circuits resolution at the first tier — no test ever exercised the HOME tier.
+/// Every other integration test passes an explicit `journal_dir::` (see `run_clj`),
+/// which short-circuits resolution at the first tier — no test ever exercised the
+/// HOME tier.
 ///
 /// # Fix Applied
 /// `resolve_journal_dir` filters an empty HOME into the same `/tmp` fallback as an unset
@@ -760,17 +695,17 @@ fn ec25_empty_home_does_not_resolve_relative_journal()
   ev.fields.exit_code = Some( 0 );
   writer.append( &ev ).expect( "append probe event" );
 
-  // Positive control: read the fixture explicitly via `dir::`. The probe IS visible here,
-  // so its later absence means the path was genuinely not resolved — not that the fixture
-  // is unreadable or the marker misspelled.
+  // Positive control: read the fixture explicitly via `journal_dir::`. The probe IS
+  // visible here, so its later absence means the path was genuinely not resolved — not
+  // that the fixture is unreadable or the marker misspelled.
   let control = run_clj( &[ ".list" ], &relative_journal );
   assert!(
     stdout_str( &control ).contains( "ec25_relative_probe" ),
-    "positive control failed — probe event unreadable via explicit dir::: {}",
+    "positive control failed — probe unreadable via explicit journal_dir::: {}",
     stdout_str( &control ),
   );
 
-  // The defect: no `dir::`, empty HOME, `CLR_JOURNAL_DIR` removed, cwd = fixture's parent.
+  // The defect: no `journal_dir::`, empty HOME, `CLR_JOURNAL_DIR` removed, cwd = fixture's parent.
   let out = Command::new( CLJ )
     .arg( ".list" )
     .current_dir( cwd.path() )
@@ -784,5 +719,200 @@ fn ec25_empty_home_does_not_resolve_relative_journal()
     !stdout_str( &out ).contains( "ec25_relative_probe" ),
     "empty HOME resolved the journal relative to cwd (BUG-550): {}",
     stdout_str( &out ),
+  );
+}
+
+// ── EC-26..EC-29 : parameter names mean what the docs say they mean ───────────
+
+/// Three events that differ in exit code and working directory, so a filter that
+/// is silently ignored produces a visibly different count than one that works.
+fn write_param_fixture( dir : &Path )
+{
+  let writer = JournalWriter::new( dir.to_path_buf() );
+
+  let mut ok       = EventRecord::new( EventType::Execution );
+  ok.fields.command   = Some( "param_ok".to_owned() );
+  ok.fields.exit_code = Some( 0 );
+  ok.fields.dir       = Some( "/work/alpha".to_owned() );
+  writer.append( &ok ).expect( "append ok" );
+
+  let mut failed   = EventRecord::new( EventType::Execution );
+  failed.fields.command   = Some( "param_failed".to_owned() );
+  failed.fields.exit_code = Some( 2 );
+  failed.fields.dir       = Some( "/work/alpha".to_owned() );
+  writer.append( &failed ).expect( "append failed" );
+
+  let mut other    = EventRecord::new( EventType::Execution );
+  other.fields.command   = Some( "param_other".to_owned() );
+  other.fields.exit_code = Some( 2 );
+  other.fields.dir       = Some( "/work/beta".to_owned() );
+  writer.append( &other ).expect( "append other" );
+}
+
+/// EC-26 — `exit::` is the key the filter actually reads.
+///
+/// # Root Cause
+/// `build_filter` looked up `exit_code`, the JSON *field* name, while every doc and
+/// help line printed `exit::` (`docs/cli/param/05_exit.md`). Nothing read `exit`.
+///
+/// # Why Not Caught
+/// No test passed `exit::` at all — the two integration tests touching exit codes
+/// asserted on unfiltered output, where an ignored filter is invisible.
+///
+/// # Fix Applied
+/// `build_filter` reads `exit`; unknown keys are now rejected (EC-28), so the old
+/// spelling fails loudly instead of silently widening the result set.
+///
+/// # Prevention
+/// The fixture contains both a matching and a non-matching event, so an ignored
+/// filter returns 3 rows where a working one returns 2 — the assertion cannot pass
+/// vacuously.
+///
+/// # Pitfall
+/// An ignored *filter* param fails open, not closed: it widens output rather than
+/// erroring, which reads as success.
+#[ test ]
+fn ec26_exit_param_filters_by_exit_code()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_param_fixture( dir.path() );
+
+  let out = run_clj( &[ ".list", "exit::2" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+
+  assert!( stdout.contains( "param_failed" ), "exit::2 must keep the exit-2 event: {stdout}" );
+  assert!( stdout.contains( "param_other" ),  "exit::2 must keep both exit-2 events: {stdout}" );
+  assert!( !stdout.contains( "param_ok" ),    "exit::2 must drop the exit-0 event: {stdout}" );
+}
+
+/// EC-27 — `dir::` filters on the event's own working directory.
+///
+/// # Root Cause
+/// `resolve_journal_dir` consumed `dir::` as the journal *location*, so a documented
+/// directory filter silently repointed the reader at a path with no journal in it.
+/// The result — "No events found." — is indistinguishable from a filter that matched
+/// nothing.
+///
+/// # Why Not Caught
+/// Every test used `dir::` for its own tempdir, which is exactly the wrong reading
+/// working by coincidence: the path happened to be a real journal.
+///
+/// # Fix Applied
+/// `journal_dir::` overrides the journal location; `dir::` populates
+/// `JournalFilter::dir`, the field the library already reserved for it.
+///
+/// # Prevention
+/// This test passes both keys at once with different values, so neither can be
+/// standing in for the other.
+///
+/// # Pitfall
+/// When a library type already reserves a field name, the CLI must not spend the
+/// same name on an unrelated meaning.
+#[ test ]
+fn ec27_dir_param_filters_by_event_working_directory()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_param_fixture( dir.path() );
+
+  // `journal_dir::` (supplied by run_clj) locates the journal; `dir::` filters within it.
+  let out = run_clj( &[ ".list", "dir::/work/beta" ], dir.path() );
+  assert!( out.status.success(), "exit non-zero: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+
+  assert!( stdout.contains( "param_other" ), "dir::/work/beta must keep its event: {stdout}" );
+  assert!( !stdout.contains( "param_ok" ),     "dir:: must drop /work/alpha events: {stdout}" );
+  assert!( !stdout.contains( "param_failed" ), "dir:: must drop /work/alpha events: {stdout}" );
+}
+
+/// EC-28 — an unrecognised parameter exits 1 instead of being ignored.
+#[ test ]
+fn ec28_unknown_param_exits_1()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_param_fixture( dir.path() );
+
+  // The pre-fix spelling of EC-26's filter is now a hard error, not a silent no-op.
+  let out = run_clj( &[ ".list", "exit_code::2" ], dir.path() );
+  assert!( !out.status.success(), "unknown param must exit non-zero" );
+  let stderr = stderr_str( &out );
+  assert!( stderr.contains( "unknown parameter" ), "missing diagnostic: {stderr}" );
+  assert!( stderr.contains( "exit_code" ), "diagnostic must name the offending key: {stderr}" );
+  assert!( stderr.contains( "Accepted:" ), "diagnostic must list what is accepted: {stderr}" );
+
+  // A param valid for another command is still rejected for this one.
+  let out = run_clj( &[ ".list", "by::model" ], dir.path() );
+  assert!( !out.status.success(), "`by::` belongs to .stats, not .list" );
+
+  // An unknown *command* outranks an unknown param — the command is the real error.
+  let out = run_clj( &[ ".bogus", "since::1d" ], dir.path() );
+  assert!( !out.status.success() );
+  assert!(
+    stderr_str( &out ).contains( "unknown command" ),
+    "unknown command must be reported ahead of its params: {}",
+    stderr_str( &out ),
+  );
+
+  // A param the docs declare but no code reads gets its own diagnostic: the user
+  // followed the documentation, so "unknown" would be a lie about the parameter
+  // rather than the truth about the feature.
+  let out = run_clj( &[ ".list", "sort::time" ], dir.path() );
+  assert!( !out.status.success(), "an unimplemented param must exit non-zero" );
+  let stderr = stderr_str( &out );
+  assert!( stderr.contains( "not implemented" ), "wrong diagnostic class: {stderr}" );
+  assert!( !stderr.contains( "unknown parameter" ), "must not also claim it is unknown: {stderr}" );
+
+  // `.status` accepts the global params and nothing else — verbosity:: is declared
+  // in its docs but unimplemented, while journal_dir:: alone succeeds.
+  let out = run_clj( &[ ".status", "verbosity::2" ], dir.path() );
+  assert!( !out.status.success() );
+  assert!( stderr_str( &out ).contains( "not implemented" ), "{}", stderr_str( &out ) );
+  assert!( run_clj( &[ ".status" ], dir.path() ).status.success(), "bare .status must still work" );
+}
+
+/// EC-29 — `no_color::1` suppresses ANSI, matching the `NO_COLOR` env var.
+///
+/// # Root Cause
+/// `docs/cli/param/24_no_color.md` documents `no_color::1` with worked examples, but
+/// only the `NO_COLOR` environment variable was ever read.
+///
+/// # Why Not Caught
+/// EC-11 covered the env var only; no test passed the parameter form.
+///
+/// # Fix Applied
+/// `output::force_no_color()` sets a process-wide override that `no_color()` consults
+/// alongside the env var; `main` calls it when the param is `1`/`true`.
+///
+/// # Prevention
+/// The test asserts the presence of ANSI without the param in the same run, so a
+/// globally-colorless build cannot make it pass vacuously.
+///
+/// # Pitfall
+/// A setting readable only from the environment cannot be driven by an argument —
+/// documenting both forms requires implementing both.
+#[ test ]
+fn ec29_no_color_param_suppresses_ansi()
+{
+  assert_container();
+  let dir = tempfile::TempDir::new().unwrap();
+  write_param_fixture( dir.path() );
+
+  let plain = run_clj( &[ ".list", "no_color::1" ], dir.path() );
+  assert!( plain.status.success(), "exit non-zero: {}", stderr_str( &plain ) );
+  assert!(
+    !stdout_str( &plain ).contains( "\x1b[" ),
+    "no_color::1 should suppress ANSI codes, got: {}",
+    stdout_str( &plain ),
+  );
+
+  // Control: the same command without the param does emit ANSI.
+  let colored = run_clj( &[ ".list" ], dir.path() );
+  assert!(
+    stdout_str( &colored ).contains( "\x1b[" ),
+    "control failed — ANSI absent even without no_color::: {}",
+    stdout_str( &colored ),
   );
 }

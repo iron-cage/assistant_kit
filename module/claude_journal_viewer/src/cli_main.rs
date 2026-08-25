@@ -4,19 +4,28 @@
 // `clj` binary — CLR Journal Viewer CLI.
 //
 // Dispatches `.command key::value` arguments to one of eight journal handlers.
-// Journal directory resolution priority: `dir::` param > CLR_JOURNAL_DIR env >
-// `~/.clr/journal/` (default).
+// Journal directory resolution priority: `journal_dir::` param > CLR_JOURNAL_DIR
+// env > `~/.clr/journal/` (default).  Note `dir::` is a *filter* over each
+// event's own working directory, not the journal location — see `known_params`.
 //
 // Shared output logic lives in `claude_journal_viewer::output` (accessible by
 // both this binary and the unilang assistant routines in `routines.rs`).
 
-use claude_journal_viewer::output::{ bold, build_filter, format_event_row, resolve_journal_dir };
-use claude_journal::{ JournalFilter, JournalReader };
-use std::{ collections::HashMap, path::PathBuf };
+use claude_journal_viewer::output::
+{
+  bold, build_filter, format_event_row, health_data, parse_query_string, resolve_journal_dir, stats_data,
+};
+use claude_journal::JournalReader;
+use std::{ collections::HashMap, path::{ Path, PathBuf } };
 
 // ── Embedded web dashboard ────────────────────────────────────────────────────
 
-const INDEX_HTML : &str = r#"<!DOCTYPE html>
+/// Dashboard source with two substitution slots filled by [`index_html`].
+///
+/// `{{REFRESH_MS}}` is the poll interval in milliseconds (`0` disables polling
+/// entirely) and `{{REFRESH_LABEL}}` is the matching human-readable suffix, so
+/// the page never advertises a cadence it is not actually running.
+const INDEX_HTML_TEMPLATE : &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -47,7 +56,7 @@ function fmtCost(c){ return c==null?'-':'$'+c.toFixed(4); }
 function fmtDur(ms){ return ms==null?'-':ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s'; }
 function load(){
   fetch('/api/events').then(r=>r.json()).then(evs=>{
-    document.getElementById('status').textContent=evs.length+' event(s) — auto-refresh 5s';
+    document.getElementById('status').textContent=evs.length+' event(s) — {{REFRESH_LABEL}}';
     document.getElementById('rows').innerHTML=evs.slice().reverse().map(e=>
       '<tr><td>'+fmt(e.ts?e.ts.slice(0,16):null)+'</td>'
       +'<td>'+fmt(e.type)+'</td>'
@@ -60,10 +69,30 @@ function load(){
   }).catch(()=>{ document.getElementById('status').textContent='Error loading events'; });
 }
 load();
-setInterval(load,5000);
+if({{REFRESH_MS}}>0)setInterval(load,{{REFRESH_MS}});
 </script>
 </body>
 </html>"#;
+
+/// Render the dashboard page for a given auto-refresh interval.
+///
+/// `refresh_secs` of `0` means "load once, never poll" — both the `setInterval`
+/// guard and the status-line label are driven from the same value so they can
+/// never disagree.
+fn index_html( refresh_secs : u32 ) -> String
+{
+  let label = if refresh_secs == 0
+  {
+    "auto-refresh off".to_owned()
+  }
+  else
+  {
+    format!( "auto-refresh {refresh_secs}s" )
+  };
+  INDEX_HTML_TEMPLATE
+    .replace( "{{REFRESH_MS}}", &( u64::from( refresh_secs ) * 1000 ).to_string() )
+    .replace( "{{REFRESH_LABEL}}", &label )
+}
 
 // ── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -82,6 +111,102 @@ fn parse_params( args : &[ String ] ) -> HashMap< String, String >
     }
   }
   map
+}
+
+/// Params every command accepts — journal location and color suppression.
+const GLOBAL_PARAMS : &[ &str ] = &[ "journal_dir", "no_color" ];
+
+/// Event-selection params, accepted by the commands that read events.
+const FILTER_PARAMS : &[ &str ] =
+  &[ "since", "until", "type", "command", "exit", "model", "dir", "creds", "limit" ];
+
+/// The full set of params `command` accepts, sorted — always at least
+/// [`GLOBAL_PARAMS`].
+fn known_params( command : &str ) -> Vec< &'static str >
+{
+  let ( takes_filters, own ) : ( bool, &[ &'static str ] ) = match command
+  {
+    ".list"   => ( true,  &[ "format" ] ),
+    ".tail"   => ( true,  &[] ),
+    ".stats"  => ( true,  &[ "by" ] ),
+    ".search" => ( true,  &[ "pattern" ] ),
+    ".export" => ( true,  &[ "output", "format" ] ),
+    ".serve"  => ( false, &[ "port", "bind", "open", "refresh" ] ),
+    ".prune"  => ( false, &[ "keep", "dry_run" ] ),
+    ".chart"  => ( false, &[ "out", "open" ] ),
+    _         => ( false, &[] ),
+  };
+  let mut all : Vec< &'static str > = GLOBAL_PARAMS.to_vec();
+  if takes_filters { all.extend_from_slice( FILTER_PARAMS ); }
+  all.extend_from_slice( own );
+  all.sort_unstable();
+  all
+}
+
+/// Params the command's docs declare but no code reads yet.
+///
+/// Kept separate from "unknown" so a user following the documentation gets an
+/// answer about the *feature* rather than being told the parameter does not
+/// exist. Each entry is a debt against `docs/cli/param/`, not a typo.
+fn unimplemented_params( command : &str ) -> &'static [ &'static str ]
+{
+  match command
+  {
+    ".list"   => &[ "columns", "reverse", "sort", "wide" ],
+    ".tail"   => &[ "format" ],
+    ".stats"  => &[ "verbosity", "wide" ],
+    ".status" => &[ "verbosity" ],
+    _         => &[],
+  }
+}
+
+/// Reject any `key::value` the command does not accept, exiting 1.
+///
+/// Fix(param-silent-accept): reject unknown params instead of ignoring them
+/// Root cause: `parse_params` collected every `key::value` into one map and each
+///   handler read only the keys it knew, so a key nothing reads was accepted
+///   silently with exit 0. That is what turned both naming collisions into
+///   *quiet* defects: `exit::2` (the spelling every doc prints) fell through to
+///   nothing and returned the whole unfiltered list, looking exactly like a
+///   filter that matched everything.
+/// Pitfall: a filter param that is ignored does not fail closed — it widens the
+///   result set. Silence is the wrong default whenever the unread key would have
+///   *narrowed* the output.
+fn reject_unknown_params( command : &str, params : &HashMap< String, String > )
+{
+  let known   = known_params( command );
+  let pending = unimplemented_params( command );
+
+  let mut unknown : Vec< &str > = Vec::new();
+  let mut planned : Vec< &str > = Vec::new();
+  for key in params.keys().map( String::as_str )
+  {
+    if known.contains( &key ) { continue; }
+    if pending.contains( &key ) { planned.push( key ); } else { unknown.push( key ); }
+  }
+  if unknown.is_empty() && planned.is_empty() { return; }
+
+  unknown.sort_unstable();
+  planned.sort_unstable();
+  if !unknown.is_empty()
+  {
+    eprintln!(
+      "Error: unknown parameter{} for {command}: {}",
+      if unknown.len() == 1 { "" } else { "s" },
+      unknown.join( ", " ),
+    );
+    eprintln!( "Accepted: {}", known.join( ", " ) );
+  }
+  if !planned.is_empty()
+  {
+    eprintln!(
+      "Error: parameter{} not implemented for {command}: {}",
+      if planned.len() == 1 { "" } else { "s" },
+      planned.join( ", " ),
+    );
+    eprintln!( "Documented in docs/cli/param/ but not yet wired up — see that parameter's page." );
+  }
+  std::process::exit( 1 );
 }
 
 // ── Command handlers ──────────────────────────────────────────────────────────
@@ -158,52 +283,201 @@ fn cmd_export( params : &HashMap< String, String >, dir : PathBuf )
   }
 }
 
+/// Respond with a JSON body under the given HTTP status code.
+fn respond_json( req : tiny_http::Request, status : u16, body : &str )
+{
+  let resp = tiny_http::Response::from_string( body )
+    .with_status_code( status )
+    .with_header(
+      "Content-Type: application/json"
+        .parse::< tiny_http::Header >()
+        .expect( "static Content-Type header is valid ASCII" ),
+    );
+  let _ = req.respond( resp );
+}
+
+/// Respond with the embedded dashboard HTML.
+fn respond_html( req : tiny_http::Request, body : &str )
+{
+  let resp = tiny_http::Response::from_string( body )
+    .with_header(
+      "Content-Type: text/html; charset=utf-8"
+        .parse::< tiny_http::Header >()
+        .expect( "static Content-Type header is valid ASCII" ),
+    );
+  let _ = req.respond( resp );
+}
+
+/// Render an error payload as `{ "error" : "..." }`.
+fn error_body( message : &str ) -> String
+{
+  serde_json::json!( { "error" : message } ).to_string()
+}
+
+/// Name the first query key outside `allowed`, if any.
+///
+/// The CLI's own rejection (`reject_unknown_params`) cannot cover this path:
+/// query keys never reach it. Without the same check here, `?exit_code=2`
+/// returns HTTP 200 and the *whole* event list — the identical silent-widening
+/// failure the CLI fix closes, one surface over.
+///
+/// Applied to `/api/events` and `/api/stats` only. `/api/health` takes no
+/// parameters at all, so no key it might receive can change its response —
+/// there is no result set to silently widen, and rejecting a stray cache-buster
+/// would cost strictness with nothing bought.
+fn unknown_query_key< S : ::core::hash::BuildHasher >(
+  params : &HashMap< String, String, S >, allowed : &[ &str ],
+) -> Option< String >
+{
+  let mut bad : Vec< &str > = params.keys().map( String::as_str )
+    .filter( | k | !allowed.contains( k ) ).collect();
+  bad.sort_unstable();
+  bad.first().map( | k | format!( "unknown query parameter '{k}' (accepted: {})", allowed.join( ", " ) ) )
+}
+
+/// `GET /api/events` — filtered event list; same query vocabulary as `.list`.
+fn respond_events( req : tiny_http::Request, reader : &JournalReader, query : &str )
+{
+  let params = parse_query_string( query );
+  if let Some( e ) = unknown_query_key( &params, FILTER_PARAMS )
+  {
+    respond_json( req, 400, &error_body( &e ) );
+    return;
+  }
+  match build_filter( &params )
+  {
+    Ok( mut filter ) =>
+    {
+      // Keep the historical cap for callers that pass no `limit`, so a large
+      // journal is never streamed in full just because the query was empty.
+      if filter.limit.is_none() { filter.limit = Some( 200 ); }
+      let events = reader.query( &filter );
+      let body   = serde_json::to_string( &events ).unwrap_or_else( | _ | "[]".to_owned() );
+      respond_json( req, 200, &body );
+    }
+    Err( e ) => respond_json( req, 400, &error_body( &e ) ),
+  }
+}
+
+/// `GET /api/stats` — grouped statistics; same query vocabulary as `.stats`.
+fn respond_stats( req : tiny_http::Request, dir : &Path, query : &str )
+{
+  let params = parse_query_string( query );
+  let mut allowed = FILTER_PARAMS.to_vec();
+  allowed.push( "by" );
+  allowed.sort_unstable();
+  if let Some( e ) = unknown_query_key( &params, &allowed )
+  {
+    respond_json( req, 400, &error_body( &e ) );
+    return;
+  }
+  match stats_data( &params, dir.to_path_buf() )
+  {
+    Ok( data ) =>
+    {
+      let groups : Vec< _ > = data
+        .groups
+        .iter()
+        .map( | g | serde_json::json!( { "key" : g.key, "count" : g.count, "cost_usd" : g.cost_usd } ) )
+        .collect();
+      let body = serde_json::json!(
+      {
+        "by"           : data.by,
+        "column_label" : data.column_label,
+        "total_events" : data.total_events,
+        "groups"       : groups,
+      } ).to_string();
+      respond_json( req, 200, &body );
+    }
+    Err( e ) => respond_json( req, 400, &error_body( &e ) ),
+  }
+}
+
+/// `GET /api/health` — journal file count, size, and date range.
+///
+/// `oldest`/`newest` are `null` rather than a placeholder string when the
+/// journal directory holds no files, so a consumer can distinguish "empty" from
+/// a real date without string-matching.
+fn respond_health( req : tiny_http::Request, dir : &Path )
+{
+  let h    = health_data( dir.to_path_buf() );
+  let body = serde_json::json!(
+  {
+    "files"  : h.files,
+    "bytes"  : h.bytes,
+    "oldest" : h.oldest,
+    "newest" : h.newest,
+  } ).to_string();
+  respond_json( req, 200, &body );
+}
+
 /// `.serve` — start an embedded HTTP server for web-based journal viewing.
 fn cmd_serve( params : &HashMap< String, String >, dir : PathBuf )
 {
+  let bind     = params.get( "bind" ).map_or( "127.0.0.1", String::as_str );
   let port_str = params
     .get( "port" )
     .cloned()
     .unwrap_or_else( || std::env::var( "CLJ_PORT" ).unwrap_or_else( | _ | "0".to_owned() ) );
   let port : u16 = port_str.parse().unwrap_or( 0 );
-  let addr       = format!( "127.0.0.1:{port}" );
-  let server     = match tiny_http::Server::http( &addr )
+  let refresh : u32 = params.get( "refresh" ).map_or( 10, | s | s.parse().unwrap_or_else( | _ |
+  {
+    eprintln!( "Error: invalid refresh '{s}' (expected non-negative integer seconds; 0 disables)" );
+    std::process::exit( 1 );
+  } ) );
+
+  let addr   = format!( "{bind}:{port}" );
+  let server = match tiny_http::Server::http( &addr )
   {
     Ok( s )  => s,
     Err( e ) => { eprintln!( "Error: could not start server on {addr}: {e}" ); std::process::exit( 1 ); }
   };
   let actual_port = server.server_addr().to_ip().map_or( port, | a | a.port() );
-  println!( "Listening on http://localhost:{actual_port}" );
+
+  // INV-002: loopback prints as `localhost` (AC-001's exact form); any widened
+  // bind prints the address actually listened on and warns, so the startup line
+  // can never understate how reachable the journal now is.
+  let loopback = matches!( bind, "127.0.0.1" | "localhost" | "::1" | "[::1]" );
+  let host     = if loopback { "localhost" } else { bind };
+  let url      = format!( "http://{host}:{actual_port}" );
+
+  // The warning precedes the startup line deliberately. A consumer that syncs
+  // on the startup line (any piped reader, including the test harness) is then
+  // guaranteed the warning is already written — emitting it afterwards makes
+  // the exposure signal racy for exactly the readers that most need it.
+  if !loopback
+  {
+    eprintln!( "Warning: bound to {bind} — journal data is reachable beyond this machine" );
+  }
+  println!( "Listening on {url}" );
   // Flush stdout so piped readers (e.g. integration test harness) see the port immediately.
   std::io::Write::flush( &mut std::io::stdout() ).ok();
 
-  let reader = JournalReader::open( dir );
+  if matches!( params.get( "open" ).map( String::as_str ), Some( "1" | "true" ) )
+  {
+    if let Err( e ) = open::that( &url )
+    {
+      eprintln!( "Warning: could not open {url} in browser: {e}" );
+    }
+  }
+
+  let page   = index_html( refresh );
+  let reader = JournalReader::open( dir.clone() );
   loop
   {
     let Ok( req ) = server.recv() else { continue; };
-    let url = req.url().to_owned();
-    if url.starts_with( "/api/events" )
+    let full = req.url().to_owned();
+    let ( path, query ) = full.split_once( '?' ).unwrap_or( ( full.as_str(), "" ) );
+    match path
     {
-      let filter = JournalFilter { limit : Some( 200 ), ..JournalFilter::default() };
-      let events = reader.query( &filter );
-      let body   = serde_json::to_string( &events ).unwrap_or_else( | _ | "[]".to_owned() );
-      let resp   = tiny_http::Response::from_string( body )
-        .with_header(
-          "Content-Type: application/json"
-            .parse::< tiny_http::Header >()
-            .expect( "static Content-Type header is valid ASCII" ),
-        );
-      let _ = req.respond( resp );
-    }
-    else
-    {
-      let resp = tiny_http::Response::from_string( INDEX_HTML )
-        .with_header(
-          "Content-Type: text/html; charset=utf-8"
-            .parse::< tiny_http::Header >()
-            .expect( "static Content-Type header is valid ASCII" ),
-        );
-      let _ = req.respond( resp );
+      "/api/events" => respond_events( req, &reader, query ),
+      "/api/stats"  => respond_stats( req, &dir, query ),
+      "/api/health" => respond_health( req, &dir ),
+      // Every other `/api/*` path is a client error, not a request for the
+      // dashboard — falling through to the HTML branch would answer a typo'd
+      // endpoint with 200 + text/html and hide the mistake.
+      p if p.starts_with( "/api/" ) => respond_json( req, 404, &error_body( &format!( "unknown endpoint '{p}'" ) ) ),
+      _ => respond_html( req, &page ),
     }
   }
 }
@@ -243,10 +517,15 @@ fn print_help()
   println!( "  until::<dur>        Events older than" );
   println!( "  type::<event_type>  execution|credential|gate_wait|retry|timeout|..." );
   println!( "  command::<name>     Exact command name (run, ask, isolated, refresh)" );
-  println!( "  exit_code::<n>      Exact exit code filter" );
+  println!( "  exit::<n>           Exact exit code filter" );
   println!( "  model::<substr>     Model name substring filter" );
+  println!( "  dir::<substr>       Event working-directory substring filter" );
+  println!( "  creds::<substr>     Credential name substring filter" );
   println!( "  limit::<n>          Max events to return" );
-  println!( "  dir::<path>         Journal directory (overrides CLR_JOURNAL_DIR)" );
+  println!();
+  println!( "{}", bold( "Global params (accepted by every command):" ) );
+  println!( "  journal_dir::<path> Journal directory (overrides CLR_JOURNAL_DIR)" );
+  println!( "  no_color::0|1       Suppress ANSI color codes (same as NO_COLOR=1)" );
   println!();
   println!( "{}", bold( "Command-specific params:" ) );
   println!( "  .list    format::table|json" );
@@ -254,7 +533,7 @@ fn print_help()
   println!( "  .search  pattern::<str>               (required)" );
   println!( "  .prune   keep::<dur>  dry_run::0|1" );
   println!( "  .export  output::<path>  format::json|jsonl|csv|table" );
-  println!( "  .serve   port::<n>" );
+  println!( "  .serve   port::<n>  bind::<addr>  open::0|1  refresh::<secs>" );
   println!( "  .chart   out::<path>  open::0|1" );
   println!();
   println!( "{}", bold( "Env vars:" ) );
@@ -270,7 +549,20 @@ fn main()
   let args    : Vec< String > = std::env::args().collect();
   let command = args.get( 1 ).map_or( ".help", String::as_str );
   let params  = parse_params( args.get( 2.. ).unwrap_or( &[] ) );
-  let dir     = resolve_journal_dir( &params );
+
+  // Unknown *command* outranks unknown *param* — `clj .bogus since::1d` should
+  // report the command, not lecture about a param that only looks wrong because
+  // the command it belongs to does not exist.
+  const COMMANDS : &[ &str ] =
+    &[ ".list", ".tail", ".stats", ".search", ".serve", ".prune", ".status", ".export", ".chart" ];
+  if COMMANDS.contains( &command ) { reject_unknown_params( command, &params ); }
+
+  if matches!( params.get( "no_color" ).map( String::as_str ), Some( "1" | "true" ) )
+  {
+    claude_journal_viewer::output::force_no_color();
+  }
+
+  let dir = resolve_journal_dir( &params );
 
   match command
   {

@@ -12,14 +12,27 @@ use std::{ collections::HashMap, path::PathBuf, time::SystemTime };
 
 // ── Directory resolution ──────────────────────────────────────────────────────
 
-/// Resolve the journal directory from `dir::` param, `CLR_JOURNAL_DIR` env,
-/// or the default `~/.clr/journal/` — falling back to `/tmp/.clr/journal` when
-/// `HOME` is unset or empty.
+/// Resolve the journal directory from `journal_dir::` param, `CLR_JOURNAL_DIR`
+/// env, or the default `~/.clr/journal/` — falling back to `/tmp/.clr/journal`
+/// when `HOME` is unset or empty.
+///
+/// Fix(param-dir-collision): read `journal_dir`, not `dir`
+/// Root cause: this consumed `dir::`, the key `docs/cli/param/07_dir.md` assigns
+///   to the event working-directory *filter* and that `JournalFilter::dir`
+///   already reserves. One name carried two meanings, so `clj .list
+///   dir::/home/u/alpha` silently repointed the reader at a nonexistent journal
+///   and printed "No events found." — indistinguishable from a filter that
+///   matched nothing. Meanwhile the documented `journal_dir::` was read by
+///   nothing at all.
+/// Pitfall: a param name that collides with a *data field* name is worse than an
+///   ugly one — the wrong reading still produces plausible output. When the
+///   library already reserves a name (`JournalFilter::dir`), the CLI must not
+///   spend it on something else.
 #[ must_use ]
 #[ inline ]
 pub fn resolve_journal_dir< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S > ) -> PathBuf
 {
-  if let Some( d ) = params.get( "dir" )
+  if let Some( d ) = params.get( "journal_dir" )
   {
     return PathBuf::from( d );
   }
@@ -85,10 +98,20 @@ pub fn parse_event_type( s : &str ) -> Result< EventType, String >
 
 /// Build a `JournalFilter` from the parsed param map.
 ///
+/// Fix(param-exit-collision): read `exit`, not `exit_code`
+/// Root cause: every documented example spells this `exit::`
+///   (`docs/cli/param/05_exit.md`), but the code read `exit_code`. Since unknown
+///   keys were accepted silently, `clj .list exit::2` returned the *unfiltered*
+///   list — the documented invocation looked like it worked and quietly widened
+///   the result set instead of narrowing it.
+/// Pitfall: `exit_code` is the JSON *field* name; `exit::` is the CLI *param*
+///   name. They are allowed to differ, but only one of them can be the key this
+///   function looks up, and it has to be the one the docs and help text print.
+///
 /// # Errors
 ///
 /// Returns a descriptive error string when any typed param (`since`, `until`,
-/// `type`, `exit_code`, `limit`) fails to parse.
+/// `type`, `exit`, `limit`) fails to parse.
 #[ inline ]
 pub fn build_filter< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S > ) -> Result< JournalFilter, String >
 {
@@ -103,14 +126,15 @@ pub fn build_filter< S : ::core::hash::BuildHasher >( params : &HashMap< String,
   }
   if let Some( s ) = params.get( "type" )    { f.event_type = Some( parse_event_type( s )? ); }
   if let Some( s ) = params.get( "command" ) { f.command = Some( s.clone() ); }
-  if let Some( s ) = params.get( "exit_code" )
+  if let Some( s ) = params.get( "exit" )
   {
     f.exit_code = Some(
       s.parse::< i32 >()
-        .map_err( | _ | format!( "invalid exit_code '{s}' (expected integer)" ) )?
+        .map_err( | _ | format!( "invalid exit '{s}' (expected integer)" ) )?
     );
   }
   if let Some( s ) = params.get( "model" )   { f.model = Some( s.clone() ); }
+  if let Some( s ) = params.get( "dir" )     { f.dir = Some( s.clone() ); }
   if let Some( s ) = params.get( "creds" )   { f.creds = Some( s.clone() ); }
   if let Some( s ) = params.get( "limit" )
   {
@@ -122,14 +146,87 @@ pub fn build_filter< S : ::core::hash::BuildHasher >( params : &HashMap< String,
   Ok( f )
 }
 
+/// Percent-decode one query-string component, treating `+` as a space.
+///
+/// Invalid escapes are passed through literally rather than rejected — a
+/// malformed `%zz` is far more likely to be a literal percent in a search
+/// pattern than an encoding the caller meant.
+fn percent_decode( raw : &str ) -> String
+{
+  let bytes = raw.as_bytes();
+  let mut out = Vec::with_capacity( bytes.len() );
+  let mut i = 0;
+  while i < bytes.len()
+  {
+    match bytes[ i ]
+    {
+      b'+' => { out.push( b' ' ); i += 1; }
+      b'%' if i + 2 < bytes.len() =>
+      {
+        let hex = raw.get( i + 1..i + 3 ).and_then( | h | u8::from_str_radix( h, 16 ).ok() );
+        if let Some( byte ) = hex { out.push( byte ); i += 3; }
+        else { out.push( b'%' ); i += 1; }
+      }
+      other => { out.push( other ); i += 1; }
+    }
+  }
+  String::from_utf8_lossy( &out ).into_owned()
+}
+
+/// Parse an HTTP query string into the same param map shape the CLI produces.
+///
+/// Accepts the portion after `?` (with or without a leading `?`), splits on `&`
+/// and `=`, and percent-decodes both halves. The result feeds
+/// [`build_filter`] directly, so the HTTP API and the `.list` command share one
+/// filter vocabulary instead of each defining its own.
+///
+/// A bare key with no `=` maps to an empty value; an empty segment is skipped.
+#[ must_use ]
+#[ inline ]
+pub fn parse_query_string( query : &str ) -> HashMap< String, String >
+{
+  let mut out = HashMap::new();
+  for pair in query.trim_start_matches( '?' ).split( '&' )
+  {
+    if pair.is_empty() { continue; }
+    let ( k, v ) = pair.split_once( '=' ).unwrap_or( ( pair, "" ) );
+    let key = percent_decode( k );
+    if key.is_empty() { continue; }
+    out.insert( key, percent_decode( v ) );
+  }
+  out
+}
+
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
-/// Returns `true` when `NO_COLOR` is set in the environment.
+/// Process-wide override set by [`force_no_color`], for the `no_color::` param.
+static FORCE_NO_COLOR : core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new( false );
+
+/// Suppress ANSI codes for the rest of the process, as `no_color::1` requires.
+///
+/// Fix(param-no-color-unread): make the documented `no_color::` param do something
+/// Root cause: `docs/cli/param/24_no_color.md` documents `no_color::1` with three
+///   worked examples, but nothing ever read the key — only the `NO_COLOR` env
+///   var. `clj .list no_color::1 > file` therefore wrote the escape codes the
+///   param exists to remove, silently, with exit 0.
+/// Pitfall: an override that only reads the environment cannot be driven by an
+///   argument. Routing the param through a real override (rather than mutating
+///   `NO_COLOR` in-process) keeps the two inputs to one decision function
+///   instead of making one input impersonate the other.
+#[ inline ]
+pub fn force_no_color()
+{
+  FORCE_NO_COLOR.store( true, core::sync::atomic::Ordering::Relaxed );
+}
+
+/// Returns `true` when `NO_COLOR` is set in the environment, or [`force_no_color`]
+/// was called.
 #[ must_use ]
 #[ inline ]
 pub fn no_color() -> bool
 {
-  std::env::var_os( "NO_COLOR" ).is_some()
+  FORCE_NO_COLOR.load( core::sync::atomic::Ordering::Relaxed )
+  || std::env::var_os( "NO_COLOR" ).is_some()
 }
 
 /// Wrap `s` in ANSI bold codes unless `NO_COLOR` is set.
@@ -234,58 +331,107 @@ pub fn list_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, 
 #[ inline ]
 pub fn stats_output< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
+  let data = stats_data( params, dir )?;
+  let mut out = format_stats_table( &data );
+  out.push( '\n' );
+  let _ = write!( out, "\nTotal: {} event(s)", data.total_events );
+  Ok( out )
+}
+
+/// One aggregated statistics bucket.
+///
+/// The structured unit behind both the `.stats` text table and the web
+/// dashboard's `/api/stats` JSON — the two renderings share this computation
+/// rather than each aggregating events themselves.
+#[ derive( Debug, Clone ) ]
+pub struct StatsGroup
+{
+  /// Group key — a date, model name, directory, or agent id depending on `by::`.
+  pub key : String,
+  /// Number of events in this group.
+  pub count : u64,
+  /// Summed `cost_usd` across the group; events without a cost contribute 0.
+  pub cost_usd : f64,
+}
+
+/// Aggregated statistics for one grouping dimension.
+#[ derive( Debug, Clone ) ]
+pub struct StatsData
+{
+  /// The `by::` dimension that produced this grouping (`day`, `model`, `dir`, `agent`).
+  pub by : String,
+  /// Column heading for the key column in the text rendering (`DATE`, `MODEL`, …).
+  pub column_label : String,
+  /// Groups in presentation order — already sorted per the dimension's own rule.
+  pub groups : Vec< StatsGroup >,
+  /// Total events matched by the filter, across all groups.
+  pub total_events : usize,
+}
+
+/// `.stats` — aggregate events into groups without rendering them.
+///
+/// Applies the same default as the text command: when `since::` is absent the
+/// window is the last 7 days.
+///
+/// # Errors
+///
+/// Returns `Err` when any filter param is invalid or `by::` is not one of
+/// `day`, `model`, `dir`, `agent`.
+#[ inline ]
+pub fn stats_data< S : ::core::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< StatsData, String >
+{
   let mut filter = build_filter( params )?;
   if filter.since.is_none() { filter.since = Some( Duration::from_secs( 7 * 86_400 ) ); }
 
   let events = JournalReader::open( dir ).query( &filter );
   let by     = params.get( "by" ).map_or( "day", String::as_str );
-  let mut out = String::new();
-  match by
+  let ( column_label, groups ) = match by
   {
-    "day"   =>
-    {
-      out.push_str( &stats_table(
+    "day" => (
+      "DATE",
+      group_events(
         &events,
         | ev | ev.ts.get( ..10 ).unwrap_or( "unknown" ).to_owned(),
-        "DATE",
         StatsOrder::KeyAscending,
-      ) );
-    }
-    "model" =>
-    {
-      out.push_str( &stats_table(
+      ),
+    ),
+    "model" => (
+      "MODEL",
+      group_events(
         &events,
         | ev | ev.fields.model.clone().unwrap_or_else( || "unknown".to_owned() ),
-        "MODEL",
         StatsOrder::KeyAscending,
-      ) );
-    }
-    "dir" =>
-    {
-      out.push_str( &stats_table(
+      ),
+    ),
+    "dir" => (
+      "DIR",
+      group_events(
         &events,
         | ev | ev.fields.dir.clone().unwrap_or_else( || "(no dir)".to_owned() ),
-        "DIR",
         StatsOrder::CountDescending,
-      ) );
-    }
-    "agent" =>
-    {
-      out.push_str( &stats_table(
+      ),
+    ),
+    "agent" => (
+      "AGENT",
+      group_events(
         &events,
         | ev | ev.fields.agent_id.clone().unwrap_or_else( || "(no agent)".to_owned() ),
-        "AGENT",
         StatsOrder::CountDescending,
-      ) );
-    }
+      ),
+    ),
     other => return Err( format!( "invalid by '{other}' (valid: day, model, dir, agent)" ) ),
-  }
-  out.push( '\n' );
-  let _ = write!( out, "\nTotal: {} event(s)", events.len() );
-  Ok( out )
+  };
+
+  Ok( StatsData
+  {
+    by           : by.to_owned(),
+    column_label : column_label.to_owned(),
+    groups,
+    total_events : events.len(),
+  } )
 }
 
-/// Row ordering for `stats_table`.
+/// Row ordering for a stats grouping.
 #[ derive( Clone, Copy ) ]
 enum StatsOrder
 {
@@ -295,8 +441,8 @@ enum StatsOrder
   CountDescending,
 }
 
-/// Build a stats table string grouped by the key returned by `key_fn`.
-fn stats_table< F >( events : &[ EventRecord ], key_fn : F, col_label : &str, order : StatsOrder ) -> String
+/// Bucket `events` by the key returned by `key_fn`, sorted per `order`.
+fn group_events< F >( events : &[ EventRecord ], key_fn : F, order : StatsOrder ) -> Vec< StatsGroup >
 where
   F : Fn( &EventRecord ) -> String,
 {
@@ -307,18 +453,28 @@ where
     entry.0 += ev.fields.cost_usd.unwrap_or( 0.0 );
     entry.1 += 1;
   }
-  let mut out = String::new();
-  out.push_str( &bold( &format!( "{col_label:<24}  COUNT     COST" ) ) );
-  out.push( '\n' );
-  let mut rows : Vec< _ > = buckets.into_iter().collect();
+  let mut rows : Vec< StatsGroup > = buckets
+    .into_iter()
+    .map( | ( key, ( cost_usd, count ) ) | StatsGroup { key, count, cost_usd } )
+    .collect();
   match order
   {
-    StatsOrder::KeyAscending    => rows.sort_by( | a, b | a.0.cmp( &b.0 ) ),
-    StatsOrder::CountDescending => rows.sort_by( | a, b | b.1.1.cmp( &a.1.1 ).then_with( || a.0.cmp( &b.0 ) ) ),
+    StatsOrder::KeyAscending    => rows.sort_by( | a, b | a.key.cmp( &b.key ) ),
+    StatsOrder::CountDescending => rows.sort_by( | a, b | b.count.cmp( &a.count ).then_with( || a.key.cmp( &b.key ) ) ),
   }
-  for ( key, ( cost, count ) ) in &rows
+  rows
+}
+
+/// Render a `StatsData` as the aligned text table used by `.stats`.
+fn format_stats_table( data : &StatsData ) -> String
+{
+  let mut out = String::new();
+  let label = &data.column_label;
+  out.push_str( &bold( &format!( "{label:<24}  COUNT     COST" ) ) );
+  out.push( '\n' );
+  for StatsGroup { key, count, cost_usd } in &data.groups
   {
-    let _ = writeln!( out, "{key:<24}  {count:<8}  ${cost:.4}" );
+    let _ = writeln!( out, "{key:<24}  {count:<8}  ${cost_usd:.4}" );
   }
   out
 }
@@ -366,20 +522,56 @@ pub fn search_output< S : ::core::hash::BuildHasher >( params : &HashMap< String
   Ok( out )
 }
 
+/// Journal health snapshot.
+///
+/// The structured unit behind both the `.status` text output and the web
+/// dashboard's `/api/health` JSON, so the two can never disagree about what
+/// "healthy" reports.
+#[ derive( Debug, Clone ) ]
+pub struct HealthData
+{
+  /// Journal directory the snapshot describes.
+  pub dir : PathBuf,
+  /// Number of `YYYY-MM-DD.jsonl` files present.
+  pub files : usize,
+  /// Combined size of those files in bytes.
+  pub bytes : u64,
+  /// Date of the oldest journal file, or `None` when the journal is empty.
+  pub oldest : Option< String >,
+  /// Date of the newest journal file, or `None` when the journal is empty.
+  pub newest : Option< String >,
+}
+
+/// `.status` — collect journal health without rendering it.
+#[ must_use ]
+#[ inline ]
+pub fn health_data( dir : PathBuf ) -> HealthData
+{
+  let reader = JournalReader::open( dir.clone() );
+  HealthData
+  {
+    files  : reader.file_count(),
+    bytes  : reader.total_bytes(),
+    oldest : reader.oldest_date(),
+    newest : reader.newest_date(),
+    dir,
+  }
+}
+
 /// `.status` — return a journal health string.
 #[ must_use ]
 #[ inline ]
 pub fn status_output( dir : PathBuf ) -> String
 {
-  let reader = JournalReader::open( dir.clone() );
-  let count  = reader.file_count();
-  let bytes  = reader.total_bytes();
-  let oldest = reader.oldest_date().unwrap_or_else( || "(none)".to_owned() );
-  let newest = reader.newest_date().unwrap_or_else( || "(none)".to_owned() );
+  let h      = health_data( dir );
+  let count  = h.files;
+  let bytes  = h.bytes;
+  let oldest = h.oldest.unwrap_or_else( || "(none)".to_owned() );
+  let newest = h.newest.unwrap_or_else( || "(none)".to_owned() );
   format!(
     "{}\ndir:    {}\nfiles:  {count}\nsize:   {bytes} bytes\noldest: {oldest}\nnewest: {newest}",
     bold( "Journal Status" ),
-    dir.display(),
+    h.dir.display(),
   )
 }
 

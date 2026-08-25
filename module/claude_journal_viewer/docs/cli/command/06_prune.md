@@ -2,13 +2,13 @@
 
 Delete old journal files by filename-date age.
 
--- **Parameters:** keep::, dry_run::
--- **Exit Codes:** 0 (success, including "dir not found" and "nothing to prune"), 1 (invalid param)
+-- **Parameters:** keep::, dry_run::, journal_dir::, no_color::
+-- **Exit Codes:** 0 (success, including "dir not found" and "nothing to prune"), 1 (invalid or unknown param)
 
 ### Syntax
 
 ```
-clj .prune [keep::RETENTION_SPEC] [dry_run::BOOL]
+clj .prune [keep::RETENTION_SPEC] [dry_run::BOOL] [journal_dir::PATH] [no_color::BOOL]
 ```
 
 ### Parameters
@@ -17,6 +17,12 @@ clj .prune [keep::RETENTION_SPEC] [dry_run::BOOL]
 |-----------|------|---------|----------|---------|
 | `keep` | RetentionSpec | `30d` | No | Age threshold — a duration, floored to whole days |
 | `dry_run` | Boolean | 0 | No | Show what would be pruned without deleting |
+| `journal_dir` | Path | ~/.clr/journal/ | No | Which journal is pruned — check it before a non-dry run |
+| `no_color` | Boolean | 0 | No | Disable ANSI colors |
+
+`.prune` accepts no event filters: it selects files by filename date, never by
+event content, so `since::`/`dir::` and the rest are rejected rather than
+quietly ignored on a command that deletes.
 
 **Algorithm (4 steps):**
 

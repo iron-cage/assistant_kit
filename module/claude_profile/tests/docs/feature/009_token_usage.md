@@ -500,9 +500,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-30: Sessions table shown when >1 `_active_*` marker exists; own session has `✓`
 
-- **Given:** Credential store contains 2 `_active_*` files: `_active_laptop_user1` → `alice@x.com` (current machine's own marker), `_active_desktop_user1` → `bob@x.com` (another machine). Two saved accounts with valid quota.
+- **Given:** Credential store contains 2 `_active_*` files: `_active_laptop_devuser` → `alice@x.com` (current machine's own marker), `_active_desktop_devuser` → `bob@x.com` (another machine). Two saved accounts with valid quota.
 - **When:** `clp .usage` is run.
-- **Then:** Output after the footer contains a `Sessions` table with two rows: `user1@laptop` → `alice@x.com ✓` and `user1@desktop` → `bob@x.com`. The `✓` marks the current machine's own session.
+- **Then:** Output after the footer contains a `Sessions` table with two rows: `devuser@laptop` → `alice@x.com ✓` and `devuser@desktop` → `bob@x.com`. The `✓` marks the current machine's own session.
 - **Exit:** 0
 - **Source fn:** `ft30_009_sessions_table_shown_auto_multiple_markers` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md)

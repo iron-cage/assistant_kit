@@ -75,11 +75,11 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 
 ### FT-04: `assignee::USER@MACHINE` (no `name::`) clears marker for that identity (Feature 065)
 
-- **Given:** `_active_w003_user1` pre-seeded = `alice@corp.com` in credential store.
-- **When:** `clp .accounts assignee::user1@w003` (no `name::`)
-- **Then:** Stdout contains `unassigned` and names `_active_w003_user1`; `_active_w003_user1` cleared/removed from credential store.
+- **Given:** `_active_devbox_devuser` pre-seeded = `alice@corp.com` in credential store.
+- **When:** `clp .accounts assignee::devuser@devbox` (no `name::`)
+- **Then:** Stdout contains `unassigned` and names `_active_devbox_devuser`; `_active_devbox_devuser` cleared/removed from credential store.
 - **Exit:** 0
-- **Note:** Corrected identity/marker literals to match the cited test (`user1@w003` / `_active_w003_user1`, not `testuser@testmachine` / `_active_testmachine_testuser`). The cited test never calls `write_account()`, so no credential file exists to be "modified" either way — that clause is dropped as untested/vacuous.
+- **Note:** Corrected identity/marker literals to match the cited test (`devuser@devbox` / `_active_devbox_devuser`, not `testuser@testmachine` / `_active_testmachine_testuser`). The cited test never calls `write_account()`, so no credential file exists to be "modified" either way — that clause is dropped as untested/vacuous.
 - **Source fn:** `ft02_assignee_unassign_clears_marker` (in `tests/cli/account_assign_test.rs`)
 
 ### FT-05: Unknown account exits 1 (Feature 065)

@@ -27,7 +27,7 @@ user:     $USER env var
 sanitize: keep [a-zA-Z0-9\-\.]; replace all other chars with '_'
 ```
 
-Example: hostname `w003`, user `user1` → `_active_w003_user1`
+Example: hostname `devbox`, user `devuser` → `_active_devbox_devuser`
 
 ### Content Format
 

@@ -50,10 +50,10 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 > `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior was absorbed into `.accounts`/`.usage` as `assign::1` + `for::`. Feature 064 replaced both with `active::USER@MACHINE name::X`. Feature 065 renamed `active::` → `assignee::` and added `assignee::0` as the current-machine sentinel.
 > - `clp .account.assign name::X` → exits 1 with generic "unknown command" error (fully deregistered)
 > - `clp .accounts assign::1 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 064)
-> - `clp .accounts active::user1@w003 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 065)
+> - `clp .accounts active::devuser@devbox name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 065)
 > - `clp .accounts assignee::0 name::X` → writes marker for current machine (current behavior — `0` = `$USER@$HOSTNAME`)
 > - `clp .accounts assignee::bob@laptop name::X` → writes marker for specific machine (current behavior)
-> - `clp .accounts assignee::user1@w003` (no `name::`) → clears/unassigns the marker (Feature 065)
+> - `clp .accounts assignee::devuser@devbox` (no `name::`) → clears/unassigns the marker (Feature 065)
 >
 > See [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) AC-01 through AC-10.
 

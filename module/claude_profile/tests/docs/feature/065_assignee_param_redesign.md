@@ -34,9 +34,9 @@
 
 ### FT-01: `assignee::USER@MACHINE name::X` writes marker
 
-- **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing `_active_w003_user1`.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` contains `alice@corp.com`. stdout contains `assigned alice@corp.com for user1@w003  →  _active_w003_user1`. No credential files modified. `alice@corp.com.json` unchanged.
+- **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing `_active_devbox_devuser`.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` contains `alice@corp.com`. stdout contains `assigned alice@corp.com for devuser@devbox  →  _active_devbox_devuser`. No credential files modified. `alice@corp.com.json` unchanged.
 - **Exit:** 0
 - **Maps to:** AC-01
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
@@ -56,9 +56,9 @@
 
 ### FT-03: `assignee::USER@MACHINE` (no `name::`) unassigns marker
 
-- **Given:** `{credential_store}/_active_w003_user1` exists containing `alice@corp.com`.
-- **When:** `clp .accounts assignee::user1@w003` (no `name::`)
-- **Then:** Exits 0. `_active_w003_user1` is cleared or deleted. stdout contains `unassigned user1@w003  →  _active_w003_user1 cleared`. No credential files modified.
+- **Given:** `{credential_store}/_active_devbox_devuser` exists containing `alice@corp.com`.
+- **When:** `clp .accounts assignee::devuser@devbox` (no `name::`)
+- **Then:** Exits 0. `_active_devbox_devuser` is cleared or deleted. stdout contains `unassigned devuser@devbox  →  _active_devbox_devuser cleared`. No credential files modified.
 - **Exit:** 0
 - **Maps to:** AC-03
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
@@ -78,9 +78,9 @@
 
 ### FT-05: `assignee::USER@MACHINE name::X dry::1` previews without writing
 
-- **Given:** `alice@corp.com.credentials.json` exists. No existing `_active_w003_user1`.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com dry::1`
-- **Then:** Exits 0. stdout contains `[dry-run] would assign alice@corp.com for user1@w003  →  _active_w003_user1`. No `_active_*` file created.
+- **Given:** `alice@corp.com.credentials.json` exists. No existing `_active_devbox_devuser`.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com dry::1`
+- **Then:** Exits 0. stdout contains `[dry-run] would assign alice@corp.com for devuser@devbox  →  _active_devbox_devuser`. No `_active_*` file created.
 - **Exit:** 0
 - **Maps to:** AC-05
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
@@ -112,7 +112,7 @@
 ### FT-08: `assignee::USER@MACHINE name::ghost` — unknown account exits 1
 
 - **Given:** Credential store does NOT contain `ghost@example.com`.
-- **When:** `clp .accounts assignee::user1@w003 name::ghost@example.com`
+- **When:** `clp .accounts assignee::devuser@devbox name::ghost@example.com`
 - **Then:** Exits 1. Error indicates account not found. No `_active_*` file written.
 - **Exit:** 1
 - **Maps to:** AC-08
@@ -134,7 +134,7 @@
 ### FT-10: `active::USER@MACHINE name::X` exits 1 with REMOVED_TOGGLE message
 
 - **Given:** Clean environment.
-- **When:** `clp .accounts active::user1@w003 name::alice@corp.com`
+- **When:** `clp .accounts active::devuser@devbox name::alice@corp.com`
 - **Then:** Exits 1. stderr contains migration message: "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)". No files modified.
 - **Exit:** 1
 - **Maps to:** AC-10
@@ -145,8 +145,8 @@
 ### FT-11: `assignee::` does NOT modify `owner` field
 
 - **Given:** `alice@corp.com.json` exists with `"owner": "other@machine"`. `alice@corp.com.credentials.json` exists.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. Assignee marker write is ownership-neutral.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. Assignee marker write is ownership-neutral.
 - **Exit:** 0
 - **Maps to:** AC-11
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
@@ -158,8 +158,8 @@
 - **Given:** `alice@corp.com.credentials.json` exists.
 - **When (a):** `clp .accounts assignee::"alice@my laptop" name::alice@corp.com`
 - **Then (a):** Exits 0. `_active_my_laptop_alice` written. Space in `my laptop` → `_`.
-- **When (b):** `clp .accounts assignee::user1@w003.local name::alice@corp.com`
-- **Then (b):** Exits 0. `_active_w003.local_user1` written. Dot is preserved verbatim.
+- **When (b):** `clp .accounts assignee::devuser@devbox.local name::alice@corp.com`
+- **Then (b):** Exits 0. `_active_devbox.local_devuser` written. Dot is preserved verbatim.
 - **Exit:** 0
 - **Maps to:** AC-12
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
@@ -169,8 +169,8 @@
 ### FT-13: `force::1 assignee::USER@MACHINE name::X` — `force::1` silently ignored
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com force::1`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written with `alice@corp.com`. `force::1` is silently ignored — `assignee::` has no ownership gate. Output identical to the same command without `force::1`.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com force::1`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` written with `alice@corp.com`. `force::1` is silently ignored — `assignee::` has no ownership gate. Output identical to the same command without `force::1`.
 - **Exit:** 0
 - **Maps to:** AC-13
 - **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)

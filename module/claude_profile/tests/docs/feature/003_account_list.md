@@ -303,9 +303,9 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-20: `format::json` includes `owner` and `is_owned` fields per account
 
-- **Given:** Account A has `{name}.json` with `owner = "w003_user1"` (matches current machine identity). Account B has no `owner` field.
+- **Given:** Account A has `{name}.json` with `owner = "devbox_devuser"` (matches current machine identity). Account B has no `owner` field.
 - **When:** `clp .accounts format::json`
-- **Then:** Account A JSON object contains `owner: "w003_user1"` and `is_owned: true`. Account B JSON object contains `owner: ""` and `is_owned: true` (unowned = owned by all).
+- **Then:** Account A JSON object contains `owner: "devbox_devuser"` and `is_owned: true`. Account B JSON object contains `owner: ""` and `is_owned: true` (unowned = owned by all).
 - **Exit:** 0
 - **Source fn:** `mre_324_json_output_keys` (key presence), `mre_324_json_owner_is_owned_values` (matching owner → true, unowned → true), `mre_324_json_is_owned_false_for_foreign_owner` (foreign owner → false)
 - **Source:** [003_account_list.md AC-20](../../../docs/feature/003_account_list.md)

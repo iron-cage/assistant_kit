@@ -16,27 +16,27 @@ List all saved accounts (identity view) or run per-account mutations (`assignee:
 ```bash
 clp .accounts
 clp .accounts name::alice@acme.com
-clp .accounts alice@acme.com                         # positional: bare name at any position
-clp .accounts car                                     # prefix: first saved account starting with "car"
-clp .accounts cols::+host,-tier                      # add host column, remove tier column
-clp .accounts cols::-owner                            # hide owner column
-clp .accounts cols::-inference_provider               # hide inference provider column
-clp .accounts cols::+backend                          # show backend column (anthropic/redirect)
-clp .accounts tags::kimi_pool                         # only accounts carrying kimi_pool
-clp .accounts tags::kimi_pool,ci cols::+tags          # all listed tags required; show Tags column
-clp .accounts assignee::user1@w003 name::alice@acme.com  # write per-machine marker for alice
-clp .accounts assignee::0 name::alice@acme.com           # write marker for current machine
-clp .accounts assignee::user1@w003                       # unassign (clear) marker for user1@w003
-clp .accounts assignee::0                                # unassign current machine's marker
-clp .accounts owner::0 name::alice@acme.com            # clear ownership (G8 gate)
-clp .accounts owner::0 name::alice@acme.com force::1   # bypass G8
-clp .accounts owner::user1@w003 name::alice@acme.com   # set ownership
-clp .accounts lock::1 name::alice@acme.com             # claim-lock: block auto-selection and .account.use/assignee::
-clp .accounts lock::0 name::alice@acme.com             # clear claim-lock
-clp .accounts reserve::1 name::alice@acme.com          # deprioritize for rotation (soft — still selectable as last resort)
-clp .accounts reserve::0 name::alice@acme.com          # clear reservation
-clp .accounts refresh::1                              # fetch live quota (HTTP)
-clp .accounts refresh::1 sort::renew                 # sorted by renewal, live data
+clp .accounts alice@acme.com                                 # positional: bare name at any position
+clp .accounts car                                            # prefix: first saved account starting with "car"
+clp .accounts cols::+host,-tier                              # add host column, remove tier column
+clp .accounts cols::-owner                                   # hide owner column
+clp .accounts cols::-inference_provider                      # hide inference provider column
+clp .accounts cols::+backend                                 # show backend column (anthropic/redirect)
+clp .accounts tags::kimi_pool                                # only accounts carrying kimi_pool
+clp .accounts tags::kimi_pool,ci cols::+tags                 # all listed tags required; show Tags column
+clp .accounts assignee::devuser@devbox name::alice@acme.com  # write per-machine marker for alice
+clp .accounts assignee::0 name::alice@acme.com               # write marker for current machine
+clp .accounts assignee::devuser@devbox                       # unassign (clear) marker for devuser@devbox
+clp .accounts assignee::0                                    # unassign current machine's marker
+clp .accounts owner::0 name::alice@acme.com                  # clear ownership (G8 gate)
+clp .accounts owner::0 name::alice@acme.com force::1         # bypass G8
+clp .accounts owner::devuser@devbox name::alice@acme.com     # set ownership
+clp .accounts lock::1 name::alice@acme.com                   # claim-lock: block auto-selection and .account.use/assignee::
+clp .accounts lock::0 name::alice@acme.com                   # clear claim-lock
+clp .accounts reserve::1 name::alice@acme.com                # deprioritize for rotation (soft — still selectable as last resort)
+clp .accounts reserve::0 name::alice@acme.com                # clear reservation
+clp .accounts refresh::1                                     # fetch live quota (HTTP)
+clp .accounts refresh::1 sort::renew                         # sorted by renewal, live data
 clp .accounts format::json
 clp .accounts format::table
 ```
@@ -88,7 +88,7 @@ clp .accounts format::table
 ```bash
 clp .accounts
 # alice@acme.com
-#   Owner:   user1@w003
+#   Owner:   devuser@devbox
 #   Active:  yes
 #   Current: no
 #   Sub:     max
@@ -100,9 +100,9 @@ clp .accounts
 clp .accounts format::table
 # Accounts
 #
-#    Account         Owner        Active  Sub   Tier                     Expires
-# -  --------------  -----------  ------  ----  -----------------------  ---------
-# ✓  alice@acme.com  user1@w003   yes     max   default_claude_max_20x   in 2h 11m
+#    Account         Owner           Active  Sub   Tier                     Expires
+# -  --------------  --------------  ------  ----  -----------------------  ---------
+# ✓  alice@acme.com  devuser@devbox  yes     max   default_claude_max_20x   in 2h 11m
 
 clp .accounts owner::0 name::alice@acme.com
 # unclaimed alice@acme.com
@@ -939,11 +939,11 @@ Evaluated against `.account.use` and `.usage` under the strict [command_group](.
 **Fully removed (Feature 037).** The interim `.accounts assign::1 name::X` migration path is also removed (Feature 064 — `assign::` is now a REMOVED_TOGGLE). The `active::` migration path introduced in Feature 064 is itself now a REMOVED_TOGGLE (Feature 065). Use `.accounts assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) instead.
 
 ```bash
-clp .accounts assignee::user1@w003 name::alice@corp.com
-clp .accounts assignee::0 name::alice@corp.com          # current machine
+clp .accounts assignee::devuser@devbox name::alice@corp.com
+clp .accounts assignee::0 name::alice@corp.com               # current machine
 clp .accounts assignee::bob@laptop name::alice@corp.com
-clp .accounts assignee::user1@w003                      # unassign marker (no name::)
-clp .accounts assignee::0                               # unassign current machine's marker
+clp .accounts assignee::devuser@devbox                       # unassign marker (no name::)
+clp .accounts assignee::0                                    # unassign current machine's marker
 ```
 
 ---

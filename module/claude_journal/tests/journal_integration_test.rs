@@ -378,14 +378,14 @@ fn it12_new_fields_serialize_when_present()
   let fields = EventFields
   {
     user : Some( "i4".to_owned() ),
-    host : Some( "w002".to_owned() ),
+    host : Some( "nodeB".to_owned() ),
     args : Some( vec![ "--foo".to_owned(), "bar".to_owned() ] ),
     ..EventFields::default()
   };
   let json = serde_json::to_value( &fields ).expect( "serialize" );
 
   assert_eq!( json[ "user" ], "i4", "user key must be present with correct value" );
-  assert_eq!( json[ "host" ], "w002", "host key must be present with correct value" );
+  assert_eq!( json[ "host" ], "nodeB", "host key must be present with correct value" );
   assert_eq!( json[ "args" ], serde_json::json!( [ "--foo", "bar" ] ), "args key must be present with correct value" );
 }
 
@@ -648,13 +648,13 @@ fn it19_attribution_fields_serialize_when_present()
   let fields = EventFields
   {
     account  : Some( "alice@example.com".to_owned() ),
-    agent_id : Some( "alice@w003/a/b/".to_owned() ),
+    agent_id : Some( "alice@devbox/a/b/".to_owned() ),
     ..EventFields::default()
   };
   let json = serde_json::to_value( &fields ).expect( "serialize" );
 
   assert_eq!( json[ "account" ], "alice@example.com", "account key must be present with correct value" );
-  assert_eq!( json[ "agent_id" ], "alice@w003/a/b/", "agent_id key must be present with correct value" );
+  assert_eq!( json[ "agent_id" ], "alice@devbox/a/b/", "agent_id key must be present with correct value" );
 }
 
 // ── IT-20: account/agent_id omitted when None ─────────────────────────────────
@@ -700,11 +700,11 @@ fn it21_legacy_line_without_attribution_fields_parses()
 #[ test ]
 fn it22_compose_agent_id_exact_format()
 {
-  assert_eq!( compose_agent_id( "alice", "w003", "/a/b" ), "alice@w003/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "devbox", "/a/b" ), "alice@devbox/a/b/" );
   assert_eq!
   (
-    compose_agent_id( "alice", "w003", "/home/alice/assistant/module/claude_runner" ),
-    "alice@w003/home/alice/assistant/module/claude_runner/",
+    compose_agent_id( "alice", "devbox", "/home/alice/assistant/module/claude_runner" ),
+    "alice@devbox/home/alice/assistant/module/claude_runner/",
     "format must match the canonical AGENT_ID shape"
   );
 }
@@ -718,6 +718,6 @@ fn it22_compose_agent_id_exact_format()
 #[ test ]
 fn it23_compose_agent_id_never_double_slashes()
 {
-  assert_eq!( compose_agent_id( "alice", "w003", "/a/b/" ), "alice@w003/a/b/" );
-  assert_eq!( compose_agent_id( "alice", "w003", "/a/b//" ), "alice@w003/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "devbox", "/a/b/" ), "alice@devbox/a/b/" );
+  assert_eq!( compose_agent_id( "alice", "devbox", "/a/b//" ), "alice@devbox/a/b/" );
 }

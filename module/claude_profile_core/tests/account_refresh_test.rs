@@ -1001,7 +1001,7 @@ fn ft26_071_refresh_redirect_account_returns_none_credentials_unchanged()
 /// temp HOME. `run_isolated` captures that file as `Some(blank)` and every write-back
 /// site persisted it verbatim over the store's non-blank record: the `None`-branch
 /// `fs::write`, the `Some(paths)`-branch store write + `save(..., Some(bytes))`, and
-/// the `is_still_active` live-file write. On 2026-08-12 one sweep on w003 blanked ten
+/// the `is_still_active` live-file write. On 2026-08-12 one sweep on devbox blanked ten
 /// accounts' store records in 19 seconds (commit c19b8003de).
 ///
 /// # Why Not Caught

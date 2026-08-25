@@ -2,26 +2,30 @@
 
 Show journal health, size, and configuration.
 
--- **Parameters:** verbosity::, journal_dir::
--- **Exit Codes:** 0 (success)
+-- **Parameters:** journal_dir::, no_color::
+-- **Exit Codes:** 0 (success), 1 (unknown or unimplemented param)
 
 ### Syntax
 
 ```
-clj .status [verbosity::LEVEL] [journal_dir::PATH]
+clj .status [journal_dir::PATH] [no_color::BOOL]
 ```
 
 ### Parameters
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| `verbosity` | Integer | 1 | No | Detail level (0=compact, 1=standard, 2=per-file) |
 | `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override |
+| `no_color` | Boolean | 0 | No | Disable ANSI colors |
+
+**Not yet implemented:** `verbosity::`. The report is always rendered at the
+standard level shown below; passing `verbosity::` exits 1 rather than being
+silently ignored.
 
 **Algorithm (2 steps):**
 
 1. Open journal directory, count files, sum total bytes, extract oldest/newest dates
-2. Render health report at requested verbosity
+2. Render the health report
 
 **Output (verbosity 1):**
 

@@ -9,14 +9,14 @@ Mutation param on `.accounts` and `.usage` that sets or clears the `owner` field
 **Behavior:**
 
 ```text
-owner::user1@w003 name::X          → write_owner(X, store, "user1@w003")
-owner::0 name::X                    → write_owner(X, store, "")     (release)
-owner::0                             → batch-clear all owned accounts in filter
-owner::user1@w003 name::X,Y,Z      → batch set owner for X, Y, Z
-owner::0 name::X,Y,Z               → batch clear owner for X, Y, Z
-owner::user1@w003 name::X dry::1   → preview without writing
-owner::user1@w003 name::X force::1 → bypass G8 even if owned by another
-owner::0 name::X force::1          → bypass G8 for ownership release
+owner::devuser@devbox name::X           → write_owner(X, store, "devuser@devbox")
+owner::0 name::X                        → write_owner(X, store, "")     (release)
+owner::0                                → batch-clear all owned accounts in filter
+owner::devuser@devbox name::X,Y,Z       → batch set owner for X, Y, Z
+owner::0 name::X,Y,Z                    → batch clear owner for X, Y, Z
+owner::devuser@devbox name::X dry::1    → preview without writing
+owner::devuser@devbox name::X force::1  → bypass G8 even if owned by another
+owner::0 name::X force::1               → bypass G8 for ownership release
 ```
 
 **`owner::0` sentinel:** The literal string `"0"` releases ownership — calls `write_owner(name, store, "")` to clear the `owner` field in `{name}.json`. This replaces the former `unclaim::1` param (removed in Feature 064). Batch: when `owner::0` is present and `name::` is absent, ownership is cleared for all accounts in the current filtered set; non-owned accounts are skipped with a `"skip"` message rather than exiting 1.

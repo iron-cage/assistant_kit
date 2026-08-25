@@ -46,13 +46,14 @@ parameters layer additional constraints.
 
 ---
 
-### TC-3: `bind` rejects invalid IP address — ⏳ Phase 2
+### TC-3: `bind` rejects invalid IP address
 
 - **Given:** clean environment
-- **When:** `clj .serve bind::"999.999.999.999"`
-- **Then:** exit 1; stderr indicates the address is not a valid IPv4/IPv6 address
+- **When:** `clj .serve bind::"999.999.999.999" port::0`
+- **Then:** exit 1; stderr contains `could not start server on 999.999.999.999:0`
 - **Exit:** 1
-- **Blocked on:** `bind::` being wired at all. `cmd_serve()` never reads a `bind` key (`src/cli_main.rs:168` hardcodes `127.0.0.1`), so today this invocation exits 0 on clean shutdown — the "constraint" this case asserts has no code to enforce it, and writing the test now would encode the wrong expectation
+- **Note:** the rejection happens at bind time, not parse time — the value is handed to `tiny_http::Server::http()` unvalidated and the OS refuses it. The assertion is therefore on the bind-failure message, not on a "not a valid IPv4/IPv6 address" wording that no code produces. What the case actually protects against is a malformed address being silently swallowed in favour of some default
+- **Implemented as:** `tc3_invalid_bind_address_exits_1`
 - **Source:** [type/03_string.md](../../../../docs/cli/type/03_string.md), [param/16_bind.md](../../../../docs/cli/param/16_bind.md)
 
 ---

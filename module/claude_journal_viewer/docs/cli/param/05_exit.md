@@ -15,6 +15,11 @@ clj .list exit::4 since::1d          # Timeouts in last day
 clj .list exit::1 command::ask       # Ask failures
 ```
 
+The parameter is `exit`; `exit_code` is the name of the *JSON field* it matches
+against (and the key in `format::json` output). Passing `exit_code::` on the
+command line is an error, not a synonym — see
+[`.list`](../command/01_list.md)'s unknown-parameter handling.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -32,6 +37,10 @@ clj .list exit::1 command::ask       # Ask failures
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | All exit codes |
+| 2 | [`.tail`](../command/02_tail.md) | -- | All exit codes |
+| 3 | [`.stats`](../command/03_stats.md) | -- | All exit codes |
+| 4 | [`.search`](../command/04_search.md) | -- | All exit codes |
+| 8 | [`.export`](../command/08_export.md) | -- | All exit codes |
 
 ### Referenced User Stories
 

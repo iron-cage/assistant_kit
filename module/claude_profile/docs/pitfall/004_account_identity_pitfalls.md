@@ -13,7 +13,7 @@ Account identity — name inference, machine-specific markers, and test fixture 
 
 ### Pitfall 1 — Active marker filename can collide with test machine identity (BUG-308)
 
-Tests that hardcode `_active_w003_user1` as an "other machine" marker will fail on machines where `hostname=w003` and `user=user1` — the fixture name matches the own marker, causing it to be returned by `active_marker_filename()` instead of treated as a foreign marker.
+Tests that hardcode `_active_devbox_devuser` as an "other machine" marker will fail on machines where `hostname=devbox` and `user=devuser` — the fixture name matches the own marker, causing it to be returned by `active_marker_filename()` instead of treated as a foreign marker.
 
 **Fix:** Use synthetic hostnames (`_active_testhost1_tst1`, `_active_testhost2_tst2`) that will never match a real machine. Add `assert_ne!` guards verifying the synthetic names differ from the actual own marker.
 

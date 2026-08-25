@@ -49,11 +49,11 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 
 ---
 
-### EC-1: `assignee::user1@w003 name::X` writes `_active_w003_user1 = X`
+### EC-1: `assignee::devuser@devbox name::X` writes `_active_devbox_devuser = X`
 
-- **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing `_active_w003_user1` marker.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` contains `alice@corp.com`. No other files modified (credentials, `{name}.json`, `~/.claude.json` all unchanged).
+- **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing `_active_devbox_devuser` marker.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` contains `alice@corp.com`. No other files modified (credentials, `{name}.json`, `~/.claude.json` all unchanged).
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
@@ -69,11 +69,11 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 
 ---
 
-### EC-3: `assignee::user1@w003` (no `name::`) clears `_active_w003_user1`
+### EC-3: `assignee::devuser@devbox` (no `name::`) clears `_active_devbox_devuser`
 
-- **Given:** `{credential_store}/_active_w003_user1` exists containing `alice@corp.com`.
-- **When:** `clp .accounts assignee::user1@w003` (no `name::`)
-- **Then:** Exits 0. `_active_w003_user1` is cleared or deleted. No credential files modified.
+- **Given:** `{credential_store}/_active_devbox_devuser` exists containing `alice@corp.com`.
+- **When:** `clp .accounts assignee::devuser@devbox` (no `name::`)
+- **Then:** Exits 0. `_active_devbox_devuser` is cleared or deleted. No credential files modified.
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
@@ -99,30 +99,30 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 
 ---
 
-### EC-6: `assignee::@w003` (empty user component) exits 1
+### EC-6: `assignee::@devbox` (empty user component) exits 1
 
 - **Given:** Clean environment.
-- **When:** `clp .accounts assignee::@w003 name::alice@corp.com`
+- **When:** `clp .accounts assignee::@devbox name::alice@corp.com`
 - **Then:** Exits 1. Error about empty user component. No `_active_*` file written.
 - **Exit:** 1
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
 ---
 
-### EC-7: `assignee::user1@` (empty machine component) exits 1
+### EC-7: `assignee::devuser@` (empty machine component) exits 1
 
 - **Given:** Clean environment.
-- **When:** `clp .accounts assignee::user1@ name::alice@corp.com`
+- **When:** `clp .accounts assignee::devuser@ name::alice@corp.com`
 - **Then:** Exits 1. Error about empty machine component. No `_active_*` file written.
 - **Exit:** 1
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
 ---
 
-### EC-8: `assignee::user1@w003 name::X dry::1` previews without writing
+### EC-8: `assignee::devuser@devbox name::X dry::1` previews without writing
 
-- **Given:** `alice@corp.com.credentials.json` exists. No existing `_active_w003_user1`.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com dry::1`
+- **Given:** `alice@corp.com.credentials.json` exists. No existing `_active_devbox_devuser`.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com dry::1`
 - **Then:** Exits 0. stdout contains `[dry-run]` preview message. No `_active_*` file created or modified.
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
@@ -149,10 +149,10 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 
 ---
 
-### EC-11: `assignee::user1@w003 name::unknown` exits 1 — account not found
+### EC-11: `assignee::devuser@devbox name::unknown` exits 1 — account not found
 
 - **Given:** Credential store does NOT contain `ghost@example.com`.
-- **When:** `clp .accounts assignee::user1@w003 name::ghost@example.com`
+- **When:** `clp .accounts assignee::devuser@devbox name::ghost@example.com`
 - **Then:** Exits 1. Error indicates account not found. No `_active_*` file created.
 - **Exit:** 1
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
@@ -172,8 +172,8 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 ### EC-13: Dot and hyphen in machine component preserved
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
-- **When:** `clp .accounts assignee::user1@w003.local name::alice@corp.com`
-- **Then:** Exits 0. `{credential_store}/_active_w003.local_user1` contains `alice@corp.com`. Dot is kept verbatim.
+- **When:** `clp .accounts assignee::devuser@devbox.local name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_devbox.local_devuser` contains `alice@corp.com`. Dot is kept verbatim.
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
@@ -192,8 +192,8 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 ### EC-15: `assignee::user@host name::X` does NOT modify `owner` field
 
 - **Given:** `alice@corp.com.json` exists with `"owner": "other@machine"`.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. `assignee::` is marker-only.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. `assignee::` is marker-only.
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
@@ -202,8 +202,8 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 ### EC-16: `force::1 assignee::user@host name::X` — `force::1` silently ignored
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
-- **When:** `clp .accounts assignee::user1@w003 name::alice@corp.com force::1`
-- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written with `alice@corp.com`. `force::1` is silently ignored — `assignee::` has no ownership gate. Output identical to the same command without `force::1`.
+- **When:** `clp .accounts assignee::devuser@devbox name::alice@corp.com force::1`
+- **Then:** Exits 0. `{credential_store}/_active_devbox_devuser` written with `alice@corp.com`. `force::1` is silently ignored — `assignee::` has no ownership gate. Output identical to the same command without `force::1`.
 - **Exit:** 0
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
@@ -212,7 +212,7 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 ### EC-17: `active::user@host name::X` exits 1 — REMOVED_TOGGLE migration message
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
-- **When:** `clp .accounts active::user1@w003 name::alice@corp.com`
+- **When:** `clp .accounts active::devuser@devbox name::alice@corp.com`
 - **Then:** Exits 1. stderr contains migration message referencing `assignee::`. No `_active_*` file written.
 - **Exit:** 1
 - **Note:** `active::` is a REMOVED_TOGGLE (Feature 065). The migration message directs users to `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine).

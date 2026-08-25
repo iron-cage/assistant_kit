@@ -2,15 +2,15 @@
 
 List journal events with filtering and sort.
 
--- **Parameters:** since::, until::, type::, command::, exit::, model::, dir::, creds::, limit::, format::, sort::, reverse::
--- **Exit Codes:** 0 (success), 1 (invalid param)
+-- **Parameters:** since::, until::, type::, command::, exit::, model::, dir::, creds::, limit::, format::, journal_dir::, no_color::
+-- **Exit Codes:** 0 (success), 1 (invalid, unknown, or unimplemented param)
 
 ### Syntax
 
 ```
 clj .list [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [command::CMD]
-          [exit::CODE] [model::NAME] [dir::PATH] [creds::NAME] [limit::N]
-          [format::FORMAT] [sort::FIELD] [reverse::BOOL]
+          [exit::CODE] [model::NAME] [dir::SUBSTR] [creds::NAME] [limit::N]
+          [format::FORMAT] [journal_dir::PATH] [no_color::BOOL]
 ```
 
 ### Parameters
@@ -23,12 +23,23 @@ clj .list [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [command::CMD]
 | `command` | String | -- | No | Filter by clr command |
 | `exit` | Integer | -- | No | Filter by exit code |
 | `model` | String | -- | No | Filter by model name (substring) |
-| `dir` | Path | -- | No | Filter by working directory (substring) |
+| `dir` | Path | -- | No | Filter by the event's own working directory (substring) |
 | `creds` | String | -- | No | Filter by credential name |
 | `limit` | Integer | 50 | No | Max events to display |
 | `format` | OutputFormat | table | No | Output format |
-| `sort` | SortField | time | No | Sort field |
-| `reverse` | Boolean | 0 | No | Reverse sort order |
+| `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override |
+| `no_color` | Boolean | 0 | No | Disable ANSI colors |
+
+**Not yet implemented:** `sort::`, `reverse::`, `wide::`, `columns::`. These
+have parameter pages under `docs/cli/param/` but no implementation; passing one
+exits 1 with a "not implemented" message rather than being silently ignored.
+
+### Unknown parameters
+
+Any `key::value` outside the accepted set exits 1 naming the offending key and
+listing what is accepted. This matters most for filters: a silently-ignored
+filter *widens* the result set rather than erroring, so it reads as a query
+that legitimately matched everything.
 
 **Algorithm (3 steps):**
 

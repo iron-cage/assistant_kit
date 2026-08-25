@@ -38,18 +38,18 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .accounts owner::user1@w003 name::bob` writes `"owner": "user1@w003"` to `{bob}.json` via `write_owner()`; exits 0; stdout contains `owned {name} by user1@w003`.
-- **AC-02**: `name::` is required — `clp .accounts owner::user1@w003` without `name::` exits 1 with an error message.
+- **AC-01**: `clp .accounts owner::devuser@devbox name::bob` writes `"owner": "devuser@devbox"` to `{bob}.json` via `write_owner()`; exits 0; stdout contains `owned {name} by devuser@devbox`.
+- **AC-02**: `name::` is required — `clp .accounts owner::devuser@devbox` without `name::` exits 1 with an error message.
 - **AC-03**: G8 gate: when `{name}.json` has `owner: "other@host"` and caller is not `other@host`, `clp .accounts owner::me@here name::X` exits 1 with `"ownership violation: this account is owned by other@host"`.
 - **AC-04**: Unowned account (owner="" or absent): gate passes — `owner::VALUE` writes successfully.
 - **AC-05**: `clp .accounts owner::` (empty value) exits 1 with error directing user to `owner::0` for ownership release. (Former `unclaim::1` mutual exclusion no longer applies — `unclaim::` is now REMOVED; `owner::0` is the release sentinel.)
-- **AC-06**: `clp .accounts owner::user1@w003 name::X dry::1` prints `[dry-run] would set owner of {name} to user1@w003`; exits 0; no files written.
-- **AC-07**: `clp .accounts owner::user1@w003 name::X force::1` when account is owned by a different identity → G8 bypassed → `write_owner()` succeeds; exits 0.
-- **AC-08**: `clp .accounts owner::user1@w003 name::X trace::1` emits `... · accounts owner  write_owner: OK  name={name} identity=user1@w003` to stderr.
-- **AC-09**: Prefix resolution: `owner::user1@w003 name::ill` resolves `ill` to the full account email if unambiguous.
+- **AC-06**: `clp .accounts owner::devuser@devbox name::X dry::1` prints `[dry-run] would set owner of {name} to devuser@devbox`; exits 0; no files written.
+- **AC-07**: `clp .accounts owner::devuser@devbox name::X force::1` when account is owned by a different identity → G8 bypassed → `write_owner()` succeeds; exits 0.
+- **AC-08**: `clp .accounts owner::devuser@devbox name::X trace::1` emits `... · accounts owner  write_owner: OK  name={name} identity=devuser@devbox` to stderr.
+- **AC-09**: Prefix resolution: `owner::devuser@devbox name::ill` resolves `ill` to the full account email if unambiguous.
 - **AC-10**: `owner::` with empty value exits 1 with error directing user to use `owner::0` to clear ownership.
 - **AC-11**: After setting owner, all G1–G8 gates respect the new owner on subsequent operations from any identity.
-- **AC-12**: `.usage owner::user1@w003 name::X` works identically to `.accounts owner::user1@w003 name::X` — same write path, same gates, same output (mutation executes before table render, same as `assignee::USER@MACHINE` and `owner::0`).
+- **AC-12**: `.usage owner::devuser@devbox name::X` works identically to `.accounts owner::devuser@devbox name::X` — same write path, same gates, same output (mutation executes before table render, same as `assignee::USER@MACHINE` and `owner::0`).
 
 ### Features
 

@@ -97,7 +97,7 @@ Feature behavioral requirement test cases for `docs/feature/005_account_delete.m
 
 ### FT-06: Non-owned account exits 1 with ownership violation message
 
-- **Given:** Account `alice@other.com` has `{credential_store}/alice@other.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"user1@thishost"` — not equal to `"other@remote"`.
+- **Given:** Account `alice@other.com` has `{credential_store}/alice@other.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"devuser@thishost"` — not equal to `"other@remote"`.
 - **When:** `clp .account.delete name::alice@other.com`
 - **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. No files are deleted — `alice@other.com.credentials.json` and `alice@other.com.json` remain present.
 - **Exit:** 1

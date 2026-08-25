@@ -102,8 +102,8 @@ file's EC-8 scenario (see EC-8's own note below).
 ### EC-7: Dot and hyphen in machine component preserved *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
-- **When:** `clp .accounts assign::1 name::alice@corp.com for::user1@w003.local`
-- **Then:** Exits 0. `{credential_store}/_active_w003.local_user1` contains `alice@corp.com`. Dot is kept verbatim in the machine component (`.` is in the allowed set).
+- **When:** `clp .accounts assign::1 name::alice@corp.com for::devuser@devbox.local`
+- **Then:** Exits 0. `{credential_store}/_active_devbox.local_devuser` contains `alice@corp.com`. Dot is kept verbatim in the machine component (`.` is in the allowed set).
 - **Exit:** 0
 - **Source fn:** `ec7_dot_hyphen_in_machine_preserved` (N/A — removed with the feature)
 - **Source:** [param/053_for.md](../../../../docs/cli/param/053_for.md)

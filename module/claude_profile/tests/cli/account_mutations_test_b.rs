@@ -650,7 +650,7 @@ fn aw17_use_prefix_ambiguous_no_exact_local_part_exits_1()
 
 /// aw18 (Feature 004 AC-12): a running claude session at switch time produces a
 /// stderr advisory — the switch rewrites credentials for FUTURE launches only, so
-/// live sessions keep the previous account (w003 report: "does not actually switch
+/// live sessions keep the previous account (devbox report: "does not actually switch
 /// despite it say so"). Exit stays 0; stdout's `switched to` line is unchanged.
 ///
 /// Proc scan is hermetic: `CLR_PROC_DIR` points at a fake proc tree containing one

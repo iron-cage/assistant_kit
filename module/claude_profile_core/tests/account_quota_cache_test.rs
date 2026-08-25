@@ -609,23 +609,23 @@ fn t502_02_read_merges_freshest_across_host_subtrees()
 {
   let store = tempfile::tempdir().unwrap();
   let name  = "fleet@acme.com";
-  seed_host_cache( store.path(), "w001_user1", name, "2026-01-01T00:00:00Z", 10.0 );
-  seed_host_cache( store.path(), "w002_user1", name, "2026-01-02T00:00:00Z", 20.0 );
+  seed_host_cache( store.path(), "nodeA_devuser", name, "2026-01-01T00:00:00Z", 10.0 );
+  seed_host_cache( store.path(), "nodeB_devuser", name, "2026-01-02T00:00:00Z", 20.0 );
   // T03: lexicographically huge but unparseable timestamp must never win.
-  seed_host_cache( store.path(), "w009_user1", name, "not-a-timestamp", 99.0 );
+  seed_host_cache( store.path(), "nodeC_devuser", name, "not-a-timestamp", 99.0 );
 
   let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
     .expect( "T02: merged read must see the host subtrees" );
   let ( u, _ ) = entry.five_hour.expect( "five_hour present" );
-  assert!( ( u - 20.0 ).abs() < f64::EPSILON, "T02: fresher w002 entry must win, got {u}" );
+  assert!( ( u - 20.0 ).abs() < f64::EPSILON, "T02: fresher nodeB entry must win, got {u}" );
   assert_eq!( entry.fetched_at, "2026-01-02T00:00:00Z" );
 
-  // Direction flip: w001 becomes the freshest.
-  seed_host_cache( store.path(), "w001_user1", name, "2026-01-03T00:00:00Z", 30.0 );
+  // Direction flip: nodeA becomes the freshest.
+  seed_host_cache( store.path(), "nodeA_devuser", name, "2026-01-03T00:00:00Z", 30.0 );
   let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
     .expect( "T02: merged read after flip" );
   let ( u, _ ) = entry.five_hour.expect( "five_hour present" );
-  assert!( ( u - 30.0 ).abs() < f64::EPSILON, "T02: freshest must flip to w001, got {u}" );
+  assert!( ( u - 30.0 ).abs() < f64::EPSILON, "T02: freshest must flip to nodeA, got {u}" );
 }
 
 /// T04 (TSK-502): a legacy gitignored `-cache/{name}.json` (pre-502 layout) is

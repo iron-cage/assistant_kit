@@ -26,19 +26,19 @@
 //! |----|---------------|-------|-----------|-----|
 //! | FT-01 | `ft01_assignee_assign_writes_current_machine_marker` | FT-01 | `assignee::testuser@testmachine name::X` writes `DEFAULT_MARKER` | P |
 //! | FT-01b | `ft01b_assignee_assign_writes_remote_marker` | FT-01 | `assignee::bob@laptop name::X` writes `_active_laptop_bob` | P |
-//! | FT-02 | `ft02_assignee_unassign_clears_marker` | FT-03 | `assignee::user1@w003` (no name) clears marker | P |
+//! | FT-02 | `ft02_assignee_unassign_clears_marker` | FT-03 | `assignee::devuser@devbox` (no name) clears marker | P |
 //! | FT-03 | `ft03_assignee_assign_dry_run` | FT-05 | `assignee::testuser@testmachine name::X dry::1` → no write | P |
 //! | FT-04 | `ft04_assignee_unknown_account_exits_1` | FT-08 | `assignee::testuser@testmachine name::ghost` → exit 1; stderr names `name::` (BUG-342) | N |
 //! | FT-04u | `ft04u_assignee_unknown_account_usage_exits_1` | FT-08 | Same as FT-04 via `.usage` — `api_dispatch.rs`'s duplicate call site (BUG-342) | N |
 //! | FT-05 | `ft05_assign_removed_toggle` | FT-10 | `assign::1 name::X` → exit 1 REMOVED_TOGGLE | N |
 //! | FT-06 | `ft06_assign_and_for_removed_toggles` | FT-10 | `assign::1 for::bob@laptop name::X` → exit 1 | N |
 //! | FT-07 | `ft07_unclaim_removed_toggle` | FT-10 | `unclaim::1 name::X` → exit 1 REMOVED_TOGGLE | N |
-//! | FT-07b | `ft07b_assignee_unassign_dry_run` | FT-07 | `assignee::user1@w003 dry::1` (no name) → `[dry-run]` preview | P |
-//! | FT-10 | `ft10_active_removed_toggle_migration_message` | FT-10 | `active::user1@w003 name::X` → exit 1 REMOVED_TOGGLE | N |
+//! | FT-07b | `ft07b_assignee_unassign_dry_run` | FT-07 | `assignee::devuser@devbox dry::1` (no name) → `[dry-run]` preview | P |
+//! | FT-10 | `ft10_active_removed_toggle_migration_message` | FT-10 | `active::devuser@devbox name::X` → exit 1 REMOVED_TOGGLE | N |
 //! | FT-11 | `ft11_assignee_does_not_modify_owner` | FT-11 | `assignee::...` does NOT touch `owner` field | P |
 //! | FT-11b | `ft11b_assignee_remote_does_not_modify_owner` | FT-11 | `assignee::bob@laptop name::X` does NOT touch `owner` field | P |
 //! | FT-12a | `ft12a_space_in_assignee_value_sanitized` | FT-12 | `assignee::"alice@my laptop" name::X` → `_active_my_laptop_alice` | P |
-//! | FT-12b | `ft12b_dot_hyphen_in_assignee_value_preserved` | FT-12 | `assignee::user1@w003.local name::X` → `_active_w003.local_user1` | P |
+//! | FT-12b | `ft12b_dot_hyphen_in_assignee_value_preserved` | FT-12 | `assignee::devuser@devbox.local name::X` → `_active_devbox.local_devuser` | P |
 //! | FT-13 | `ft13_force_ignored_for_assignee` | FT-13 | `force::1 assignee::...` — force silently ignored; marker written | P |
 //! | EC-2 | `ec2_assignee_zero_sentinel_assign` | EC-2 | `assignee::0 name::X` writes `DEFAULT_MARKER` via sentinel | P |
 //! | EC-4 | `ec4_assignee_zero_sentinel_unassign` | EC-4 | `assignee::0` (no name) clears current machine marker | P |
@@ -163,7 +163,7 @@ fn ft01b_assignee_assign_writes_remote_marker()
 // ── FT-02: unassign clears marker ─────────────────────────────────────────────
 
 #[ test ]
-/// FT-02 (AC-03): `assignee::user1@w003` (no `name::`) clears `_active_w003_user1`.
+/// FT-02 (AC-03): `assignee::devuser@devbox` (no `name::`) clears `_active_devbox_devuser`.
 fn ft02_assignee_unassign_clears_marker()
 {
   let dir  = TempDir::new().unwrap();
@@ -172,11 +172,11 @@ fn ft02_assignee_unassign_clears_marker()
   let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
 
   let store  = credential_store( dir.path() );
-  let marker = "_active_w003_user1";
+  let marker = "_active_devbox_devuser";
   std::fs::create_dir_all( &store ).unwrap();
   std::fs::write( store.join( marker ), "alice@corp.com" ).unwrap();
 
-  let out = run_cs_with_env( &[ ".accounts", "assignee::user1@w003" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assignee::devuser@devbox" ], &refs );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -370,7 +370,7 @@ fn ft07_unclaim_removed_toggle()
 // ── FT-07b: unassign dry-run ──────────────────────────────────────────────────
 
 #[ test ]
-/// FT-07b (AC-07): `assignee::user1@w003 dry::1` (no `name::`) prints `[dry-run]`; no file deleted.
+/// FT-07b (AC-07): `assignee::devuser@devbox dry::1` (no `name::`) prints `[dry-run]`; no file deleted.
 fn ft07b_assignee_unassign_dry_run()
 {
   let dir  = TempDir::new().unwrap();
@@ -379,11 +379,11 @@ fn ft07b_assignee_unassign_dry_run()
   let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
 
   let store  = credential_store( dir.path() );
-  let marker = "_active_w003_user1";
+  let marker = "_active_devbox_devuser";
   std::fs::create_dir_all( &store ).unwrap();
   std::fs::write( store.join( marker ), "alice@corp.com" ).unwrap();
 
-  let out = run_cs_with_env( &[ ".accounts", "assignee::user1@w003", "dry::1" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assignee::devuser@devbox", "dry::1" ], &refs );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -407,7 +407,7 @@ fn ft10_active_removed_toggle_migration_message()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "active::user1@w003", "name::alice@corp.com" ],
+    &[ ".accounts", "active::devuser@devbox", "name::alice@corp.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );
@@ -511,14 +511,14 @@ fn ft12b_dot_hyphen_in_assignee_value_preserved()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "assignee::user1@w003.local", "name::alice@corp.com" ],
+    &[ ".accounts", "assignee::devuser@devbox.local", "name::alice@corp.com" ],
     &refs,
   );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
-  let content = std::fs::read_to_string( store.join( "_active_w003.local_user1" ) )
-    .expect( "_active_w003.local_user1 must exist — dot/hyphen preserved in sanitization" );
+  let content = std::fs::read_to_string( store.join( "_active_devbox.local_devuser" ) )
+    .expect( "_active_devbox.local_devuser must exist — dot/hyphen preserved in sanitization" );
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 

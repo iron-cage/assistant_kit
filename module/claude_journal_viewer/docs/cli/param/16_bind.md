@@ -1,33 +1,36 @@
 # CLI Parameter: bind
 
-HTTP server bind address. Intended to default to `127.0.0.1` (localhost
-only, per invariant INV-002), with `0.0.0.0` opting into network-accessible
-binding — journal data may contain sensitive content, so exposure must be a
-conscious choice.
+HTTP server bind address. Defaults to `127.0.0.1` (localhost only, per
+invariant INV-002), with `0.0.0.0` opting into network-accessible binding —
+journal data may contain sensitive content, so exposure must be a conscious
+choice.
 
-**Status: not implemented (Phase 2 deliverable).** `cmd_serve()`
-(`src/cli_main.rs:168`) hardcodes `format!( "127.0.0.1:{port}" )` and never
-reads a `bind` key, so `bind::` is currently accepted-and-ignored rather than
-honored: `.serve` is loopback-only regardless of what is passed. INV-002
-(`docs/invariant/002_localhost_only.md`) is `Status: Planned` for exactly this
-reason. Treat every example below as the intended Phase 2 contract, not
-present behavior.
+The value is passed through to `tiny_http::Server::http()` unvalidated, so an
+unresolvable or already-bound address fails at startup with
+`Error: could not start server on {addr}: {e}` and exit 1 rather than being
+rejected at parse time. IPv6 addresses take the bracketed form
+(`bind::[::1]`), matching the socket-address syntax the server itself parses.
+
+Binding anywhere other than loopback prints a one-line warning to stderr
+(`Warning: bound to {addr} — journal data is reachable beyond this machine`)
+and makes the startup line report the real address instead of `localhost`, so
+a widened bind can never be mistaken for the default.
 
 - **Type:** [`String`](../type/03_string.md)
-- **Default:** 127.0.0.1 (hardcoded, not yet configurable)
+- **Default:** 127.0.0.1
 - **Required:** No
 
 ```bash
-clj .serve                            # Bind to 127.0.0.1 — the only behavior available today
-clj .serve bind::0.0.0.0             # Phase 2: network-accessible (currently ignored)
-clj .serve bind::192.168.1.5 port::9090  # Phase 2: specific interface (currently ignored)
+clj .serve                               # Bind to 127.0.0.1 (default)
+clj .serve bind::0.0.0.0                 # Network-accessible — warns on stderr
+clj .serve bind::192.168.1.5 port::9090  # Specific interface
 ```
 
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| [`String`](../type/03_string.md) | Fundamental | String | Valid IPv4/IPv6 address |
+| [`String`](../type/03_string.md) | Fundamental | String | Valid IPv4/IPv6 address (IPv6 bracketed); validated at bind time, not parse time |
 
 ### Referenced Parameter Groups
 

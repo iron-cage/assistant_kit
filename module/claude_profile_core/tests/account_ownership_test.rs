@@ -43,9 +43,9 @@ use claude_core::ClaudePaths;
 ///
 /// ## Setup
 /// `TempDir` with own marker + 2 foreign markers. Foreign names are hard-coded to
-/// `_active_machine2_user1` and `_active_machine3_user2` — guaranteed to differ
+/// `_active_machine2_devuser` and `_active_machine3_devuser2` — guaranteed to differ
 /// from `active_marker_filename()` on any real machine (those strings would require
-/// `$HOSTNAME=machine2` + `$USER=user1` or `$HOSTNAME=machine3` + `$USER=user2`).
+/// `$HOSTNAME=machine2` + `$USER=devuser` or `$HOSTNAME=machine3` + `$USER=devuser2`).
 ///
 /// ## Assert
 /// Set size = 2; contains "alice@test.com" and "bob@test.com"; does NOT contain
@@ -65,13 +65,13 @@ fn test_ft11_025_other_machines_active_returns_others()
   std::fs::write( store.join( &own_name ), "own@test.com" ).unwrap();
 
   // Two foreign markers with names that cannot match active_marker_filename()
-  // on any realistic CI machine ($HOSTNAME≠"machine2" or $USER≠"user1", etc.)
-  std::fs::write( store.join( "_active_machine2_user1" ), "alice@test.com" ).unwrap();
-  std::fs::write( store.join( "_active_machine3_user2" ), "bob@test.com"   ).unwrap();
+  // on any realistic CI machine ($HOSTNAME≠"machine2" or $USER≠"devuser", etc.)
+  std::fs::write( store.join( "_active_machine2_devuser" ),  "alice@test.com" ).unwrap();
+  std::fs::write( store.join( "_active_machine3_devuser2" ), "bob@test.com"   ).unwrap();
 
   // Sanity guard: own_name must differ from the chosen hard-coded names
   assert!(
-    own_name != "_active_machine2_user1" && own_name != "_active_machine3_user2",
+    own_name != "_active_machine2_devuser" && own_name != "_active_machine3_devuser2",
     "FT-11: own_name '{own_name}' collides with a hard-coded foreign filename — \
      update the test to use different foreign names",
   );
@@ -109,7 +109,7 @@ fn test_ft11_025_other_machines_active_returns_others()
 ///
 /// ## Setup
 /// `TempDir` with the target account's `.credentials.json`, plus a
-/// hard-coded foreign marker (`_active_machine2_user1` — the same
+/// hard-coded foreign marker (`_active_machine2_devuser` — the same
 /// collision-free fixture name FT-11 already relies on) containing the
 /// target account's name.
 ///
@@ -124,7 +124,7 @@ fn test_ft14_025_delete_clears_foreign_machine_marker()
   let store = tmp.path();
 
   let name           = "ghost@example.com";
-  let foreign_marker = "_active_machine2_user1";
+  let foreign_marker = "_active_machine2_devuser";
 
   // Sanity guard: foreign_marker must differ from this machine's own marker name
   // (same guarantee FT-11 relies on), or this test would exercise the already-

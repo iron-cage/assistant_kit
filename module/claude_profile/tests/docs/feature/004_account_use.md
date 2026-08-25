@@ -158,7 +158,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 
 ### FT-10: Non-owned account exits 1 with ownership violation message
 
-- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"user1@thishost"` — not equal to `"other@remote"`.
+- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"devuser@thishost"` — not equal to `"other@remote"`.
 - **When:** `clp .account.use name::alice@corp.com`
 - **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. `switch_account()` is NOT called — no credential files are modified. The `_active` marker is unchanged.
 - **Exit:** 1

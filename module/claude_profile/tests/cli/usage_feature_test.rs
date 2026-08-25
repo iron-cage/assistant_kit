@@ -581,7 +581,7 @@ fn f63_ft12_usage_owner_mirrors_accounts()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".usage", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ".usage", "owner::devuser@devbox", "name::alice@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -590,7 +590,7 @@ fn f63_ft12_usage_owner_mirrors_accounts()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   assert_eq!(
-    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
     "FT-12: .usage owner:: must write owner field",
   );
 }
@@ -685,7 +685,7 @@ fn f65_ft10_usage_active_removed_toggle()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "active::user1@w003", "name::alice@acme.com" ],
+    &[ ".usage", "active::devuser@devbox", "name::alice@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );
@@ -698,7 +698,7 @@ fn f65_ft10_usage_active_removed_toggle()
 }
 
 #[ test ]
-/// FT-03 parity on `.usage` (AC-03): `.usage assignee::user1@w003` (no `name::`) clears the
+/// FT-03 parity on `.usage` (AC-03): `.usage assignee::devuser@devbox` (no `name::`) clears the
 /// per-machine marker file.
 ///
 /// Mirrors `ft02_assignee_unassign_clears_marker` in `account_assign_test.rs` but targets `.usage`.
@@ -707,13 +707,13 @@ fn f65_ft03_usage_assignee_unassign()
   let dir    = TempDir::new().unwrap();
   let home   = dir.path().to_str().unwrap();
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let marker = "_active_w003_user1";
+  let marker = "_active_devbox_devuser";
 
   std::fs::create_dir_all( &store ).unwrap();
   std::fs::write( store.join( marker ), "alice@acme.com" ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".usage", "assignee::user1@w003" ],
+    &[ ".usage", "assignee::devuser@devbox" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );

@@ -21,7 +21,7 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ft01 | `ft_owner_sets_owner_field` | `owner::user1@w003 name::X` writes owner | P |
+//! | ft01 | `ft_owner_sets_owner_field` | `owner::devuser@devbox name::X` writes owner | P |
 //! | ft02 | `ft_owner_requires_name` | `owner::X` without `name::` → exit 1 | N |
 //! | ft03 | `ft_owner_g8_blocks_non_owner` | G8: owned by another → exit 1 | N |
 //! | ft04 | `ft_owner_unowned_passes_g8` | unowned → write succeeds | P |
@@ -63,7 +63,7 @@ use tempfile::TempDir;
 
 // ── AP: Account Owner Param (Feature 063) ─────────────────────────────────────
 
-/// FT-01 (AC-01, Feat 063): `.accounts owner::user1@w003 name::X` writes owner field.
+/// FT-01 (AC-01, Feat 063): `.accounts owner::devuser@devbox name::X` writes owner field.
 ///
 /// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-01]
 #[ test ]
@@ -75,7 +75,7 @@ fn ft_owner_sets_owner_field()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -84,11 +84,11 @@ fn ft_owner_sets_owner_field()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   assert_eq!(
-    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
-    "FT-01: owner must be 'user1@w003'",
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
+    "FT-01: owner must be 'devuser@devbox'",
   );
   assert!(
-    stdout( &out ).contains( "owned alice@acme.com by user1@w003" ),
+    stdout( &out ).contains( "owned alice@acme.com by devuser@devbox" ),
     "FT-01: stdout must confirm ownership; got:\n{}", stdout( &out ),
   );
 }
@@ -99,7 +99,7 @@ fn ft_owner_sets_owner_field()
 #[ test ]
 fn ft_owner_requires_name()
 {
-  let out = run_cs( &[ ".accounts", "owner::user1@w003" ] );
+  let out = run_cs( &[ ".accounts", "owner::devuser@devbox" ] );
   assert_exit( &out, 1 );
   assert!(
     stderr( &out ).contains( "requires name" ),
@@ -141,7 +141,7 @@ fn ft_owner_unowned_passes_g8()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -150,7 +150,7 @@ fn ft_owner_unowned_passes_g8()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   assert_eq!(
-    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
     "FT-04: unowned account must accept owner write",
   );
 }
@@ -169,7 +169,7 @@ fn ft_owner_mutual_exclusion_unclaim()
   // Feature 064: unclaim::1 is REMOVED_TOGGLE — exits 1 with migration message.
   // (The mutual exclusion with owner:: is now moot since unclaim::1 is removed.)
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "unclaim::1", "name::test@acme.com" ],
+    &[ ".accounts", "owner::devuser@devbox", "unclaim::1", "name::test@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );
@@ -195,7 +195,7 @@ fn ft_owner_dry_run_preview()
   let before    = std::fs::read_to_string( &meta_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -247,7 +247,7 @@ fn ft_owner_trace_emits_diagnostic()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "trace::1" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com", "trace::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -270,7 +270,7 @@ fn ft_owner_prefix_resolution()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -279,7 +279,7 @@ fn ft_owner_prefix_resolution()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   assert_eq!(
-    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
     "FT-09: prefix 'alice' must resolve to 'alice@acme.com'",
   );
 }
@@ -388,7 +388,7 @@ fn ec2_owner_empty_rejected()
   );
 }
 
-/// EC-03 (Param 062): `owner::user1@w003 unclaim::1 name::X` → exit 1 — `unclaim::1`
+/// EC-03 (Param 062): `owner::devuser@devbox unclaim::1 name::X` → exit 1 — `unclaim::1`
 /// is `REMOVED_TOGGLE` (Feature 064); migration message directs user to `owner::0`.
 ///
 /// Spec: [`tests/docs/cli/param/63_owner.md` EC-03]
@@ -401,7 +401,7 @@ fn ec3_owner_and_unclaim_removed_toggle()
   write_account_owner( dir.path(), "test@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "unclaim::1", "name::test@acme.com" ],
+    &[ ".accounts", "owner::devuser@devbox", "unclaim::1", "name::test@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );
@@ -411,13 +411,13 @@ fn ec3_owner_and_unclaim_removed_toggle()
   );
 }
 
-/// EC-04 (Param 062): `owner::user1@w003` (no `name::`) → exit 1.
+/// EC-04 (Param 062): `owner::devuser@devbox` (no `name::`) → exit 1.
 ///
 /// Spec: [`tests/docs/cli/param/63_owner.md` EC-04]
 #[ test ]
 fn ec4_owner_missing_name_exits_1()
 {
-  let out = run_cs( &[ ".accounts", "owner::user1@w003" ] );
+  let out = run_cs( &[ ".accounts", "owner::devuser@devbox" ] );
   assert_exit( &out, 1 );
   assert!(
     stderr( &out ).contains( "requires name" ),
@@ -473,7 +473,7 @@ fn ec6_owner_force_bypasses_g8()
   );
 }
 
-/// EC-07 (Param 062): `owner::user1@w003 name::X dry::1` → `[dry-run]`, no file writes.
+/// EC-07 (Param 062): `owner::devuser@devbox name::X dry::1` → `[dry-run]`, no file writes.
 ///
 /// Spec: [`tests/docs/cli/param/63_owner.md` EC-07]
 #[ test ]
@@ -489,7 +489,7 @@ fn ec7_owner_dry_no_file_writes()
   let before    = std::fs::read_to_string( &meta_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -508,11 +508,11 @@ fn ec8_owner_overwrite_existing()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@devbox" );
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::new@identity", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -525,7 +525,7 @@ fn ec8_owner_overwrite_existing()
   );
 }
 
-/// EC-09 (Param 062): idempotent — same `owner::user1@w003` when already owned by same → exit 0.
+/// EC-09 (Param 062): idempotent — same `owner::devuser@devbox` when already owned by same → exit 0.
 ///
 /// Spec: [`tests/docs/cli/param/63_owner.md` EC-09]
 #[ test ]
@@ -534,11 +534,11 @@ fn ec9_owner_idempotent_same_value()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@devbox" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -546,7 +546,7 @@ fn ec9_owner_idempotent_same_value()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   assert_eq!(
-    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
     "EC-09: idempotent write must preserve owner",
   );
 }
@@ -560,11 +560,11 @@ fn ec10_owner_zero_clears_ownership()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@corp.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@corp.com", "devuser@devbox" );
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   assert!(
@@ -591,17 +591,17 @@ fn ec11_owner_zero_no_name_batch_clears()
   let home = dir.path().to_str().unwrap();
   // A: owned by caller → cleared
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@acme.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@acme.com", "devuser@devbox" );
   // B: unowned → skipped with "skip" message
   write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
   write_account_owner( dir.path(), "bob@acme.com", "" );
   // C: owned by caller → cleared
   write_account( dir.path(), "carol@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "carol@acme.com", "user1@w003" );
+  write_account_owner( dir.path(), "carol@acme.com", "devuser@devbox" );
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -641,15 +641,15 @@ fn ec12_owner_zero_comma_list_batch_clear()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@corp.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@corp.com", "devuser@devbox" );
   write_account( dir.path(), "bob@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "bob@corp.com", "user1@w003" );
+  write_account_owner( dir.path(), "bob@corp.com", "devuser@devbox" );
   write_account( dir.path(), "charlie@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "charlie@corp.com", "user1@w003" );
+  write_account_owner( dir.path(), "charlie@corp.com", "devuser@devbox" );
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com,bob@corp.com,charlie@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -671,7 +671,7 @@ fn ec12_owner_zero_comma_list_batch_clear()
   }
 }
 
-/// EC-13 (Param 062): `owner::user1@w003 name::X,Y,Z` — batch-set via comma-list; exits 0.
+/// EC-13 (Param 062): `owner::devuser@devbox name::X,Y,Z` — batch-set via comma-list; exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/63_owner.md` EC-13]
 #[ test ]
@@ -687,15 +687,15 @@ fn ec13_owner_set_comma_list_batch_set()
   write_account_owner( dir.path(), "charlie@corp.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "owner::user1@w003", "name::alice@corp.com,bob@corp.com,charlie@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ".accounts", "owner::devuser@devbox", "name::alice@corp.com,bob@corp.com,charlie@corp.com" ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
-  assert!( out_text.contains( "owned alice@corp.com by user1@w003" ),   "EC-13: must own alice" );
-  assert!( out_text.contains( "owned bob@corp.com by user1@w003" ),     "EC-13: must own bob" );
-  assert!( out_text.contains( "owned charlie@corp.com by user1@w003" ), "EC-13: must own charlie" );
+  assert!( out_text.contains( "owned alice@corp.com by devuser@devbox" ),   "EC-13: must own alice" );
+  assert!( out_text.contains( "owned bob@corp.com by devuser@devbox" ),     "EC-13: must own bob" );
+  assert!( out_text.contains( "owned charlie@corp.com by devuser@devbox" ), "EC-13: must own charlie" );
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   for name in &[ "alice@corp.com", "bob@corp.com", "charlie@corp.com" ]
@@ -704,8 +704,8 @@ fn ec13_owner_set_comma_list_batch_set()
       &std::fs::read_to_string( store.join( format!( "{name}.json" ) ) ).unwrap()
     ).unwrap();
     assert_eq!(
-      meta[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
-      "EC-13: {name} owner must be set to user1@w003",
+      meta[ "owner" ].as_str().unwrap_or( "MISSING" ), "devuser@devbox",
+      "EC-13: {name} owner must be set to devuser@devbox",
     );
   }
 }
@@ -723,7 +723,7 @@ fn ec14_owner_zero_force_bypasses_g8()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com", "force::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   assert!(
@@ -749,7 +749,7 @@ fn ec15_owner_zero_dry_run()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account_owner( dir.path(), "alice@corp.com", "user1@w003" );
+  write_account_owner( dir.path(), "alice@corp.com", "devuser@devbox" );
 
   let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let meta_path = store.join( "alice@corp.com.json" );
@@ -757,7 +757,7 @@ fn ec15_owner_zero_dry_run()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com", "dry::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   assert!(
@@ -786,7 +786,7 @@ fn ec16_owner_zero_force_dry_run()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com", "force::1", "dry::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   assert!(
@@ -815,7 +815,7 @@ fn ec17_owner_zero_unowned_clears_idempotent()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   assert!(
@@ -845,7 +845,7 @@ fn ec18_owner_zero_g8_blocks_foreign_no_force()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 1 );
   assert!(
@@ -879,7 +879,7 @@ fn ec19_owner_zero_missing_json_exits_2()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "name::alice@corp.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 2 );
   assert!(
@@ -907,7 +907,7 @@ fn ec20_owner_zero_batch_force_clears_foreign()
 
   let out = run_cs_with_env(
     &[ ".accounts", "owner::0", "force::1" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+    &[ ( "HOME", home ), ( "USER", "devuser" ), ( "HOSTNAME", "devbox" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );

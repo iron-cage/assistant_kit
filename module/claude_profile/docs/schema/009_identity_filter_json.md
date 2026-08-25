@@ -15,7 +15,7 @@
 
 One file per Identity (`user@host`). Filename derivation and sanitization are identical to the active marker's ([schema/005](005_active_marker.md)): same `hostname`/`user` resolution chain, same `keep [a-zA-Z0-9\-\.]; replace all other chars with '_'` sanitize.
 
-Example: hostname `w003`, user `user1` → `_filter_w003_user1`
+Example: hostname `devbox`, user `devuser` → `_filter_devbox_devuser`
 
 ### Fields
 

@@ -245,9 +245,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ### IT-20: Save does NOT modify `owner` field — `owner: None` passed to `save()`
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `{credential_store}/work@acme.com.json` already exists and contains `"owner": "user1@host1"`.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `{credential_store}/work@acme.com.json` already exists and contains `"owner": "devuser@host1"`.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** Exit 0. stdout: `saved current credentials as 'work@acme.com'`. `{credential_store}/work@acme.com.json` still contains `"owner": "user1@host1"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`; the `owner` field is preserved via read-merge.
+- **Then:** Exit 0. stdout: `saved current credentials as 'work@acme.com'`. `{credential_store}/work@acme.com.json` still contains `"owner": "devuser@host1"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`; the `owner` field is preserved via read-merge.
 - **Exit:** 0
 - **Source fn:** `as_save_does_not_modify_owner`
 - **Source:** [002_account_save.md AC-19](../../../../docs/feature/002_account_save.md)

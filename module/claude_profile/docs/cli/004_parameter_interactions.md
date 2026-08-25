@@ -333,10 +333,10 @@ clp .usage rotate::1
 
 ```bash
 # name::ghost@example.com is not found — error names name:: explicitly
-clp .accounts assignee::user1@w003 name::ghost@example.com
+clp .accounts assignee::devuser@devbox name::ghost@example.com
 # error: account 'ghost@example.com' (from name::) not found in credential store
 
 # Same disambiguation on the .usage duplicate call site (api_dispatch.rs)
-clp .usage assignee::user1@w003 name::ghost@example.com
+clp .usage assignee::devuser@devbox name::ghost@example.com
 # error: account 'ghost@example.com' (from name::) not found in credential store
 ```

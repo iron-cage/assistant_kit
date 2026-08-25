@@ -13,6 +13,12 @@ clj .list dir::/home/user/myproject   # Events from specific project
 clj .list dir::myproject since::7d   # Substring match, last week
 ```
 
+`dir::` never changes *where the journal is read from* — that is
+[`journal_dir::`](21_journal_dir.md), a separate global parameter. The two are
+independent and may be combined: `clj .list journal_dir::/var/log/clr
+dir::/work/alpha` reads the alternate journal and shows only the events whose
+own working directory contains `/work/alpha`.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -30,6 +36,10 @@ clj .list dir::myproject since::7d   # Substring match, last week
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.list`](../command/01_list.md) | -- | All directories |
+| 2 | [`.tail`](../command/02_tail.md) | -- | All directories |
+| 3 | [`.stats`](../command/03_stats.md) | -- | All directories |
+| 4 | [`.search`](../command/04_search.md) | -- | All directories |
+| 8 | [`.export`](../command/08_export.md) | -- | All directories |
 
 ### Referenced User Stories
 

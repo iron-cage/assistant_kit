@@ -98,7 +98,7 @@ FT-3 verifies the 8 known type strings: `"execution"`, `"credential"`, `"gate_wa
 
 ### FT-7: `account`/`agent_id` attribution fields serialize, omit, and back-parse correctly
 
-- **Given:** (a) `EventFields` with `account = Some("alice@example.com")`, `agent_id = Some("alice@w003/a/b/")`; (b) `EventFields::default()`; (c) a raw pre-attribution JSONL line with no `account`/`agent_id` keys
+- **Given:** (a) `EventFields` with `account = Some("alice@example.com")`, `agent_id = Some("alice@devbox/a/b/")`; (b) `EventFields::default()`; (c) a raw pre-attribution JSONL line with no `account`/`agent_id` keys
 - **When:** serialize (a) and (b) to JSON; deserialize (c) via `serde_json::from_str::<EventRecord>`
 - **Then:** (a) both keys present with exact values; (b) both keys absent (not `null`); (c) parses successfully with both fields `None` and legacy fields intact
 - **Source:** [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md) AC-005, AC-011 — implemented as IT-19, IT-20, IT-21
@@ -107,7 +107,7 @@ FT-3 verifies the 8 known type strings: `"execution"`, `"credential"`, `"gate_wa
 
 ### FT-8: `compose_agent_id()` format ownership
 
-- **Given:** `compose_agent_id("alice", "w003", dir)` for `dir` in `"/a/b"`, `"/a/b/"`, `"/a/b//"`
+- **Given:** `compose_agent_id("alice", "devbox", dir)` for `dir` in `"/a/b"`, `"/a/b/"`, `"/a/b//"`
 - **When:** compare each result against the canonical string
-- **Then:** all three yield exactly `"alice@w003/a/b/"` — no host/dir separator, exactly one trailing slash regardless of input slashing
+- **Then:** all three yield exactly `"alice@devbox/a/b/"` — no host/dir separator, exactly one trailing slash regardless of input slashing
 - **Source:** [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md) AC-009 — implemented as IT-22, IT-23

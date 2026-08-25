@@ -1,38 +1,39 @@
 # CLI Parameter: include_stdout
 
-Extend search scope to include stdout and stderr content fields.
-By default, `.search` only matches against the `message` field.
-When `1`, the regex pattern is also applied to `stdout` and
-`stderr` fields, which contain the full subprocess output
-captured at journal level `full`.
+**Superseded — not a parameter.** `.search` searches `stdout` and `stderr`
+unconditionally, alongside `error_message`, `model`, and `command`. There is no
+narrower default for this flag to widen, so the parameter carries no meaning
+and is not accepted; passing it exits 1.
 
-- **Type:** [`Boolean`](../type/08_boolean.md)
-- **Default:** 0
+This page is retained because the surrounding documentation links to it. The
+behavior it describes is the *current, unconditional* behavior of
+[`.search`](../command/04_search.md) — search the output fields directly and
+omit the flag.
+
+- **Type:** -- (not accepted)
+- **Default:** -- (stdout and stderr always searched)
 - **Required:** No
 
 ```bash
-clj .search pattern::"Fix bug" include_stdout::1   # Search in output
-clj .search pattern::"panic" include_stdout::1      # Find panics in output
-clj .search pattern::"Error" include_stdout::1 since::1d  # Errors in output today
+clj .search pattern::"panic"              # Finds panics in stdout/stderr
+clj .search pattern::"Error" since::1d    # Errors in output today
 ```
 
 ### Referenced Type
 
-| Type | Kind | Fundamental | Key Constraint |
-|------|------|-------------|----------------|
-| [`Boolean`](../type/08_boolean.md) | Fundamental | Integer | 0 or 1 |
+-- (none — the parameter is not accepted)
 
 ### Referenced Parameter Groups
 
 | # | Group | Membership |
 |---|-------|------------|
-| 4 | [Search](../param_group/04_search.md) | Full |
+| 4 | [Search](../param_group/04_search.md) | Superseded |
 
 ### Referenced Commands
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 4 | [`.search`](../command/04_search.md) | 0 | Message-only search |
+| 4 | [`.search`](../command/04_search.md) | -- | stdout/stderr always searched; flag not accepted |
 
 ### Referenced User Stories
 

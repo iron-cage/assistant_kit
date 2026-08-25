@@ -8,8 +8,8 @@
 //!   alice@acme.com.json               ← account metadata (identity, model, roles, profile)
 //!   alice@home.com.credentials.json
 //!   alice@home.com.json
-//!   _active_w003_user1                ← text: name of active account (per-machine)
-//!   _filter_w003_user1                ← JSON: per-identity include/exclude tag filter
+//!   _active_devbox_devuser            ← text: name of active account (per-machine)
+//!   _filter_devbox_devuser            ← JSON: per-identity include/exclude tag filter
 //! ```
 //!
 //! The active marker filename is `_active_{hostname}_{user}` (see [`active_marker_filename`]).

@@ -86,11 +86,11 @@ These fields are written by one caller and never touched by others (preserved vi
   "organization_role": "admin",
   "workspace_uuid": null,
   "workspace_name": null,
-  "host": "w003",
+  "host": "devbox",
   "tags": ["ci", "work"],
   "inference_provider": "anthropic",
   "_renewal_at": "2026-07-01T00:00:00Z",
-  "owner": "user1@w003",
+  "owner": "devuser@devbox",
   "claim_lock": false,
   "reserve": false,
   "model_override": "opus",
@@ -113,7 +113,7 @@ A `backend::redirect` account (see [feature/071](../feature/071_redirect_backend
   "backend": "redirect",
   "base_url": "https://api.moonshot.ai/anthropic",
   "redirect_model": "kimi-k3",
-  "host": "w003",
+  "host": "devbox",
   "tags": ["kimi_pool"]
 }
 ```

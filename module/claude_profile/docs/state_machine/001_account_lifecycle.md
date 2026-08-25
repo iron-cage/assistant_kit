@@ -34,7 +34,7 @@
 
 ### Multi-Machine Note
 
-"Active" is per-machine. Account `A` can be `active` on machine `w003` and `saved` on machine `w004` simultaneously. Each machine has its own `_active_{host}_{user}` marker. See [schema/005](../schema/005_active_marker.md).
+"Active" is per-machine. Account `A` can be `active` on machine `devbox` and `saved` on machine `buildbox` simultaneously. Each machine has its own `_active_{host}_{user}` marker. See [schema/005](../schema/005_active_marker.md).
 
 ### Behavioral Invariants
 

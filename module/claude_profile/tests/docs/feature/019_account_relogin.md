@@ -145,7 +145,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 
 ### FT-10: Non-owned account exits 1 with ownership violation message
 
-- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"user1@thishost"` — not equal to `"other@remote"`.
+- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"devuser@thishost"` — not equal to `"other@remote"`.
 - **When:** `clp .account.relogin name::alice@corp.com`
 - **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. The 6-step relogin procedure is NOT started — no `switch_account()` call, no `claude` spawn, no credential comparison.
 - **Exit:** 1

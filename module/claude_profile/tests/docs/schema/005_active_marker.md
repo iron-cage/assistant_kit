@@ -20,9 +20,9 @@ plain-text content format, and `other_machines_active()` read semantics.
 
 ### SC-1: `account.save` writes active marker with correct filename shape
 
-- **Given:** `$HOSTNAME = "w003"` and `$USER = "user1"` in the environment
+- **Given:** `$HOSTNAME = "devbox"` and `$USER = "devuser"` in the environment
 - **When:** `.account.save alice` is invoked
-- **Then:** A file named `_active_w003_user1` is created in the credential store — the active marker filename matches `_active_{HOSTNAME}_{USER}` pattern
+- **Then:** A file named `_active_devbox_devuser` is created in the credential store — the active marker filename matches `_active_{HOSTNAME}_{USER}` pattern
 - **Source fn:** `as16_save_writes_active_marker` (cli/account_mutations_test_b.rs)
 - **Source:** [docs/schema/005_active_marker.md §File Location §Filename Derivation](../../../docs/schema/005_active_marker.md)
 
@@ -40,7 +40,7 @@ plain-text content format, and `other_machines_active()` read semantics.
 
 ### SC-3: Non-alphanumeric characters in hostname/user are replaced with `_`
 
-- **Given:** `$HOSTNAME = "w003.local"` (contains `.`) or `$USER = "user@corp"` (contains `@`)
+- **Given:** `$HOSTNAME = "devbox.local"` (contains `.`) or `$USER = "user@corp"` (contains `@`)
 - **When:** `active_marker_filename()` is called
 - **Then:** Dots, `@`, and all other non-`[a-zA-Z0-9\-.]` characters are replaced with `_` — safe for use as a filename component
 - **Source fn:** `sc3_005_active_marker_sanitizes_nonalphanumeric_to_underscore` (account_tests.rs)

@@ -22,8 +22,8 @@ is in place and prevents the described account identity failure mode.
 - **When:** `active_marker_filename()` is called on the real test machine.
 - **Then:** The synthetic marker name (`_active_testhost1_tst1`, `_active_testhost2_tst2`, etc.)
   does NOT match the machine's own marker — `assert_ne!` guards confirm non-collision.
-  Fix BUG-308: tests that hardcoded `_active_w003_user1` failed on machines where
-  `hostname=w003` and `user=user1`.
+  Fix BUG-308: tests that hardcoded `_active_devbox_devuser` failed on machines where
+  `hostname=devbox` and `user=devuser`.
 - **Rule:** Never hardcode real-looking hostnames in test fixtures for `_active_*` markers.
   Always use synthetic names that cannot match any realistic machine identity.
 - **Source fn:** All active-marker tests in `tests/usage/touch_tests.rs`,

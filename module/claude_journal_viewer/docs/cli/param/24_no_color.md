@@ -15,6 +15,10 @@ clj .tail no_color::1 > /tmp/log.txt  # Pipe-safe output
 NO_COLOR=1 clj .stats                 # Via environment
 ```
 
+The parameter and the environment variable feed the same decision: either one
+alone suppresses color, and neither can re-enable it once the other has set it.
+Accepted values are `1` and `true`; anything else leaves color on.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -34,6 +38,10 @@ NO_COLOR=1 clj .stats                 # Via environment
 | 1 | [`.list`](../command/01_list.md) | 0 | ANSI colors enabled |
 | 2 | [`.tail`](../command/02_tail.md) | 0 | ANSI colors enabled |
 | 3 | [`.stats`](../command/03_stats.md) | 0 | ANSI colors enabled |
+| 4 | [`.search`](../command/04_search.md) | 0 | ANSI colors enabled |
+| 6 | [`.prune`](../command/06_prune.md) | 0 | ANSI colors enabled |
+| 7 | [`.status`](../command/07_status.md) | 0 | ANSI colors enabled |
+| 8 | [`.export`](../command/08_export.md) | 0 | Applies to `format::table` only |
 
 ### Referenced User Stories
 

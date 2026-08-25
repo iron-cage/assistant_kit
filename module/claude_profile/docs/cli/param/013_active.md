@@ -3,8 +3,8 @@
 > **REMOVED (Feature 065):** The `active::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment is now performed via `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine).
 >
 > **Migration:**
-> - `active::user1@w003 name::X` → `assignee::user1@w003 name::X`
-> - `active::user1@w003` (unassign) → `assignee::user1@w003`
+> - `active::devuser@devbox name::X` → `assignee::devuser@devbox name::X`
+> - `active::devuser@devbox` (unassign) → `assignee::devuser@devbox`
 > - `active::$USER@$HOSTNAME name::X` → `assignee::0 name::X` (current machine via sentinel)
 >
 > Using `active::` now exits 1 with a migration message.
@@ -24,10 +24,10 @@
 **Behavior:**
 
 ```text
-active::user1@w003 name::X          → write _active_w003_user1 = X (assign)
-active::user1@w003                   → clear _active_w003_user1    (unassign)
-active::user1@w003 name::X dry::1   → preview without writing
-active::user1@w003 name::X trace::1 → emit ... · accounts active  assign: OK
+active::devuser@devbox name::X          → write _active_devbox_devuser = X (assign)
+active::devuser@devbox                  → clear _active_devbox_devuser    (unassign)
+active::devuser@devbox name::X dry::1   → preview without writing
+active::devuser@devbox name::X trace::1 → emit ... · accounts active  assign: OK
 ```
 
 **Value format and sanitization:**
@@ -42,9 +42,9 @@ Sanitization: alphanumeric, `-`, `.` kept; all other characters become `_`. Iden
 
 | `active::` value | Written filename |
 |-----------------|-----------------|
-| `user1@w003` | `_active_w003_user1` |
+| `devuser@devbox` | `_active_devbox_devuser` |
 | `alice@my laptop` | `_active_my_laptop_alice` (space → `_`) |
-| `alice@w003.local` | `_active_w003.local_alice` (dot preserved) |
+| `alice@devbox.local` | `_active_devbox.local_alice` (dot preserved) |
 
 **No ownership side effects:** `active::` does NOT modify the `owner` field in `{name}.json` — marker-only write. Ownership is managed by `owner::` and `owner::0`.
 

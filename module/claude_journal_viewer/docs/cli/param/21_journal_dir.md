@@ -20,6 +20,14 @@ The resolution order is:
 2. `CLR_JOURNAL_DIR` environment variable
 3. `~/.clr/journal/` default
 
+Not to be confused with [`dir::`](07_dir.md), which filters events by *their
+own* recorded working directory and does not affect where the journal is read
+from. Both may be given at once.
+
+For `.serve`, `journal_dir::` is a launch-time argument only — it is
+deliberately not accepted as an HTTP query key, since a client able to repoint
+the reader could reach any file tree the server process can.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -40,7 +48,11 @@ The resolution order is:
 | 2 | [`.tail`](../command/02_tail.md) | ~/.clr/journal/ | Standard location |
 | 3 | [`.stats`](../command/03_stats.md) | ~/.clr/journal/ | Standard location |
 | 4 | [`.search`](../command/04_search.md) | ~/.clr/journal/ | Standard location |
+| 5 | [`.serve`](../command/05_serve.md) | ~/.clr/journal/ | Launch-time only, never a query key |
+| 6 | [`.prune`](../command/06_prune.md) | ~/.clr/journal/ | Selects which journal is pruned |
 | 7 | [`.status`](../command/07_status.md) | ~/.clr/journal/ | Standard location |
+| 8 | [`.export`](../command/08_export.md) | ~/.clr/journal/ | Standard location |
+| 9 | [`.chart`](../command/09_chart.md) | ~/.clr/journal/ | Standard location |
 
 ### Referenced User Stories
 

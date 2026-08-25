@@ -27,7 +27,7 @@ Examples:
 | `for::` value | Written filename | Written machine | Written user |
 |---------------|-----------------|-----------------|--------------|
 | `alice@laptop` | `_active_laptop_alice` | `laptop` | `alice` |
-| `user1@w003.local` | `_active_w003.local_user1` | `w003.local` | `user1` |
+| `devuser@devbox.local` | `_active_devbox.local_devuser` | `devbox.local` | `devuser` |
 | `alice@my laptop` | `_active_my_laptop_alice` | `my_laptop` (space→`_`) | `alice` |
 
 When `for::` is omitted, the target is the current machine — same resolved values as `active_marker_filename()` (`$USER`/`$USERNAME`/`"user"` and `resolve_hostname()`).

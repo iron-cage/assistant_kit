@@ -44,35 +44,35 @@ The `"0"` sentinel in `assignee::` is a **"current machine" shortcut** — it do
 
 ```
 # Set ownership for alice:
-owner::user1@w003 name::alice@corp.com    # explicit identity
-owner::0 name::alice@corp.com             # 0 = RELEASE (clear owner field)
+owner::devuser@devbox name::alice@corp.com     # explicit identity
+owner::0 name::alice@corp.com                  # 0 = RELEASE (clear owner field)
 
 # Assign marker for alice:
-assignee::user1@w003 name::alice@corp.com # explicit identity
-assignee::0 name::alice@corp.com          # 0 = CURRENT MACHINE ($USER@$HOSTNAME)
+assignee::devuser@devbox name::alice@corp.com  # explicit identity
+assignee::0 name::alice@corp.com               # 0 = CURRENT MACHINE ($USER@$HOSTNAME)
 
 # Unassign marker:
-assignee::user1@w003                      # clear explicit identity's marker
-assignee::0                               # clear current machine's marker
+assignee::devuser@devbox                       # clear explicit identity's marker
+assignee::0                                    # clear current machine's marker
 ```
 
 **`force::` bypass:** `assignee::` has no ownership gate — `force::1` is silently ignored when combined with `assignee::`. (Same behavior as `active::` in Feature 064.)
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .accounts assignee::user1@w003 name::alice@corp.com` writes `{credential_store}/_active_w003_user1` = `alice@corp.com`; exits 0; stdout contains `assigned alice@corp.com for user1@w003  →  _active_w003_user1`. No credential files modified.
+- **AC-01**: `clp .accounts assignee::devuser@devbox name::alice@corp.com` writes `{credential_store}/_active_devbox_devuser` = `alice@corp.com`; exits 0; stdout contains `assigned alice@corp.com for devuser@devbox  →  _active_devbox_devuser`. No credential files modified.
 - **AC-02**: `clp .accounts assignee::0 name::alice@corp.com` expands `$USER@$HOSTNAME`, writes `{credential_store}/_active_{hostname}_{user}` = `alice@corp.com`; exits 0; stdout contains `assigned alice@corp.com for {user}@{hostname}  →  _active_{hostname}_{user}`.
-- **AC-03**: `clp .accounts assignee::user1@w003` (no `name::`) clears `{credential_store}/_active_w003_user1`; exits 0; stdout contains `unassigned user1@w003  →  _active_w003_user1 cleared`. No credential files modified.
+- **AC-03**: `clp .accounts assignee::devuser@devbox` (no `name::`) clears `{credential_store}/_active_devbox_devuser`; exits 0; stdout contains `unassigned devuser@devbox  →  _active_devbox_devuser cleared`. No credential files modified.
 - **AC-04**: `clp .accounts assignee::0` (no `name::`) expands `$USER@$HOSTNAME`, clears `{credential_store}/_active_{hostname}_{user}`; exits 0; stdout contains `unassigned {user}@{hostname}  →  _active_{hostname}_{user} cleared`.
-- **AC-05**: `clp .accounts assignee::user1@w003 name::alice@corp.com dry::1` exits 0; stdout contains `[dry-run] would assign alice@corp.com for user1@w003  →  _active_w003_user1`; no files written.
+- **AC-05**: `clp .accounts assignee::devuser@devbox name::alice@corp.com dry::1` exits 0; stdout contains `[dry-run] would assign alice@corp.com for devuser@devbox  →  _active_devbox_devuser`; no files written.
 - **AC-06**: `clp .accounts assignee::0 name::alice@corp.com dry::1` exits 0; stdout contains `[dry-run] would assign alice@corp.com for {user}@{hostname}  →  _active_{hostname}_{user}`; no files written.
 - **AC-07**: `clp .accounts assignee::0 dry::1` (no `name::`) exits 0; stdout contains `[dry-run] would unassign {user}@{hostname}  →  _active_{hostname}_{user} cleared`; no `_active_*` file modified or deleted.
-- **AC-08**: `clp .accounts assignee::user1@w003 name::ghost@example.com` when account not in credential store exits 1 with account-not-found error; no marker file written.
+- **AC-08**: `clp .accounts assignee::devuser@devbox name::ghost@example.com` when account not in credential store exits 1 with account-not-found error; no marker file written.
 - **AC-09**: `clp .accounts assignee::badvalue` (no `@` and value ≠ `"0"`) exits 1 with invalid `USER@MACHINE` format error; no `_active_*` file written.
-- **AC-10**: `clp .accounts active::user1@w003 name::alice@corp.com` exits 1; stderr contains migration message: "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)". No files modified.
+- **AC-10**: `clp .accounts active::devuser@devbox name::alice@corp.com` exits 1; stderr contains migration message: "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)". No files modified.
 - **AC-11**: `assignee::` does NOT modify the `owner` field in `{name}.json` — marker-only write, ownership-neutral.
 - **AC-12**: `assignee::` value sanitization: spaces → `_`; dots and hyphens preserved verbatim. Example: `assignee::alice@my laptop` → `_active_my_laptop_alice`.
-- **AC-13**: `clp .accounts assignee::user1@w003 name::alice@corp.com force::1` — `force::1` silently ignored; marker written identically to without `force::1`; exits 0.
+- **AC-13**: `clp .accounts assignee::devuser@devbox name::alice@corp.com force::1` — `force::1` silently ignored; marker written identically to without `force::1`; exits 0.
 
 ### Bugs
 

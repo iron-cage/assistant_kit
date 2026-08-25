@@ -302,20 +302,20 @@ fn ft32_009_sessions_table_who_override()
 /// and `✓` on the own session row.
 ///
 /// # Root Cause (BUG-308)
-/// Previous version hardcoded `_active_w003_user1` and `_active_w004_user2` as
-/// "other machine" marker filenames. On the test machine (hostname=w003, user=user1),
-/// `active_marker_filename()` returns `_active_w003_user1` — the same name as the
+/// Previous version hardcoded `_active_devbox_devuser` and `_active_buildbox_devuser2` as
+/// "other machine" marker filenames. On the test machine (hostname=devbox, user=devuser),
+/// `active_marker_filename()` returns `_active_devbox_devuser` — the same name as the
 /// hardcoded "other" marker. The second `fs::write` overwrote the own marker content
 /// (`"own@test.com"` → `"alice@test.com"`), so `build_sessions_table` showed
 /// `alice@test.com ✓` instead of `own@test.com ✓`.
 ///
 /// # Why Not Caught
 /// Test was written and validated on a machine where `active_marker_filename()` did not
-/// collide with `_active_w003_user1`. The fragility is machine-specific and silent —
+/// collide with `_active_devbox_devuser`. The fragility is machine-specific and silent —
 /// the test panics with a misleading message rather than a setup-collision error.
 ///
 /// # Fix Applied
-/// Fix(BUG-308): replaced hardcoded `_active_w003_user1` / `_active_w004_user2` with
+/// Fix(BUG-308): replaced hardcoded `_active_devbox_devuser` / `_active_buildbox_devuser2` with
 /// clearly synthetic names `_active_testhost1_tst1` / `_active_testhost2_tst2`. Added
 /// `assert_ne!` guards to fail loudly on any machine where a collision still occurs.
 /// Own marker is written LAST to ensure it is never overwritten.
@@ -327,7 +327,7 @@ fn ft32_009_sessions_table_who_override()
 ///
 /// # Pitfall
 /// `active_marker_filename()` depends on the actual hostname and `$USER` env var —
-/// both vary across machines. Never hardcode expected identities like `user1@w003`
+/// both vary across machines. Never hardcode expected identities like `devuser@devbox`
 /// directly; use synthetic names or derive them from `active_marker_filename()`.
 ///
 /// Spec: [`tests/docs/feature/25_per_machine_active_marker.md` FT-13]
@@ -344,8 +344,8 @@ fn ft13_025_sessions_table_parses_marker_identity_from_filename()
   let own_fname = claude_profile_core::account::active_marker_filename();
 
   // "Other machine" markers use synthetic hostnames/users that no real machine is expected
-  // to have. Fix(BUG-308): previous hardcoded `_active_w003_user1` overwrote the own marker
-  // on machines where hostname=w003, user=user1 (same name as `active_marker_filename()`).
+  // to have. Fix(BUG-308): previous hardcoded `_active_devbox_devuser` overwrote the own marker
+  // on machines where hostname=devbox, user=devuser (same name as `active_marker_filename()`).
   let other1_fname = "_active_testhost1_tst1";
   let other2_fname = "_active_testhost2_tst2";
   assert_ne!(

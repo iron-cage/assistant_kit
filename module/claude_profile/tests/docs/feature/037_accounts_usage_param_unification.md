@@ -17,22 +17,22 @@
 | FT-05 | AC-05 | `.accounts owner::0 name::X` exits 0; writes `owner: ""`; credentials and active marker unchanged (Feature 064; formerly `unclaim::1 name::X`) | `it01_unclaim_clears_owner (account_ownership_test.rs)` |
 | FT-06 | AC-06 | `.accounts owner::0 name::X` exits 1 with ownership violation when G8 fails; gate runs before `dry::1` (Feature 064; formerly `unclaim::1`) | `ft16_unclaim_g8_gate (account_ownership_test.rs)` |
 | FT-07 | AC-07 | `.accounts owner::0` (no `name::`) applies ownership release to all filtered accounts; each evaluated against G8; non-owned skipped (Feature 064; formerly `unclaim::1` batch) | `ft07_accounts_unclaim_batch` |
-| FT-08 | AC-08 | `.accounts assignee::user1@w003 name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged (Feature 065; formerly `assign::1 name::X`) | `ft01_assignee_assign_writes_current_machine_marker (account_assign_test.rs)` |
+| FT-08 | AC-08 | `.accounts assignee::devuser@devbox name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged (Feature 065; formerly `assign::1 name::X`) | `ft01_assignee_assign_writes_current_machine_marker (account_assign_test.rs)` |
 | FT-09 | AC-09 | `.accounts assignee::bob@laptop name::X` writes `_active_laptop_bob`; sanitization identical to former `.account.assign` (Feature 065; formerly `assign::1 name::X for::bob@laptop`) | `ft01b_assignee_assign_writes_remote_marker (account_assign_test.rs)` |
-| FT-10 | AC-10 | `.accounts assignee::user1@w003` (no `name::`) clears `_active_w003_user1`; exits 0; no credentials or `{name}.json` touched (Feature 065; replaces former `assign::1` no-name usage block) | `ft02_assignee_unassign_clears_marker (account_assign_test.rs)` |
+| FT-10 | AC-10 | `.accounts assignee::devuser@devbox` (no `name::`) clears `_active_devbox_devuser`; exits 0; no credentials or `{name}.json` touched (Feature 065; replaces former `assign::1` no-name usage block) | `ft02_assignee_unassign_clears_marker (account_assign_test.rs)` |
 | FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with targeted `owner::0` migration hint — registered as redirect stub (Feature 037) | *(coverage gap — no `accounts_test.rs` exists and no `fully_deregistered`-named function exists anywhere; see body section)* |
 | FT-12 | AC-12 | `.account.assign name::alice` exits 1 with targeted `assignee::` migration hint — registered as redirect stub (Feature 037) | *(coverage gap — no `accounts_test.rs` exists and no `fully_deregistered`-named function exists anywhere; see body section)* |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
 | FT-15 | AC-15 | `.accounts refresh::1 touch::1` accepted but inert — no fetch/touch trace lines, local-only output | `ft15_accounts_refresh_touch_inert (accounts_ft_test.rs)` |
 | FT-16 | AC-16 | `.usage owner::0 name::X` clears owner field — identical result to `.accounts owner::0 name::X` (Feature 064; formerly `usage unclaim::1 name::X`) | `f37_ft16_usage_unclaim_mirrors_accounts` (`usage_feature_test.rs`) |
-| FT-17 | AC-17 | `.usage assignee::user1@w003 name::X` writes marker — identical result to `.accounts assignee::user1@w003 name::X` (Feature 065; formerly `active::USER@MACHINE name::X` — Feature 064) | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
+| FT-17 | AC-17 | `.usage assignee::devuser@devbox name::X` writes marker — identical result to `.accounts assignee::devuser@devbox name::X` (Feature 065; formerly `active::USER@MACHINE name::X` — Feature 064) | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-18 | AC-18 | `.accounts dry::1 owner::0 name::X` prints `[dry-run] would clear owner of X`; exits 0; no files modified; G8 gate runs (Feature 064; formerly `dry::1 unclaim::1`) | `ft17_unclaim_dry_run (account_ownership_test.rs)` |
 | FT-19 | AC-19 | Owner column visible by default on `.accounts` and `.usage`; shows owner from `{name}.json`; `cols::-owner` hides it | `ft19_owner_column_default_visible` |
 | FT-20 | AC-20 | `.accounts owner::0 name::X force::1` bypasses G8; clears owner even when caller ≠ stored owner; exits 0 (Feature 064; formerly `unclaim::1 force::1`) | `ft20_accounts_unclaim_force_bypasses_g8` |
-| FT-21 | AC-21 | `.accounts force::1` without `owner::`, and `.accounts force::1 assignee::user1@w003 name::X`, silently ignore `force::1` — no error (Feature 065; formerly with `assign::1`/`active::`) | `ft21_force_no_effect_without_unclaim` |
+| FT-21 | AC-21 | `.accounts force::1` without `owner::`, and `.accounts force::1 assignee::devuser@devbox name::X`, silently ignore `force::1` — no error (Feature 065; formerly with `assign::1`/`active::`) | `ft21_force_no_effect_without_unclaim` |
 | FT-22 | AC-22 | `.accounts assign::1` exits 1 with migration message "REMOVED — use `assignee::USER@MACHINE name::X`"; `.accounts unclaim::1` exits 1 "REMOVED — use `owner::0 name::X`"; `.accounts for::user@host` exits 1 with migration message; `.accounts active::user@host` exits 1 with REMOVED_TOGGLE pointing to `assignee::` (Feature 065) | split across `ft05_assign_removed_toggle`, `ft06_assign_and_for_removed_toggles`, `ft07_unclaim_removed_toggle`, `ft10_active_removed_toggle_migration_message` (all in `account_assign_test.rs`) — no single `ft22_removed_toggle_stubs` function exists |
-| FT-23 | AC-23 | `.accounts owner::user1@w003 name::X,Y,Z` sets ownership for X, Y, Z in one invocation; each G8-evaluated independently | `ec13_owner_set_comma_list_batch_set (account_owner_param_test.rs)` |
+| FT-23 | AC-23 | `.accounts owner::devuser@devbox name::X,Y,Z` sets ownership for X, Y, Z in one invocation; each G8-evaluated independently | `ec13_owner_set_comma_list_batch_set (account_owner_param_test.rs)` |
 | FT-24 | AC-24 | `.accounts owner::0 name::X,Y,Z` clears ownership for X, Y, Z; each G8-evaluated independently | `ec12_owner_zero_comma_list_batch_clear (account_owner_param_test.rs)` — fixture has all 3 accounts owned by the caller; does not exercise the mixed-ownership/skip-message path this AC also implies |
 
 ### Notes
@@ -43,7 +43,7 @@
 - FT-05 is an integration test via `./verb/test` — identical to the former FT-02 in `36_account_ownership.md` but via `accounts owner::0 name::alice` (Feature 064; formerly `unclaim::1`).
 - FT-06 verifies G8 gate: non-owner caller on `.accounts owner::0 name::X` exits 1 before `dry::1` is checked (Feature 064).
 - FT-07 is an integration test: set up two accounts (alice owned by current, bob owned by other). `.accounts owner::0` with no `name::` applies ownership release to alice (G8 passes, owner cleared); emits `"skip bob: owned by other@remote"` for bob and continues. Exit 0 always (best-effort batch — per-account G8 violations produce skip messages, not failures). (Feature 064; formerly `unclaim::1` batch.)
-- FT-08 verifies that only the marker file is written — mtime of `{name}.credentials.json`, `{name}.json`, and `~/.claude.json` are all unchanged after `.accounts assignee::user1@w003 name::X` (Feature 065; formerly `active::user1@w003 name::X` — Feature 064; formerly `assign::1 name::X`).
+- FT-08 verifies that only the marker file is written — mtime of `{name}.credentials.json`, `{name}.json`, and `~/.claude.json` are all unchanged after `.accounts assignee::devuser@devbox name::X` (Feature 065; formerly `active::devuser@devbox name::X` — Feature 064; formerly `assign::1 name::X`).
 - FT-09 verifies `assignee::` sanitization: `assignee::bob@my-laptop` → marker `_active_my-laptop_bob` (dashes and dots preserved, other specials → `_`). (Feature 065; formerly `active::bob@my-laptop` — Feature 064; formerly `assign::1 name::X for::bob@my-laptop`.)
 - FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that stderr contains the targeted migration hint. These commands are registered as redirect stubs (Feature 037): `.account.unclaim` exits 1 with `"owner::0"` hint; `.account.assign` exits 1 with `"assignee::"` hint. NOT generic "unknown command" errors.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
@@ -52,7 +52,7 @@
 - FT-18 verifies G8 gate still runs in dry mode: (a) owned by caller → `[dry-run] would clear owner of X` printed, exits 0; (b) owned by other → exits 1, no dry-run line. Uses `owner::0 name::X dry::1` (Feature 064; formerly `dry::1 unclaim::1`).
 - FT-19 verifies Owner column: set up alice with `owner: "testuser@testmachine"`, bob with `owner: ""`. `.accounts` text output: alice row shows `testuser@testmachine` in Owner column, bob shows `—`. `.accounts cols::-owner` output: no Owner column header.
 - FT-20 verifies G8 bypass via force: same non-owned setup as FT-06; with `force::1` added to `owner::0 name::X`, exits 0 and `alice.json` has `"owner": ""`. (Feature 064; formerly `unclaim::1 force::1`.)
-- FT-21 verifies force is a no-op without `owner::`: `.accounts force::1` (no mutation) runs normally; `.accounts force::1 assignee::user1@w003 name::alice` writes marker normally. No error in either case. (Feature 065; formerly `active::` — Feature 064; formerly with `assign::1`.)
+- FT-21 verifies force is a no-op without `owner::`: `.accounts force::1` (no mutation) runs normally; `.accounts force::1 assignee::devuser@devbox name::alice` writes marker normally. No error in either case. (Feature 065; formerly `active::` — Feature 064; formerly with `assign::1`.)
 - FT-22 verifies REMOVED_TOGGLE stubs: `assign::1`, `unclaim::1`, `for::user@host`, and `active::user@host` on `.accounts` each exit 1 with migration messages pointing to `assignee::USER@MACHINE name::X`, `owner::0 name::X` respectively. (Feature 065 adds `active::` stub; Feature 064 added `assign::1`/`for::`/`unclaim::1` stubs.)
 - FT-23 verifies batch set via comma-list `name::X,Y,Z` with `owner::USER@MACHINE`; each G8-evaluated independently; all succeed when caller owns or accounts are unowned.
 - FT-24 verifies batch clear via comma-list `name::X,Y,Z` with `owner::0`; each G8-evaluated independently; accounts owned by others skipped with `"skip"` message (batch-clear mode).
@@ -145,11 +145,11 @@
 
 ---
 
-### FT-08: `.accounts active::user1@w003 name::X` writes marker only; no other files modified (Feature 064)
+### FT-08: `.accounts active::devuser@devbox name::X` writes marker only; no other files modified (Feature 064)
 
 - **Given:** Account `alice` exists. Record mtime of `alice.credentials.json`, `alice.json`, `~/.claude.json`, and any existing marker file.
-- **When:** `clp .accounts active::user1@w003 name::alice` is executed. (Formerly `assign::1 name::alice` — Feature 064.)
-- **Then:** Exits 0. Marker file `_active_w003_user1` in credential store contains `alice`. mtime of `alice.credentials.json` unchanged. mtime of `alice.json` unchanged. mtime of `~/.claude.json` unchanged.
+- **When:** `clp .accounts active::devuser@devbox name::alice` is executed. (Formerly `assign::1 name::alice` — Feature 064.)
+- **Then:** Exits 0. Marker file `_active_devbox_devuser` in credential store contains `alice`. mtime of `alice.credentials.json` unchanged. mtime of `alice.json` unchanged. mtime of `~/.claude.json` unchanged.
 - **Exit:** 0
 - **Source fn:** `ft01_assignee_assign_writes_current_machine_marker` (`account_assign_test.rs`) — renamed from `aa01_current_machine_marker_written`
 - **Source:** [037_accounts_usage_param_unification.md AC-08](../../../docs/feature/037_accounts_usage_param_unification.md)
@@ -167,11 +167,11 @@
 
 ---
 
-### FT-10: `.accounts active::user1@w003` (no `name::`) clears marker for that identity (Feature 064)
+### FT-10: `.accounts active::devuser@devbox` (no `name::`) clears marker for that identity (Feature 064)
 
-- **Given:** Credential store with marker `_active_w003_user1` = `alice`. Current identity resolves to `testuser@testmachine`.
-- **When:** `clp .accounts active::user1@w003` (no `name::`) is executed. (Feature 064 — no-name now unassigns; the former `assign::1` no-name emitted a usage block, no longer applicable.)
-- **Then:** Exits 0. Marker file `_active_w003_user1` is cleared/removed from credential store. `alice.json` unchanged. `alice.credentials.json` unchanged.
+- **Given:** Credential store with marker `_active_devbox_devuser` = `alice`. Current identity resolves to `testuser@testmachine`.
+- **When:** `clp .accounts active::devuser@devbox` (no `name::`) is executed. (Feature 064 — no-name now unassigns; the former `assign::1` no-name emitted a usage block, no longer applicable.)
+- **Then:** Exits 0. Marker file `_active_devbox_devuser` is cleared/removed from credential store. `alice.json` unchanged. `alice.credentials.json` unchanged.
 - **Exit:** 0
 - **Source fn:** `ft02_assignee_unassign_clears_marker` (`account_assign_test.rs`) — renamed from `aa04_no_name_emits_usage_block`; the old name described pre-Feature-065 behavior (usage block), the new one matches this case's current clear-marker behavior
 - **Source:** [037_accounts_usage_param_unification.md AC-10](../../../docs/feature/037_accounts_usage_param_unification.md)
@@ -246,11 +246,11 @@
 
 ---
 
-### FT-17: `.usage assignee::user1@w003 name::X` writes marker — identical to `.accounts assignee::user1@w003 name::X` (Feature 065)
+### FT-17: `.usage assignee::devuser@devbox name::X` writes marker — identical to `.accounts assignee::devuser@devbox name::X` (Feature 065)
 
 - **Given:** Account `alice` exists.
-- **When:** `clp .usage assignee::user1@w003 name::alice` is executed. (Feature 065; formerly `active::user1@w003 name::alice` — Feature 064; formerly `assign::1 name::alice`.)
-- **Then:** Exits 0. Marker file `_active_w003_user1` in credential store contains `alice`. Behavior identical to FT-08 (`.accounts assignee::user1@w003 name::alice`).
+- **When:** `clp .usage assignee::devuser@devbox name::alice` is executed. (Feature 065; formerly `active::devuser@devbox name::alice` — Feature 064; formerly `assign::1 name::alice`.)
+- **Then:** Exits 0. Marker file `_active_devbox_devuser` in credential store contains `alice`. Behavior identical to FT-08 (`.accounts assignee::devuser@devbox name::alice`).
 - **Exit:** 0
 - **Source fn:** `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-17](../../../docs/feature/037_accounts_usage_param_unification.md)
@@ -302,7 +302,7 @@
 - **Given:** Credential store with account `alice`.
 - **When (case A):** `clp .accounts force::1` (no `owner::`, no mutation) executed.
 - **Then (case A):** Exits 0. `force::1` has no effect — `.accounts` executes normally (lists accounts). No error.
-- **When (case B):** `clp .accounts force::1 active::user1@w003 name::alice` executed. (Formerly `force::1 assign::1 name::alice` — Feature 064.)
+- **When (case B):** `clp .accounts force::1 active::devuser@devbox name::alice` executed. (Formerly `force::1 assign::1 name::alice` — Feature 064.)
 - **Then (case B):** Exits 0. Marker file written normally (same as without `force::1`). `force::1` has no effect on `active::` path. No error.
 - **Exit:** 0 (both cases)
 - **Source fn:** `ft21_force_no_effect_without_unclaim`
@@ -325,11 +325,11 @@
 
 ---
 
-### FT-23: `.accounts owner::user1@w003 name::X,Y,Z` — batch ownership set (Feature 064)
+### FT-23: `.accounts owner::devuser@devbox name::X,Y,Z` — batch ownership set (Feature 064)
 
 - **Given:** Accounts `alice`, `bob`, `carol` all unowned (or owned by current identity). Current identity = `"testuser@testmachine"` (G8 passes for all).
-- **When:** `clp .accounts owner::user1@w003 name::alice,bob,carol` is executed.
-- **Then:** Exits 0. `alice.json`, `bob.json`, `carol.json` each contain `"owner": "user1@w003"`. Each evaluated against G8 independently.
+- **When:** `clp .accounts owner::devuser@devbox name::alice,bob,carol` is executed.
+- **Then:** Exits 0. `alice.json`, `bob.json`, `carol.json` each contain `"owner": "devuser@devbox"`. Each evaluated against G8 independently.
 - **Exit:** 0
 - **Source fn:** `ec13_owner_set_comma_list_batch_set` (`account_owner_param_test.rs`) — renamed from `ft23_owner_batch_set`
 - **Source:** [037_accounts_usage_param_unification.md AC-23](../../../docs/feature/037_accounts_usage_param_unification.md)

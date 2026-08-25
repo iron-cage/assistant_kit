@@ -2,14 +2,14 @@
 
 Aggregate statistics over journal events.
 
--- **Parameters:** since::, until::, type::, by::, dir::
+-- **Parameters:** since::, until::, type::, by::, dir::, journal_dir::, no_color::
 -- **Exit Codes:** 0 (success), 1 (invalid param)
 
 ### Syntax
 
 ```
 clj .stats [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [by::GROUP_BY]
-           [dir::PATH]
+           [dir::SUBSTR] [journal_dir::PATH] [no_color::BOOL]
 ```
 
 ### Parameters
@@ -20,7 +20,13 @@ clj .stats [since::DURATION] [until::DURATION] [type::EVENT_TYPE] [by::GROUP_BY]
 | `until` | Duration | -- | No | Time window end |
 | `type` | EventType | execution | No | Event type to aggregate |
 | `by` | GroupBy | day | No | Grouping dimension |
-| `dir` | Path | ~/.clr/journal/ | No | Journal directory override (falls back to `CLR_JOURNAL_DIR` env, then the default) |
+| `dir` | Path | -- | No | Filter by the event's own working directory (substring) |
+| `journal_dir` | Path | ~/.clr/journal/ | No | Journal directory override (falls back to `CLR_JOURNAL_DIR` env, then the default) |
+| `no_color` | Boolean | 0 | No | Disable ANSI colors |
+
+`dir::` and `by::dir` refer to the same event field from two directions: the
+first narrows which events are counted, the second chooses what the buckets are
+keyed on. Neither has anything to do with `journal_dir::`.
 
 **Algorithm (4 steps):**
 

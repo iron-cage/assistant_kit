@@ -33,8 +33,8 @@ Use narrow search terms (error messages, file paths, function names) rather than
 | Bash mode | `grep -rn "<search term>" {memDir} --include="*.md"` | `grep -rn "<search term>" {sessionDir}/ --include="*.jsonl"` |
 | Tool mode (default) | `{GR} with pattern="<search term>" path="{memDir}" glob="*.md"` | `{GR} with pattern="<search term>" path="{sessionDir}/" glob="*.jsonl"` |
 
-- `memDir` = the auto-memory directory (e.g., `~/.claude/projects/-home-user1-pro/memory/`)
-- `sessionDir` = `qw(R8())` — the session storage directory (e.g., `~/.claude/projects/-home-user1-pro/`)
+- `memDir` = the auto-memory directory (e.g., `~/.claude/projects/-home-devuser-pro/memory/`)
+- `sessionDir` = `qw(R8())` — the session storage directory (e.g., `~/.claude/projects/-home-devuser-pro/`)
 - `GR` = the Grep tool name as used in the current Claude Code session context
 
 **Practical effect:**

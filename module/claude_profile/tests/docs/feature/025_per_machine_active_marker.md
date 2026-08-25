@@ -84,9 +84,9 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-04: Two machines share a credential store without overwriting each other's marker
 
-- **Given:** A credential store shared between machine A (`_active_A_user1`) and machine B (`_active_B_user1`).
-- **When:** Machine A runs `clp .account.use account-a@example.com` while machine B has `_active_B_user1` = `account-b@example.com`.
-- **Then:** Machine A writes `_active_A_user1`; machine B's `_active_B_user1` is untouched. Each machine reads its own marker independently.
+- **Given:** A credential store shared between machine A (`_active_A_devuser`) and machine B (`_active_B_devuser`).
+- **When:** Machine A runs `clp .account.use account-a@example.com` while machine B has `_active_B_devuser` = `account-b@example.com`.
+- **Then:** Machine A writes `_active_A_devuser`; machine B's `_active_B_devuser` is untouched. Each machine reads its own marker independently.
 - **Note:** Design invariant guaranteed by distinct filenames (`HOSTNAME` + `USER` combination). No isolated test required; independence follows architecturally from non-overlapping filename keys. Both FT-01 and FT-02 implicitly rely on this property via TempDir HOME isolation.
 - **Source fn:** (design invariant — no dedicated test)
 - **Source:** [feature/025_per_machine_active_marker.md AC-03](../../../docs/feature/025_per_machine_active_marker.md)
@@ -163,10 +163,10 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ### FT-11: `other_machines_active()` returns other machines' account names, excludes own marker
 
-- **Given:** A credential store (TempDir) containing three `_active_*` files: the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`, a second file `_active_machine2_user1` containing `"alice@test.com"`, and a third file `_active_machine3_user2` containing `"bob@test.com"`.
+- **Given:** A credential store (TempDir) containing three `_active_*` files: the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`, a second file `_active_machine2_devuser` containing `"alice@test.com"`, and a third file `_active_machine3_devuser2` containing `"bob@test.com"`.
 - **When:** `other_machines_active(&store_path)` is called.
 - **Then:** Returns a `HashSet<String>` containing exactly `{"alice@test.com", "bob@test.com"}`. The own marker's content (`"own@test.com"`) is NOT present in the result. The set has exactly 2 elements.
-- **Note:** File names for the other machines must differ from `active_marker_filename()` — use hard-coded names like `_active_machine2_user1` to guarantee they differ from the current machine's marker regardless of environment.
+- **Note:** File names for the other machines must differ from `active_marker_filename()` — use hard-coded names like `_active_machine2_devuser` to guarantee they differ from the current machine's marker regardless of environment.
 - **Source fn:** `test_ft11_025_other_machines_active_returns_others` (in `claude_profile_core/tests/account_test.rs`)
 - **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)
 
@@ -189,6 +189,6 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, Some(spath), None, false)` is called directly (not via CLI) with `who=None` — auto-shows because marker_count=3 > 1.
 - **Then:** Output contains "Sessions" (table header appears). Each `_active_*` marker is rendered as a row: `Session` = `{user}@{host}` parsed from filename `_active_{host}_{user}` (`_active_testhost1_tst1` → `"tst1@testhost1"`, `_active_testhost2_tst2` → `"tst2@testhost2"`), and `Account` = file content (`"alice@test.com"`, `"bob@test.com"`). The own session's account cell shows `"own@test.com ✓"`.
 - **Exit:** N/A (direct `render_text` function call — no CLI, no exit code)
-- **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (marker files under the store path) is Feature 025's responsibility; the rendering is Feature 009's. BUG-308 fix: synthetic hostnames (`testhost1`/`testhost2`) replaced the original hardcoded `_active_w003_user1`/`_active_w004_user2` names, which could collide with `active_marker_filename()` on a machine actually named `w003`/`user1`.
+- **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (marker files under the store path) is Feature 025's responsibility; the rendering is Feature 009's. BUG-308 fix: synthetic hostnames (`testhost1`/`testhost2`) replaced the original hardcoded `_active_devbox_devuser`/`_active_buildbox_devuser2` names, which could collide with `active_marker_filename()` on a machine actually named `devbox`/`devuser`.
 - **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md), [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)

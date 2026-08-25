@@ -36,7 +36,7 @@ Timestamps use ISO 8601 format with millisecond precision in UTC (`2026-06-27T14
 | `user` | Username the event was produced by |
 | `host` | Hostname the event was produced on |
 | `account` | Non-secret account identifier the event was produced under (email or profile name) — never a token or secret |
-| `agent_id` | Canonical agent identity `{user}@{host}{abs_dir}/` (e.g. `alice@w003/home/alice/assistant/module/claude_runner/`), composed via `compose_agent_id()` — the single format owner |
+| `agent_id` | Canonical agent identity `{user}@{host}{abs_dir}/` (e.g. `alice@devbox/home/alice/assistant/module/claude_runner/`), composed via `compose_agent_id()` — the single format owner |
 
 The `v` field enables forward-compatible parsing: readers skip unknown fields; schema v2 events can add structure without breaking v1 readers. Unknown event types are preserved as raw JSON on read.
 

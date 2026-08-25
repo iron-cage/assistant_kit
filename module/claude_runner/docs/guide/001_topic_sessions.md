@@ -84,7 +84,7 @@ clr topics
 # ACTION
 clr topic --topic rt-race    "Investigate the token race"
 clr topic --topic pool-drain "Investigate pool eligibility"
-clr topic --topic w003-dark  "Why did w003 stop reporting?"
+clr topic --topic devbox-dark  "Why did devbox stop reporting?"
 
 # AFTER — three new topics, each with its own session
 clr topics

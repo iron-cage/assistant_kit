@@ -11,11 +11,11 @@ Renamed from `active::` (Feature 065). `active::` is now a REMOVED_TOGGLE.
 **Behavior:**
 
 ```text
-assignee::user1@w003 name::X        → write _active_w003_user1 = X (assign explicit)
-assignee::0 name::X                 → expand 0→$USER@$HOSTNAME; write _active_{host}_{user} = X (assign current)
-assignee::user1@w003                → clear _active_w003_user1    (unassign explicit)
-assignee::0                         → expand 0→$USER@$HOSTNAME; clear _active_{host}_{user} (unassign current)
-assignee::user1@w003 name::X dry::1 → preview without writing
+assignee::devuser@devbox name::X        → write _active_devbox_devuser = X (assign explicit)
+assignee::0 name::X                     → expand 0→$USER@$HOSTNAME; write _active_{host}_{user} = X (assign current)
+assignee::devuser@devbox                → clear _active_devbox_devuser    (unassign explicit)
+assignee::0                             → expand 0→$USER@$HOSTNAME; clear _active_{host}_{user} (unassign current)
+assignee::devuser@devbox name::X dry::1 → preview without writing
 ```
 
 **`assignee::0` sentinel:** The literal string `"0"` expands to the current machine identity (`$USER@$HOSTNAME`) before all other processing. After expansion, processing is identical to `assignee::USER@MACHINE`. This is a **"current machine" shortcut** — the `"0"` does NOT mean "clear" (contrast: in `owner::`, `"0"` releases ownership).
@@ -32,10 +32,10 @@ Sanitization: alphanumeric, `-`, `.` kept; all other characters become `_`. Iden
 
 | `assignee::` value | Resolves to | Written filename |
 |-------------------|------------|-----------------|
-| `user1@w003` | `user1@w003` | `_active_w003_user1` |
+| `devuser@devbox` | `devuser@devbox` | `_active_devbox_devuser` |
 | `0` | `$USER@$HOSTNAME` | `_active_{hostname}_{user}` |
 | `alice@my laptop` | `alice@my laptop` | `_active_my_laptop_alice` (space → `_`) |
-| `alice@w003.local` | `alice@w003.local` | `_active_w003.local_alice` (dot preserved) |
+| `alice@devbox.local` | `alice@devbox.local` | `_active_devbox.local_alice` (dot preserved) |
 
 **No ownership side effects:** `assignee::` does NOT modify the `owner` field in `{name}.json` — marker-only write. Ownership is managed by `owner::` and `owner::0`.
 
