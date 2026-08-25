@@ -268,7 +268,35 @@ impl ControlSession
   /// stdin, and block until the matching `control_response` arrives (or times out, or the
   /// session breaks). Returns the raw `response.response` payload (or `Value::Null` if the
   /// wire response omitted it, e.g. `seed_read_state`).
+  ///
+  /// Flattens [`Self::send_request_classified`]'s two failure classes into one `Error`, which
+  /// is what every caller but [`Self::read_file`] wants.
   fn send_request< Req : serde::Serialize > ( &self, subtype : &str, params : &Req ) -> Result< serde_json::Value >
+  {
+    self.send_request_classified( subtype, params )?
+      .map_err( | message | Error::msg( format!( "control request '{subtype}' failed: {message}" ) ) )
+  }
+
+  /// [`Self::send_request`] with the two failure classes kept apart instead of flattened.
+  ///
+  /// The outer `Err` is a *transport* failure — broken session, closed or failing stdin,
+  /// serialization failure, timeout — meaning the request never completed a round trip. The
+  /// inner `Err( message )` is the subprocess's own `control_response` error: the request did
+  /// reach the far side and was refused there.
+  ///
+  /// Fix(read-file-error-text-match): added so [`Self::read_file`] can tell "the subprocess
+  ///   said no" from "the session died" structurally.
+  /// Root cause: that distinction existed only inside this function and was destroyed on the
+  ///   way out — both classes collapsed into one `Error`, so `read_file` recovered it by
+  ///   matching `e.to_string().starts_with( "control request 'read_file' failed:" )` against
+  ///   the very prefix this function formats.
+  /// Pitfall: nothing linked that prefix to its producer, so rewording this function's message
+  ///   compiled clean. IT-29 did catch the resulting behavior change, but only by round-tripping
+  ///   a real subprocess, and it would have reported the failure against `read_file` rather than
+  ///   against the message format that actually broke — a long way from cause to symptom.
+  fn send_request_classified< Req : serde::Serialize >(
+    &self, subtype : &str, params : &Req
+  ) -> Result< core::result::Result< serde_json::Value, String > >
   {
     if let Some( reason ) = lock_or_recover( &self.broken ).clone()
     {
@@ -308,8 +336,8 @@ impl ControlSession
 
     match rx.recv_timeout( self.timeout )
     {
-      Ok( WireOutcome::Success( value ) ) => Ok( value ),
-      Ok( WireOutcome::Error( message ) ) => Err( Error::msg( format!( "control request '{subtype}' failed: {message}" ) ) ),
+      Ok( WireOutcome::Success( value ) ) => Ok( Ok( value ) ),
+      Ok( WireOutcome::Error( message ) ) => Ok( Err( message ) ),
       Err( _ ) =>
       {
         lock_or_recover( &self.pending ).remove( &request_id );
@@ -626,12 +654,15 @@ impl ControlSession
       "maxBytes" : max_bytes,
       "encoding" : encoding.map( ReadFileEncoding::as_str ),
     } );
-    match self.send_request( "read_file", &params )
+    // A transport failure (broken session, stdin failure, timeout) propagates via `?`; only the
+    // subprocess's own refusal reaches the `Err` arm below. Previously both arrived as one
+    // flattened `Error` and were told apart by matching the message prefix — see
+    // `send_request_classified`'s `Fix(read-file-error-text-match)` note.
+    match self.send_request_classified( "read_file", &params )?
     {
       Ok( value ) if value.is_null() => Ok( None ),
       Ok( value ) => Self::parse_response( "read_file", value ).map( Some ),
-      Err( e ) if e.to_string().starts_with( "control request 'read_file' failed:" ) => Ok( None ),
-      Err( e ) => Err( e ),
+      Err( _ ) => Ok( None ),
     }
   }
 

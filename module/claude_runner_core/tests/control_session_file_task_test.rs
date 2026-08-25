@@ -52,6 +52,64 @@ fn it_29_read_file_returns_contents_for_an_existing_file_and_none_for_a_missing_
   assert!( missing.is_none(), "a missing file must yield None" );
 }
 
+/// IT-29b: a *transport* failure must still surface as `Err` — `read_file` folds only the
+/// subprocess's own refusal into `Ok(None)`.
+///
+/// # Root Cause
+///
+/// `read_file` told "the subprocess said no" from "the session died" by matching
+/// `e.to_string().starts_with( "control request 'read_file' failed:" )` against the prefix
+/// `send_request` formats — a coupling across two functions with nothing linking them.
+///
+/// # Why Not Caught
+///
+/// IT-29 pins the missing-file half (refusal → `Ok(None)`) but never breaks a session, so
+/// nothing pinned the opposite direction. A change folding every `Err` into `Ok(None)` would
+/// have passed the whole suite while silently reporting dead sessions as empty reads.
+///
+/// # Fix Applied
+///
+/// `send_request_classified` keeps the two classes apart; transport failures propagate via `?`
+/// and never reach the arm that yields `Ok(None)`.
+///
+/// # Prevention
+///
+/// This test kills the subprocess out from under a live session and asserts `read_file` reports
+/// `Err`, not `Ok(None)`.
+///
+/// # Pitfall
+///
+/// "Missing file" and "dead session" are both `Err` at the wire layer but must diverge at the
+/// API boundary — collapsing them loses the distinction the SDK contract depends on.
+#[ test ]
+fn it_29b_read_file_reports_transport_failure_as_err_not_none()
+{
+  let ( session, dir ) = control_session_common::spawn_session();
+  let file_path = dir.path().join( "sample.txt" );
+  std::fs::write( &file_path, "still here\n" ).expect( "failed to write scratch file" );
+
+  // Confirm the session works before breaking it, so a failure below can only mean the kill
+  // took effect — not that the session was never usable.
+  session.read_file( file_path.to_str().unwrap(), None, None )
+    .expect( "read_file() must succeed before the subprocess is killed" )
+    .expect( "read_file() must return Some(..) for an existing file" );
+
+  claude_core::process::send_sigkill( session.pid() ).expect( "failed to SIGKILL the session subprocess" );
+
+  // The reader thread marks the session broken once the killed subprocess's stdout closes.
+  for _ in 0..100
+  {
+    if session.read_file( file_path.to_str().unwrap(), None, None ).is_err() { break; }
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
+  }
+
+  let outcome = session.read_file( file_path.to_str().unwrap(), None, None );
+  assert!(
+    outcome.is_err(),
+    "a dead subprocess must surface as Err, not be folded into Ok(None) — got {outcome:?}"
+  );
+}
+
 /// IT-30: `reloadPlugins()` is a real wire round trip returning refreshed command/agent lists.
 #[ test ]
 fn it_30_reload_plugins_is_a_real_wire_round_trip()

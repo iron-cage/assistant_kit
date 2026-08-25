@@ -333,7 +333,20 @@ fn test_no_code_duplication()
   // Pitfall: when this assertion trips, first confirm the reported number reflects actual
   //   duplicate *names* — the four entries above were all genuine, this one was not; raising
   //   the ceiling to silence a measurement bug permanently weakens the check it protects
-  let duplication_threshold = 20;
+  //
+  // Fix(dup-guard-saturated-by-convention): threshold 20 → 3; the *metric* was corrected again
+  // Root cause: none of the 20 counted duplicates was duplication. 19 were method names the
+  //   trait system requires to repeat across distinct types (as_str ×9, default ×8, fmt ×3,
+  //   from_str ×2, new ×2) and the 20th was `write_creds_restricted`'s mutually-exclusive
+  //   `#[cfg(unix)]` / `#[cfg(not(unix))]` pair. The guard sat at exactly 20/20 on pure noise,
+  //   so it could no longer detect anything: real copy-paste was indistinguishable from the
+  //   next `impl Default`, and the note above conceded the treadmill — "this threshold must be
+  //   updated each time a new struct gains a standard trait impl".
+  // Pitfall: the earlier fixes each corrected *which lines* were scanned; this one corrects
+  //   which *names* can count at all. Adding a name to SHARED_BY_CONVENTION is the same trap
+  //   as raising the ceiling — it blinds the check permanently, so add only names whose
+  //   recurrence is mandated by a trait, never names that merely happen to collide today.
+  let duplication_threshold = 3;
   let duplicates = function_count.saturating_sub( unique_count );
 
   assert!
@@ -478,14 +491,32 @@ fn is_comment_line( line : &str ) -> bool
 /// comment (`is_comment_line`). Both counters below derive from this single list
 /// so they always describe the same population — see `count_function_definitions`
 /// for why that symmetry matters.
+/// Method names whose recurrence across distinct types is mandated by a trait (or by the
+/// universal constructor convention) and therefore carries no copy-paste signal at all.
+const SHARED_BY_CONVENTION : &[ &str ] = &[
+  "as_str", "clone", "cmp", "default", "deref", "deref_mut", "drop", "eq", "fmt", "from",
+  "from_str", "hash", "into", "new", "next", "partial_cmp", "source", "try_from",
+];
+
 fn parsed_function_names( content : &str ) -> Vec< String >
 {
   let mut names = Vec::new();
+  let mut cfg_gated = false;
 
   for line in content.lines()
   {
-    if is_comment_line( line )
+    let trimmed = line.trim();
+
+    if is_comment_line( line ) || trimmed.is_empty()
     {
+      continue;
+    }
+
+    if trimmed.starts_with( "#[" )
+    {
+      // Latch across a whole attribute run — `#[ cfg( unix ) ]` followed by `#[ inline ]`
+      // must still read as gated by the time the `fn` line arrives.
+      cfg_gated = cfg_gated || trimmed.replace( ' ', "" ).contains( "cfg(" );
       continue;
     }
 
@@ -496,12 +527,14 @@ fn parsed_function_names( content : &str ) -> Vec< String >
       if let Some( end ) = after_fn.find( [ '(', '<' ] )
       {
         let name = after_fn[ ..end ].trim();
-        if !name.is_empty()
+        if !name.is_empty() && !cfg_gated && !SHARED_BY_CONVENTION.contains( &name )
         {
           names.push( name.to_string() );
         }
       }
     }
+
+    cfg_gated = false;
   }
 
   names
