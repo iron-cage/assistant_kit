@@ -75,6 +75,12 @@ fn collect_violations( file_path : &Path, pattern : &str ) -> Vec< String >
 
 /// Collect all `.md` files under `dir`, optionally skipping files whose name
 /// (without extension) matches any entry in `skip_names`.
+///
+/// Never descends into `target/`, `.git/`, or any hyphen-prefixed directory, and never yields a
+/// hyphen-prefixed file. Crate-scoped callers see no behavior change (their `docs/` trees contain
+/// none of those); the exclusions exist so a workspace-root walk stays fast and stays restricted
+/// to committed documentation — a temporary file is permitted to reference other temporary files,
+/// so scanning one would produce noise rather than signal.
 fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
 {
   let mut result = Vec::new();
@@ -83,8 +89,17 @@ fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
   for entry in entries.flatten()
   {
     let path = entry.path();
+    let name = path.file_name().and_then( |s| s.to_str() ).unwrap_or( "" );
+    if name.starts_with( '-' )
+    {
+      continue;
+    }
     if path.is_dir()
     {
+      if name == "target" || name == ".git"
+      {
+        continue;
+      }
       result.extend( md_files_in_dir( &path, skip_names ) );
     }
     else if path.extension().is_some_and( |ext| ext == "md" )
@@ -97,6 +112,51 @@ fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
     }
   }
   result
+}
+
+/// Workspace root, two levels up from this crate's manifest (`<root>/module/claude_runner`).
+fn workspace_root() -> PathBuf
+{
+  Path::new( env!( "CARGO_MANIFEST_DIR" ) )
+    .parent()
+    .expect( "module/ dir must have parent" )
+    .parent()
+    .expect( "workspace root must be 2 levels up from crate" )
+    .to_path_buf()
+}
+
+/// Whether `line` *points a reader at* a hyphen-prefixed temporary file.
+///
+/// Two pointer forms are recognized, matching the rule's own wording ("imports, includes, links
+/// in committed docs"):
+///
+/// 1. A markdown link whose target is hyphen-prefixed — `](-...)`. Always a pointer.
+/// 2. Prose of the form ``See `-foo.md` `` — the shape both real violations took.
+///
+/// Deliberately NOT flagged: a bare inline-code mention of a hyphen-prefixed name that merely
+/// *names* something rather than directing the reader to open it. `tests/docs/cli/command/
+/// 12_topics.md` describes a fixture layout containing `-not-a-dir.txt`; that is a scenario
+/// description, not a link, and forbidding it would be enforcing a rule that does not exist.
+///
+/// Two discriminators keep CLI flags out: a `--flag` is rejected by the second-hyphen check, and
+/// a filename is required to contain a `.`. Without the first, ``see `--quiet` `` and four
+/// siblings in `docs/claude_params/` would all read as violations.
+fn line_points_at_temp_file( line : &str ) -> bool
+{
+  if line.contains( "](-" )
+  {
+    return true;
+  }
+  let lowered = line.to_lowercase();
+  let Some( start ) = lowered.find( "see `-" ) else { return false };
+  let after = &lowered[ start + "see `-".len().. ];
+  // `--flag`, not a filename.
+  if after.starts_with( '-' )
+  {
+    return false;
+  }
+  let Some( end ) = after.find( '`' ) else { return false };
+  after[ ..end ].contains( '.' )
 }
 
 #[ test ]
@@ -392,4 +452,109 @@ fn manual_doc_has_no_cd_then_cargo_run_pattern()
      cd-ing away and invoke it directly instead.\nViolating lines:\n{}",
     broken_lines.join( "\n" )
   );
+}
+
+/// Committed documentation must never point a reader at a hyphen-prefixed temporary file.
+///
+/// # What This Guards
+/// Project convention makes `-`-prefixed files temporary and gitignored: freely deletable,
+/// never committed. A permanent document that links to one is therefore a reference that is
+/// *already* dead for every reader except the author, on the day it is written. This is the
+/// one direction the rule forbids — a temporary file referencing a permanent one is fine.
+///
+/// # Why This Is Workspace-Scoped
+/// Unlike the crate-scoped guards above, this one walks the whole workspace from
+/// [`workspace_root`]. The defect class is not specific to `claude_runner`: the three
+/// instances that motivated this test were in `claude_runner_core/tests/manual/readme.md`,
+/// `claude_storage/tests/manual/readme.md`, and `claude_storage_core/changelog.md`. A
+/// crate-scoped version would have caught none of them.
+///
+/// # What Counts As A Pointer
+/// [`line_points_at_temp_file`] recognizes exactly two forms — a markdown link `](-...)`, and
+/// prose of the shape ``See `-foo.md` ``. It deliberately does not flag a bare inline-code
+/// mention that merely *names* a hyphen-prefixed thing without directing the reader to it:
+/// `tests/docs/cli/command/12_topics.md` describes a fixture layout containing
+/// `-not-a-dir.txt`, which is a scenario description, not a link. Flagging it would enforce a
+/// prohibition the convention does not actually state.
+///
+/// # Pitfall
+/// The predicate is intentionally shape-based, not exhaustive. A pointer worded differently
+/// (`refer to \`-notes.md\``, or a bare `-plan.md` on its own line) slips through. That is the
+/// accepted trade: a broader pattern collides with legitimate CLI-flag prose — `` see
+/// `--quiet` `` and four siblings under `docs/claude_params/` are why the `--`-rejection and
+/// the required `.` both exist. Widen the predicate only alongside a re-check of those.
+#[ test ]
+fn no_temp_file_pointers_in_committed_docs()
+{
+  let root = workspace_root();
+  let docs = md_files_in_dir( &root, &[] );
+  // A sweep that silently collapses to a subtree would pass vacuously. The workspace carries
+  // ~2500 markdown files and the largest single crate ~412, so this floor fails loudly if
+  // `workspace_root()` ever resolves to a crate directory instead of the workspace.
+  assert!(
+    docs.len() > 1000,
+    "Expected a workspace-wide markdown sweep, but only {} files were found under {}. \
+     This assertion exists because a guard that scans nothing passes for the wrong reason.",
+    docs.len(),
+    root.display()
+  );
+  let violations : Vec< String > = docs
+    .iter()
+    .flat_map( | path |
+    {
+      let content = fs::read_to_string( path )
+        .unwrap_or_else( |e| panic!( "Cannot read {}: {e}", path.display() ) );
+      let relative = path.strip_prefix( &root ).unwrap_or( path ).to_path_buf();
+      content
+        .lines()
+        .enumerate()
+        .filter( |( _, line )| line_points_at_temp_file( line ) )
+        .map( |( i, line )| format!( "  {}:{}: {}", relative.display(), i + 1, line.trim() ) )
+        .collect::< Vec< String > >()
+    } )
+    .collect();
+  assert!(
+    violations.is_empty(),
+    "Committed documentation must not point readers at hyphen-prefixed temporary files: \
+     those are gitignored and freely deletable, so the reference is dead for everyone but \
+     its author. Inline the content the reader needs, or promote the target to a permanent \
+     (non-hyphenated) file.\nViolating lines:\n{}",
+    violations.join( "\n" )
+  );
+}
+
+/// [`line_points_at_temp_file`] must discriminate pointers from lookalikes.
+///
+/// # Why This Exists Separately
+/// `no_temp_file_pointers_in_committed_docs` is green on the current corpus, so it alone
+/// cannot demonstrate the predicate fires at all — a predicate hardwired to `false` would
+/// pass it identically. These cases pin both directions against fixed inputs, independent of
+/// what the repository happens to contain today.
+///
+/// # Pitfall
+/// The negative cases are not hypothetical. `--quiet`, `--agents`, `--tools`,
+/// `--replay-user-messages`, and `--setting-sources` all appear in committed docs in exactly
+/// the `` see `--flag` `` shape, and a predicate keying on `` see `- `` alone flags every one
+/// of them. Any widening of the predicate must keep these five negatives passing.
+#[ test ]
+fn temp_file_pointer_predicate_discriminates()
+{
+  // Pointers — must be caught.
+  assert!( line_points_at_temp_file( "See [the plan](-plan.md) for details." ) );
+  assert!( line_points_at_temp_file( "See `-corner_cases_exhaustive.md` for analysis." ) );
+  assert!( line_points_at_temp_file( "see `-v1_0_release_checklist.md` for the process." ) );
+
+  // CLI flags — the reason the `--` rejection exists.
+  assert!( !line_points_at_temp_file( "see `--quiet` to suppress output" ) );
+  assert!( !line_points_at_temp_file( "see `--replay-user-messages` for details" ) );
+  assert!( !line_points_at_temp_file( "see `--tools \"\"` to disable tools" ) );
+
+  // Naming a hyphen-prefixed thing without pointing at it — deliberately allowed.
+  assert!( !line_points_at_temp_file( "The fixture directory contains `-not-a-dir.txt`." ) );
+
+  // No extension: not a file reference.
+  assert!( !line_points_at_temp_file( "see `-notes` in the sibling directory" ) );
+
+  // Ordinary prose must not trip it.
+  assert!( !line_points_at_temp_file( "See the readme for installation instructions." ) );
 }

@@ -121,10 +121,6 @@ First stable release of `claude_storage_core` - a zero-dependency library for re
 - [Documentation](https://docs.rs/claude_storage_core)
 - [Specification](./docs/readme.md)
 
-## Release Notes Template
-
-See `-v1_0_release_checklist.md` for detailed release process and validation evidence.
-
 ---
 
 **Validation Summary**:

@@ -370,7 +370,8 @@ For each test executed:
 
 **Last Updated**: 2026-04-12
 
-**Test Run Log**: See `-test_results.md` (created during execution)
+**Test Run Log**: execution writes a hyphen-prefixed results file into this directory. It is a
+temporary artifact — gitignored, freely deletable, and deliberately not linked from here.
 
 ## bugs found and fixed (2026-03-13 manual testing session)
 
