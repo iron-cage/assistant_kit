@@ -13,8 +13,8 @@ Per-feature-doc test case indices for `claude_runner`. See [feature/readme.md](.
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_runner_tool.md` | Test cases for the runner tool feature doc instance | ✅ |
-| `002_journaling_integration.md` | Test cases for the journaling integration feature doc instance | ✅ |
-| `003_retry_hierarchy.md` | Test cases for the retry hierarchy feature doc instance | ✅ |
-| `004_json_config.md` | Test cases for the JSON config loading feature doc instance | ✅ |
-| `005_session_path_resolution.md` | Test cases for the session path resolution feature doc instance | ✅ |
+| [001_runner_tool.md](001_runner_tool.md) | Test cases for the runner tool feature doc instance | ✅ |
+| [002_journaling_integration.md](002_journaling_integration.md) | Test cases for the journaling integration feature doc instance | ✅ |
+| [003_retry_hierarchy.md](003_retry_hierarchy.md) | Test cases for the retry hierarchy feature doc instance | ✅ |
+| [004_json_config.md](004_json_config.md) | Test cases for the JSON config loading feature doc instance | ✅ |
+| [005_session_path_resolution.md](005_session_path_resolution.md) | Test cases for the session path resolution feature doc instance | ✅ |

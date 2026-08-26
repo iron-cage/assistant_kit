@@ -17,6 +17,7 @@ Every command in `command/` is evaluated against every other command using the R
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing command_group instances |
 | `readme.md` | This index — Representation Absorption Test, evaluation results, navigation |
 
 ### All Groups (16 total)

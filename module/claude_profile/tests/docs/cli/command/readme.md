@@ -11,6 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing command test specs |
 | 00_version.md | Test cases for `--version` / `-V` meta-flags |
 | 01_dot.md | Test cases for `.` command (dot shorthand) |
 | 02_help.md | Test cases for `.help` command |

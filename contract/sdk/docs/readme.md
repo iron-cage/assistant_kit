@@ -8,4 +8,4 @@
 | `api/` | SDK function/type signatures (`query()`, `Options`, `tool()`, `Query`, `SDKMessage`, `CanUseTool`) — 6 instances |
 | `param/` | Curated `Options` field reference (13 of 61 fields most relevant to porting `claude_runner`) — 13 instances |
 | `pattern/` | Reusable SDK integration patterns, incl. Rust bridge strategy options — 2 instances |
-| `001_entity.md` | Cross-entity index: all collection types with instance counts |
+| [001_entity.md](001_entity.md) | Cross-entity index: all collection types with instance counts |

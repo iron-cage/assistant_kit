@@ -13,6 +13,7 @@ Every parameter documented in [`docs/cli/param/`](../../../../docs/cli/param/rea
 
 | Name | Purpose | Status |
 |------|---------|--------|
+| procedure.md | Workflow for creating and updating param test specs | ✅ |
 | 01_agent.md | Edge case tests for `agent::` parameter | ✅ |
 | 02_case_sensitive.md | Edge case tests for `case_sensitive::` parameter | ✅ |
 | 03_entries.md | Edge case tests for `show_entries::` parameter | ✅ |

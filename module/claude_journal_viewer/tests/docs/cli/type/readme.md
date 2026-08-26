@@ -13,14 +13,14 @@ Per-type validation test case indices for `claude_journal_viewer`. See [type/rea
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_duration.md` | TC- tests for suffix parsing and case-sensitive M/m distinction | ✅ |
-| `02_event_type.md` | TC- tests for case-insensitive enum matching across 8 variants | ✅ |
-| `03_string.md` | TC- tests for unconstrained text and per-parameter additional constraints | ✅ |
-| `04_integer.md` | TC- tests for non-negative parsing and range boundaries | ✅ |
-| `05_path.md` | TC- tests for tilde expansion and read/write existence checks | ✅ |
-| `06_output_format.md` | TC- tests for all 4 format variants and case-insensitive matching | ✅ |
-| `07_sort_field.md` | TC- tests for all 6 sort fields and default directions | ✅ |
-| `08_boolean.md` | TC- tests for the 0/1 convention and invalid-value rejection | ✅ |
-| `09_group_by.md` | TC- tests for all 7 grouping dimensions | ✅ |
-| `10_port.md` | TC- tests for ephemeral port, range limits, and bind failure | ✅ |
-| `11_retention_spec.md` | TC- tests for age-based duration parsing and the floor-to-days rule | ✅ |
+| [01_duration.md](01_duration.md) | TC- tests for suffix parsing and case-sensitive M/m distinction | ✅ |
+| [02_event_type.md](02_event_type.md) | TC- tests for case-insensitive enum matching across 8 variants | ✅ |
+| [03_string.md](03_string.md) | TC- tests for unconstrained text and per-parameter additional constraints | ✅ |
+| [04_integer.md](04_integer.md) | TC- tests for non-negative parsing and range boundaries | ✅ |
+| [05_path.md](05_path.md) | TC- tests for tilde expansion and read/write existence checks | ✅ |
+| [06_output_format.md](06_output_format.md) | TC- tests for all 4 format variants and case-insensitive matching | ✅ |
+| [07_sort_field.md](07_sort_field.md) | TC- tests for all 6 sort fields and default directions | ✅ |
+| [08_boolean.md](08_boolean.md) | TC- tests for the 0/1 convention and invalid-value rejection | ✅ |
+| [09_group_by.md](09_group_by.md) | TC- tests for all 7 grouping dimensions | ✅ |
+| [10_port.md](10_port.md) | TC- tests for ephemeral port, range limits, and bind failure | ✅ |
+| [11_retention_spec.md](11_retention_spec.md) | TC- tests for age-based duration parsing and the floor-to-days rule | ✅ |

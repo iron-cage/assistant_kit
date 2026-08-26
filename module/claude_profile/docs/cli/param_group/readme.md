@@ -4,6 +4,7 @@ Semantic groupings of parameters that share a common behavioral pattern.
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing param_group instances |
 | [001_output_control.md](001_output_control.md) | Output Control: `format::`, `get::` — output serialization format and value extraction |
 | [002_field_presence.md](002_field_presence.md) | Field Presence: 16 boolean field-inclusion toggles |
 | [003_fetch_behavior.md](003_fetch_behavior.md) | Fetch Behavior: `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::` |

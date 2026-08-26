@@ -11,32 +11,32 @@ All parameters use unilang `param::value` syntax.
 
 | File | Responsibility |
 |------|----------------|
-| `01_since.md` | Time window start filter |
-| `02_until.md` | Time window end filter |
-| `03_type.md` | Event type filter |
-| `04_command.md` | CLR command name filter |
-| `05_exit.md` | Exit code filter |
-| `06_model.md` | Model name filter |
-| `07_dir.md` | Working directory filter |
-| `08_creds.md` | Credential name filter |
-| `09_limit.md` | Max results cap |
-| `10_format.md` | Output format selection |
-| `11_sort.md` | Sort field selection |
-| `12_reverse.md` | Reverse sort order toggle |
-| `13_by.md` | Stats grouping dimension |
-| `14_pattern.md` | Regex search pattern |
-| `15_port.md` | HTTP server port |
-| `16_bind.md` | HTTP server bind address |
-| `17_open.md` | Auto-open browser toggle |
-| `18_keep.md` | Retention spec for pruning |
-| `19_dry_run.md` | Dry run toggle for prune |
-| `21_journal_dir.md` | Journal directory override |
-| `22_verbosity.md` | Output detail level |
-| `23_output.md` | Export output file path |
-| `24_no_color.md` | Disable ANSI colors |
-| `27_refresh.md` | Auto-refresh interval |
-| `28_include_stdout.md` | Tombstone — the flag `.search` superseded |
-| `29_out.md` | Chart output file path |
+| [01_since.md](01_since.md) | Time window start filter |
+| [02_until.md](02_until.md) | Time window end filter |
+| [03_type.md](03_type.md) | Event type filter |
+| [04_command.md](04_command.md) | CLR command name filter |
+| [05_exit.md](05_exit.md) | Exit code filter |
+| [06_model.md](06_model.md) | Model name filter |
+| [07_dir.md](07_dir.md) | Working directory filter |
+| [08_creds.md](08_creds.md) | Credential name filter |
+| [09_limit.md](09_limit.md) | Max results cap |
+| [10_format.md](10_format.md) | Output format selection |
+| [11_sort.md](11_sort.md) | Sort field selection |
+| [12_reverse.md](12_reverse.md) | Reverse sort order toggle |
+| [13_by.md](13_by.md) | Stats grouping dimension |
+| [14_pattern.md](14_pattern.md) | Regex search pattern |
+| [15_port.md](15_port.md) | HTTP server port |
+| [16_bind.md](16_bind.md) | HTTP server bind address |
+| [17_open.md](17_open.md) | Auto-open browser toggle |
+| [18_keep.md](18_keep.md) | Retention spec for pruning |
+| [19_dry_run.md](19_dry_run.md) | Dry run toggle for prune |
+| [21_journal_dir.md](21_journal_dir.md) | Journal directory override |
+| [22_verbosity.md](22_verbosity.md) | Output detail level |
+| [23_output.md](23_output.md) | Export output file path |
+| [24_no_color.md](24_no_color.md) | Disable ANSI colors |
+| [27_refresh.md](27_refresh.md) | Auto-refresh interval |
+| [28_include_stdout.md](28_include_stdout.md) | Tombstone — the flag `.search` superseded |
+| [29_out.md](29_out.md) | Chart output file path |
 
 ### All Parameters (25 total)
 

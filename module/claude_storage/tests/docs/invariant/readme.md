@@ -13,6 +13,7 @@ Direct contract verification for the invariants defined in `docs/invariant/001-0
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_path_encoding.md` | IN- test cases for path encoding invariant (`docs/invariant/001_path_encoding.md`) | ✅ |
-| `002_session_family.md` | IN- test cases for session family invariant (`docs/invariant/002_session_family.md`) | ✅ |
-| `003_entry_type_format.md` | IN- test cases for entry type format invariant (`docs/invariant/003_entry_type_format.md`) | ✅ |
+| procedure.md | Workflow for creating and updating invariant test specs | ✅ |
+| [001_path_encoding.md](001_path_encoding.md) | IN- test cases for path encoding invariant (`docs/invariant/001_path_encoding.md`) | ✅ |
+| [002_session_family.md](002_session_family.md) | IN- test cases for session family invariant (`docs/invariant/002_session_family.md`) | ✅ |
+| [003_entry_type_format.md](003_entry_type_format.md) | IN- test cases for entry type format invariant (`docs/invariant/003_entry_type_format.md`) | ✅ |

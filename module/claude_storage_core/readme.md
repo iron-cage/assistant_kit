@@ -14,6 +14,7 @@ Pure library for Claude Code's filesystem-based storage access (zero dependencie
 | `changelog.md` | Notable changes by version |
 | `license` | License text for this crate |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `changelog.md` | Release history in Keep a Changelog format, semver-versioned. |
 
 ## overview
 

@@ -14,7 +14,7 @@
 | `api/` | Public library API contracts (COMMANDS_YAML, register_commands) |
 | `cli/` | CLI reference: commands, flags, modes, examples |
 | `variable/` | Output variable definitions for the six CLAUDE_* paths computed by `scope_for()` |
-| `001_design_decisions.md` | Rationale for key design choices made during the `--flag value` CLI redesign |
+| [001_design_decisions.md](001_design_decisions.md) | Rationale for key design choices made during the `--flag value` CLI redesign |
 | `entity.md` | Cross-entity index: Master Doc Entities Table and Master Doc Instances Table |
 | `feature/` | Runner tool design: execution modes, defaults, YAML library |
 | `guide/` | Narrative operational walkthroughs for reproducible multi-step tasks |

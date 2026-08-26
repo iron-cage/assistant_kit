@@ -20,6 +20,6 @@
 | `model.rs` | `.model` unified session/subprocess model+effort get/set/reset routine. |
 | `model_select.rs` | `.model.select` retirement stub — migration error to `.model scope::subprocess`. |
 | `models.rs` | `.models` list available Claude models routine. |
-| `provider_select.rs` | `.provider.select` get/pin/reset global inference provider routine. |
+| `provider_select.rs` | `.provider.select` get/pin/reset routine — sole write path for the `provider` config key. |
 | `token_paths.rs` | `.paths` command routine. |
 | `dot.rs` | `.` dot-shorthand command routine. |

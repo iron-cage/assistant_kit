@@ -11,6 +11,7 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
+| procedure.md | Workflow for creating and updating command test specs | ✅ |
 | 01_status.md | Integration tests for `.status` command | ✅ |
 | 02_list.md | Integration tests for `.list` command (DEPRECATED, superseded by `.projects`) | ✅ |
 | 03_show.md | Integration tests for `.show` command | ✅ |

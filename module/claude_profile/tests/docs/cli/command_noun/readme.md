@@ -12,9 +12,10 @@ package scope). This directory is the authorizing source for the NC- prefix.
 
 | File | Noun | Commands Covered | NC-N Cases |
 |------|------|-----------------|-----------|
-| `01_account.md` | account | `.accounts`, `.account.{save,use,delete,limits,relogin,rotate,renewal,inspect,assign}` | NC-1/2/3 |
-| `02_token.md` | token | `.token.status` — **REMOVED** | 0 (3 N/A) |
-| `03_credentials.md` | credentials | `.credentials.status` | NC-1/2/3 |
+| `procedure.md` | — | — | Workflow for maintaining command_noun test specs |
+| [01_account.md](01_account.md) | account | `.accounts`, `.account.{save,use,delete,limits,relogin,rotate,renewal,inspect,assign}` | NC-1/2/3 |
+| [02_token.md](02_token.md) | token | `.token.status` — **REMOVED** | 0 (3 N/A) |
+| [03_credentials.md](03_credentials.md) | credentials | `.credentials.status` | NC-1/2/3 |
 
 ### Coverage Summary
 

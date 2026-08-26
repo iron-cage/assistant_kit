@@ -11,4 +11,5 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_cli_tool.md` | FT- test cases for the CLI tool feature (`docs/feature/001_cli_tool.md`) | ✅ |
+| procedure.md | Workflow for creating and updating feature test specs | ✅ |
+| [001_cli_tool.md](001_cli_tool.md) | FT- test cases for the CLI tool feature (`docs/feature/001_cli_tool.md`) | ✅ |

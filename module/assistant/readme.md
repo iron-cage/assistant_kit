@@ -27,6 +27,7 @@ ast .version.install          # install/update claude
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/` | `ast` binary entry and feature-gated Layer 2 registry aggregation |
 | `build.rs` | YAML aggregation for `claude_runner` and `claude_storage` commands |
 | `Cargo.toml` | Crate manifest: lib + 2 bins, feature-gated Layer 2 deps |

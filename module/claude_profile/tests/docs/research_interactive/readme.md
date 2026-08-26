@@ -13,7 +13,7 @@ from research findings. Min 4 RC- cases per spec.
 
 | File | Research Doc | RC-N Cases |
 |------|-------------|-----------|
-| `001_claude_interactive_session_control.md` | Claude binary execution modes and auth subcommands | RC-1 through RC-4 |
+| [001_claude_interactive_session_control.md](001_claude_interactive_session_control.md) | Claude binary execution modes and auth subcommands | RC-1 through RC-4 |
 
 ### Coverage Summary
 

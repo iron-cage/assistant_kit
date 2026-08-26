@@ -11,9 +11,10 @@
 
 | File | Responsibility |
 |------|----------------|
-| `01_markdown.md` | Markdown export format — human-readable session transcript |
-| `02_json.md` | JSON export format — machine-parseable session data |
-| `03_text.md` | Text export format — plain-text session transcript |
+| procedure.md | Steps for adding, updating, or removing format instances |
+| [01_markdown.md](01_markdown.md) | Markdown export format — human-readable session transcript |
+| [02_json.md](02_json.md) | JSON export format — machine-parseable session data |
+| [03_text.md](03_text.md) | Text export format — plain-text session transcript |
 
 ### Taxonomy
 

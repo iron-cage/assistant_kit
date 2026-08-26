@@ -12,10 +12,10 @@
 | File | Responsibility |
 |------|----------------|
 | `readme.md` | Index and overview of runtime file test specs |
-| `001_version_history_cache.md` | RF- test cases for version history cache file |
-| `002_versions_directory.md` | RF- test cases for versions directory |
-| `003_binary_symlink.md` | RF- test cases for binary symlink |
-| `004_version_markers.md` | RF- test cases for version markers file |
+| [001_version_history_cache.md](001_version_history_cache.md) | RF- test cases for version history cache file |
+| [002_versions_directory.md](002_versions_directory.md) | RF- test cases for versions directory |
+| [003_binary_symlink.md](003_binary_symlink.md) | RF- test cases for binary symlink |
+| [004_version_markers.md](004_version_markers.md) | RF- test cases for version markers file |
 
 ### Overview Table
 

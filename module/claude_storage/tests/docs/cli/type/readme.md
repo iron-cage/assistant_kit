@@ -14,21 +14,22 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 
 | File | Responsibility |
 |------|----------------|
-| `01_entry_count.md` | TC tests for `EntryCount` — non-negative integer |
-| `02_entry_type.md` | TC tests for `EntryType` — author filter enum |
-| `03_export_format.md` | TC tests for `ExportFormat` — serialization format enum |
-| `04_path_substring.md` | TC tests for `PathSubstring` — case-insensitive path filter |
-| `05_project_id.md` | TC tests for `ProjectId` — multi-format project identifier |
-| `06_project_type.md` | TC tests for `ProjectType` — project naming scheme enum |
-| `07_scope_value.md` | TC tests for `ScopeValue` — discovery boundary enum |
-| `08_session_filter.md` | TC tests for `SessionFilter` — case-insensitive session substring |
-| `09_session_id.md` | TC tests for `SessionId` — exact session identifier |
-| `10_storage_path.md` | TC tests for `StoragePath` — filesystem path |
-| `11_target_type.md` | TC tests for `TargetType` — count target enum |
-| `12_topic_name.md` | TC tests for `TopicName` — session topic identifier |
-| `13_strategy_type.md` | TC tests for `StrategyType` — resume strategy enum |
-| `14_detail_level.md` | TC tests for `DetailLevel` — output verbosity enum |
-| `15_field_selector.md` | TC tests for `FieldSelector` — comma-separated attribute-projection field list |
+| procedure.md | Steps for adding, updating, or removing type test specs |
+| [01_entry_count.md](01_entry_count.md) | TC tests for `EntryCount` — non-negative integer |
+| [02_entry_type.md](02_entry_type.md) | TC tests for `EntryType` — author filter enum |
+| [03_export_format.md](03_export_format.md) | TC tests for `ExportFormat` — serialization format enum |
+| [04_path_substring.md](04_path_substring.md) | TC tests for `PathSubstring` — case-insensitive path filter |
+| [05_project_id.md](05_project_id.md) | TC tests for `ProjectId` — multi-format project identifier |
+| [06_project_type.md](06_project_type.md) | TC tests for `ProjectType` — project naming scheme enum |
+| [07_scope_value.md](07_scope_value.md) | TC tests for `ScopeValue` — discovery boundary enum |
+| [08_session_filter.md](08_session_filter.md) | TC tests for `SessionFilter` — case-insensitive session substring |
+| [09_session_id.md](09_session_id.md) | TC tests for `SessionId` — exact session identifier |
+| [10_storage_path.md](10_storage_path.md) | TC tests for `StoragePath` — filesystem path |
+| [11_target_type.md](11_target_type.md) | TC tests for `TargetType` — count target enum |
+| [12_topic_name.md](12_topic_name.md) | TC tests for `TopicName` — session topic identifier |
+| [13_strategy_type.md](13_strategy_type.md) | TC tests for `StrategyType` — resume strategy enum |
+| [14_detail_level.md](14_detail_level.md) | TC tests for `DetailLevel` — output verbosity enum |
+| [15_field_selector.md](15_field_selector.md) | TC tests for `FieldSelector` — comma-separated attribute-projection field list |
 
 ### Test ID Convention
 
@@ -40,21 +41,21 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 
 | File | Tests |
 |------|-------|
-| `01_entry_count.md` | 5 |
-| `02_entry_type.md` | 5 |
-| `03_export_format.md` | 5 |
-| `04_path_substring.md` | 4 |
-| `05_project_id.md` | 6 |
-| `06_project_type.md` | 5 |
-| `07_scope_value.md` | 6 |
-| `08_session_filter.md` | 4 |
-| `09_session_id.md` | 5 |
-| `10_storage_path.md` | 4 |
-| `11_target_type.md` | 5 |
-| `12_topic_name.md` | 5 |
-| `13_strategy_type.md` | 5 |
-| `14_detail_level.md` | 4 |
-| `15_field_selector.md` | 9 |
+| [01_entry_count.md](01_entry_count.md) | 5 |
+| [02_entry_type.md](02_entry_type.md) | 5 |
+| [03_export_format.md](03_export_format.md) | 5 |
+| [04_path_substring.md](04_path_substring.md) | 4 |
+| [05_project_id.md](05_project_id.md) | 6 |
+| [06_project_type.md](06_project_type.md) | 5 |
+| [07_scope_value.md](07_scope_value.md) | 6 |
+| [08_session_filter.md](08_session_filter.md) | 4 |
+| [09_session_id.md](09_session_id.md) | 5 |
+| [10_storage_path.md](10_storage_path.md) | 4 |
+| [11_target_type.md](11_target_type.md) | 5 |
+| [12_topic_name.md](12_topic_name.md) | 5 |
+| [13_strategy_type.md](13_strategy_type.md) | 5 |
+| [14_detail_level.md](14_detail_level.md) | 4 |
+| [15_field_selector.md](15_field_selector.md) | 9 |
 | **Total** | **77** |
 
 ### Related Documentation

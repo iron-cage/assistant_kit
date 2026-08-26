@@ -4,6 +4,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing param instances |
 | [001_name.md](001_name.md) | `name::` — target account identifier |
 | [002_format.md](002_format.md) | `format::` / `fmt::` — output serialization format |
 | [003_threshold.md](003_threshold.md) | `threshold::` — token expiry warning boundary |

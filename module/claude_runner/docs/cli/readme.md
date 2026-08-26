@@ -20,10 +20,10 @@ clr <command> [OPTIONS] [MESSAGE]
 | File | Responsibility |
 |------|----------------|
 | `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics, daemon, chat, sessions (15 commands) |
-| `001_dictionary.md` | Domain vocabulary for clr CLI concepts |
-| `002_command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
+| [001_dictionary.md](001_dictionary.md) | Domain vocabulary for clr CLI concepts |
+| [002_command_defaults.md](002_command_defaults.md) | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `003_env_param.md` | CLR_* env var fallbacks, gate/query runtime config (dir/poll/attempts/config-dir/query-dir), and CLAUDE_CODE_* subprocess vars (95 vars) |
+| [003_env_param.md](003_env_param.md) | CLR_* env var fallbacks, gate/query runtime config (dir/poll/attempts/config-dir/query-dir), and CLAUDE_CODE_* subprocess vars (95 vars) |
 | `config_param.md` | Config-file parameter tier: eligible parameters, TOML key reference, discovery/precedence |
 | `param_group/` | Logical parameter groupings (7 groups) |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons) |

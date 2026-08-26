@@ -11,7 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `001_version_history_cache.md` | Version history API response cache file |
-| `002_versions_directory.md` | Installed Claude Code binary versions directory |
-| `003_binary_symlink.md` | Hot-swap symlink activating the current version |
-| `004_version_markers.md` | User-defined custom version markers storage file |
+| [001_version_history_cache.md](001_version_history_cache.md) | Version history API response cache file |
+| [002_versions_directory.md](002_versions_directory.md) | Installed Claude Code binary versions directory |
+| [003_binary_symlink.md](003_binary_symlink.md) | Hot-swap symlink activating the current version |
+| [004_version_markers.md](004_version_markers.md) | User-defined custom version markers storage file |
