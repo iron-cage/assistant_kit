@@ -40,7 +40,7 @@ Cargo uses `path` for local builds and `version` for publishing. A `path`-only d
 
 Crates that need a typed error define it by hand — a plain `enum` with manual `Display` and `Error` impls — rather than deriving it. This is deliberate, not an oversight:
 
-> **Decision (2026-08-25):** routing the hand-rolled error enums through `error_tools::typed`'s `#[ derive( Error ) ]` was considered and rejected. `thiserror` 2's derive macros expand to absolute `::thiserror` paths, so every crate deriving `Error` would need `thiserror` as its own direct dependency — `error_tools`' `src/error/typed.rs` states plainly that a `use error_tools::dependency::thiserror;` alias "is no longer sufficient". Ten hand-rolled enums across nine crates keep their manual impls so that this rule stays true. The cost is some boilerplate; the benefit is that the workspace has exactly one error-handling dependency rather than two idioms in the same tree.
+> **Decision (2026-08-25):** routing the hand-rolled error enums through `error_tools::typed`'s `#[ derive( Error ) ]` was considered and rejected. `thiserror` 2's derive macros expand to absolute `::thiserror` paths, so every crate deriving `Error` would need `thiserror` as its own direct dependency — `error_tools`' `src/error/typed.rs` states plainly that a `use error_tools::dependency::thiserror;` alias "is no longer sufficient". Every crate that needs a typed error keeps hand-written `Display` and `Error` impls so that this rule stays true. The cost is some boilerplate; the benefit is that the workspace has exactly one error-handling dependency rather than two idioms in the same tree.
 
 ### Enforcement Mechanism
 
