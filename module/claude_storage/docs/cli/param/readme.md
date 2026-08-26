@@ -15,6 +15,7 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove parameter doc instances |
 | `01_agent.md` | agent:: — session type filter (main vs agent) |
 | `02_case_sensitive.md` | case_sensitive:: — case-sensitive search toggle |
 | `03_entries.md` | show_entries:: — show all session entries flag |

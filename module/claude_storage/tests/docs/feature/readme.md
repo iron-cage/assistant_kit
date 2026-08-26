@@ -11,4 +11,5 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
+| `procedure.md` | Add and remove feature test specs | — |
 | `001_cli_tool.md` | FT- test cases for the CLI tool feature (`docs/feature/001_cli_tool.md`) | ✅ |

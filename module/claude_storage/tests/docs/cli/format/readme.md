@@ -14,6 +14,7 @@ Mirror of [format/](../../../../docs/cli/format/readme.md).
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove format test specs |
 | `01_markdown.md` | FM tests for Markdown export — structure, headings, metadata |
 | `02_json.md` | FM tests for JSON export — structure, field presence, parsability |
 | `03_text.md` | FM tests for Text export — content filtering, plain-text constraints |

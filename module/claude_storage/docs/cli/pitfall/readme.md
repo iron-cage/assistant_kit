@@ -11,6 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and retire pitfall doc instances |
 | `01_parameter_validation.md` | Explicit validation required despite defaults |
 | `02_cross_command_propagation.md` | Bug patterns propagate across all commands |
 | `03_test_data_format.md` | Test JSONL must match production format |

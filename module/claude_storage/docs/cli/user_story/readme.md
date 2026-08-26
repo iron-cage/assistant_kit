@@ -11,6 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add and remove user story doc instances |
 | `001_audit_session_history.md` | Audit Session History — review conversation timeline |
 | `002_find_past_conversation.md` | Find Past Conversation — locate session by project or content |
 | `003_export_session_for_review.md` | Export Session for Review — save session to file |

@@ -15,6 +15,7 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove command doc instances |
 | `01_status.md` | .status — storage overview and statistics |
 | `02_list.md` | .list — DEPRECATED, superseded by .projects |
 | `03_show.md` | .show — display session or project details |

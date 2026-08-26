@@ -11,6 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add and update output format doc instances |
 | `01_markdown.md` | Markdown export format — human-readable session transcript |
 | `02_json.md` | JSON export format — machine-parseable session data |
 | `03_text.md` | Text export format — plain-text session transcript |

@@ -58,8 +58,9 @@ tests/
 | File | Responsibility |
 |------|----------------|
 | `docs/` | Test documentation parallel to `docs/` (test case indexes, test plans) |
+| `common/` | Shared test utilities — pre-compiled binary helper and JSONL fixture writers |
+| `manual/` | Manual testing plan covering all CLI commands, parameters, and edge cases |
 | `lib_test.rs` | Library API: `COMMANDS_YAML` exists, `register_commands()` callable |
-| `common/mod.rs` | Pre-compiled binary helper for integration tests |
 | `cli_cmd_rollup_test.rs` | Test .rollup grouped/sorted/filtered token-usage table (INT-1..INT-24, BUG-528) |
 | `cli_commands.rs` | Test CLI command storage operations |
 | `cli_sanity.rs` | Verify CLI binary builds and runs |

@@ -11,6 +11,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and retire invariant doc instances |
 | `001_path_encoding.md` | Path encode/decode contract |
 | `002_session_family.md` | Session family grouping contract |
 | `003_entry_type_format.md` | JSONL entry type field contract |

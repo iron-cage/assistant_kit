@@ -15,6 +15,7 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove parameter group doc instances |
 | `01_output_control.md` | Output Control — show_stat, show_tokens, show_tree, show_topic toggles |
 | `02_project_scope.md` | Project Scope — project:: identifier scoping |
 | `03_session_identification.md` | Session Identification — session_id:: direct access |

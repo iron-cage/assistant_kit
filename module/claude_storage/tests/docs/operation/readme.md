@@ -11,4 +11,5 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
+| `procedure.md` | Add and remove operation test specs | — |
 | `001_migration_guide.md` | OP- test cases for the migration guide (`docs/operation/001_migration_guide.md`) | ✅ |

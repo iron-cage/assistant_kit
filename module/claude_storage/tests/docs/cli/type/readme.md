@@ -14,6 +14,7 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove type test specs |
 | `01_entry_count.md` | TC tests for `EntryCount` — non-negative integer |
 | `02_entry_type.md` | TC tests for `EntryType` — author filter enum |
 | `03_export_format.md` | TC tests for `ExportFormat` — serialization format enum |

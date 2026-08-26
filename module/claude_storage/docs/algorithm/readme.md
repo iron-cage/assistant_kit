@@ -6,6 +6,7 @@
 - **Responsibility**: Index of algorithm doc instances covering procedure design, tradeoffs, and correctness guarantees.
 - **In Scope**: Agent session discovery across storage layouts; inference of which sessions are currently running.
 - **Out of Scope**: CLI command specs (→ `../cli/command/`), system invariants (→ `../invariant/`).
+- **Operations**: Adding and updating instances → `procedure.md`.
 
 ### Overview Table
 

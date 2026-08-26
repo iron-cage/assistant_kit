@@ -15,6 +15,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 
 | File | Responsibility |
 |------|----------------|
+| `procedure.md` | Add, update, and remove type doc instances |
 | `01_entry_count.md` | EntryCount — non-negative integer for entry thresholds |
 | `02_entry_type.md` | EntryType — author filter enum (user/assistant/all) |
 | `03_export_format.md` | ExportFormat — serialization format enum (markdown/json/text) |

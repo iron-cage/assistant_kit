@@ -8,7 +8,7 @@
 
 1. Identify the command's `#` number from `docs/cli/command/readme.md`
 2. Create `NN_name.md` (2-digit zero-padded `#`) in this directory
-3. Register in `readme.md` Responsibility Table: add row `| NN_name.md | Integration tests for .command |`
+3. Register in `readme.md` Responsibility Table: add row `| NN_name.md | Integration tests for .command | ✅ |`
 
 ## Remove Command Test Spec
 
