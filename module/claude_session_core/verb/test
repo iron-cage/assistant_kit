@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# test — run the module test suite inside the runbox container.
+# The engine is the globally-installed `runbox` (installed separately; not vendored in this repo); it
+# discovers the workspace's owning config (runbox/runbox.yml) by walking up
+# from this module directory, and runs this module's l1 as the payload.
+# Usage: ./verb/test [will-arg...]  (e.g. scope::subtree, level::N — forwarded
+#   verbatim to `will .test`; see `will .test ?` for the full parameter list.)
+set -euo pipefail
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/claude_session_core && ./verb/test" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then shift; echo "runbox .live -- ./module/claude_session_core/verb/test.d/l1${*:+ $*}"; exit 0; fi
+cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_session_core/verb/test.d/l1" "$@"

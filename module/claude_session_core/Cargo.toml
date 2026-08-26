@@ -1,0 +1,31 @@
+[package]
+name = "claude_session_core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_session_core"
+description = "Core library for observing live Claude Code sessions: registry, liveness, turn boundaries"
+keywords = [ "claude", "session", "registry", "liveness", "process" ]
+categories = [ "development-tools", "os::unix-apis" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Layer * dependency only — keeps this crate at Layer 0. `claude_storage_core`
+# supplies the zero-dependency JSON parser and the transcript-side session
+# identity this crate resolves live PIDs against.
+claude_storage_core = { workspace = true }
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]
+
+[dev-dependencies]
+tempfile = { workspace = true }

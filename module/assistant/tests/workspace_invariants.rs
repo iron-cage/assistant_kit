@@ -18,7 +18,7 @@
 //!
 //! | Test | Spec | Scenario |
 //! |------|------|----------|
-//! | `wd1_workspace_members_completeness` | WD-1 | All 21 documented crates in members list |
+//! | `wd1_workspace_members_completeness` | WD-1 | All 24 documented crates in members list |
 //! | `pi1_no_private_path_deps` | PI-1 | No workspace path dep points outside the workspace |
 //! | `pi2_out_of_workspace_path_deps_have_version` | PI-2 | Out-of-workspace path deps carry version field |
 //! | `vs1_workspace_package_version_declared` | VS-1 | `[workspace.package]` declares a version |
@@ -38,7 +38,7 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 21 workspace member crate names.
+/// All 24 workspace member crate names.
 //
 // Fix(BUG-482): doc comment said "18" while this constant already listed 19 entries
 // (json_redact present) — the constant itself was correct, only the count in this
@@ -70,6 +70,9 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "svg_chart",
   "claude_journal_viewer",
   "json_redact",
+  "claude_pty_core",
+  "claude_session_core",
+  "claude_daemon_core",
 ];
 
 // ──────────────────────────────── helpers ─────────────────────────────────
@@ -167,11 +170,12 @@ fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
   {
-    "claude_core" => Some( 0 ),
+    "claude_core" | "claude_session_core" => Some( 0 ),
     "claude_assets_core"
     | "claude_profile_core"
     | "claude_version_core"
     | "claude_runner_core"
+    | "claude_daemon_core"
     | "claude_journal_charts" => Some( 1 ),
     "dream"
     | "claude_assets"
@@ -182,14 +186,15 @@ fn layer_of( name : &str ) -> Option< u8 >
     | "claude_journal_viewer" => Some( 2 ),
     "assistant" | "assistant_kit" => Some( 3 ),
     // Layer * — no numeric layer; exempt from CL checks
-    // (includes claude_journal, svg_chart, json_redact — see Fix(BUG-001) doc comment above)
+    // (includes claude_journal, svg_chart, json_redact, claude_pty_core — see
+    // Fix(BUG-001) doc comment above)
     _ => None,
   }
 }
 
 // ──────────────────────── feature: workspace design ───────────────────────
 
-/// WD-1: All 21 documented workspace members are present in `[workspace.members]`.
+/// WD-1: All 24 documented workspace members are present in `[workspace.members]`.
 ///
 /// ## Root Cause (why this test exists)
 /// Workspace membership controls which crates are built and tested in CI.

@@ -15,7 +15,7 @@
 | `ps.rs` | `clr ps` dispatch — active sessions and queued waiters in two plain-style tables. |
 | `ps_snapshot.rs` | `clr ps` temporal-diff state: read/write `~/.clr/ps` snapshot, build the "Ended Since Last Check" table. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh, scope). |
-| `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation, 3-tier retry resolution. |
+| `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation, retry orchestration loop (classification/resolution delegated to `retry_classify.rs`). |
 | `retry_classify.rs` | `ErrorClass`, `ClassAttempts` — error-class taxonomy and 3-tier retry count/delay resolution used by `execution.rs`. |
 | `env.rs` | `env_bool`, `env_str`, `apply_env_vars` — CLR_* env-variable fallbacks. |
 | `kill.rs` | `dispatch_kill`, `print_kill_help` — SIGTERM delivery to a validated claude PID. |

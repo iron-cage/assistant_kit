@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# test_only — run a single test or group by nextest filter inside the runbox container.
+#
+# Usage: ./verb/test_only <nextest-filter>
+#   nextest-filter — test name substring pattern
+set -euo pipefail
+MODULE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/claude_session_core && ./verb/test_only <filter>" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then
+  shift
+  echo "runbox .live -- ./module/claude_session_core/verb/test_only.d/l1${*:+ $*}"
+  exit 0
+fi
+if [[ $# -eq 0 ]]; then
+  echo "ERROR: test_only requires a test name filter." >&2
+  echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
+  exit 1
+fi
+cd "$MODULE_DIR" && exec runbox .live -- "./module/claude_session_core/verb/test_only.d/l1" "$@"

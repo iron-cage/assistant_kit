@@ -1,0 +1,32 @@
+[package]
+name = "claude_pty_core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_pty_core"
+description = "Core library for pseudo-terminal session mechanics (zero dependencies)"
+keywords = [ "pty", "terminal", "pseudoterminal", "process", "spawn" ]
+categories = [ "development-tools", "os::unix-apis" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# ZERO runtime dependencies - this is a core guarantee.
+# The PTY layer is hand-rolled POSIX FFI rather than `pty-process` (edition 2024,
+# needs Rust 1.85 vs the workspace's 1.75) or `portable-pty` (exposes `anyhow` in
+# its public API, which collides with the error_tools-exclusive rule, and pulls
+# 18 transitive packages). See docs/algorithm/001_pty_allocation.md.
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]
+
+[dev-dependencies]
+tempfile = { workspace = true }

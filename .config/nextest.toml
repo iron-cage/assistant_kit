@@ -47,6 +47,16 @@ slow-timeout = { period = "120s", terminate-after = 10 }
 filter = "binary(bug_reproducers_239_244_test)"
 slow-timeout = { period = "30s", terminate-after = 1 }
 
+# The pty/session/daemon test binaries spawn real processes on real ptys, and
+# their central invariant is about descriptor ownership: a session ends because
+# the last pty master descriptor closes, not because anything is signalled. A
+# regression there does not fail — it waits forever for a child whose terminal is
+# still open (observed: a leaked master inherited across exec, before O_CLOEXEC).
+# The ceiling is what turns that silence back into a visible failure.
+[[profile.default.overrides]]
+filter = "binary(session_test) | binary(writer_test) | binary(pty_test) | binary(liveness_test) | binary(table_test)"
+slow-timeout = { period = "30s", terminate-after = 2 }
+
 # ps/kill tests share the `find_claude_processes()` resource: ps tests check for
 # 0 sessions while kill tests spawn fake ELF `claude` processes visible to that
 # scan.  All four binaries must run serially to prevent false no-session failures

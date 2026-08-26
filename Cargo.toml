@@ -18,6 +18,9 @@ members = [
   "module/claude_assets_core",
   "module/claude_assets",
   "module/claude_core",
+  "module/claude_pty_core",
+  "module/claude_session_core",
+  "module/claude_daemon_core",
   "module/claude_profile_core",
   "module/claude_version_core",
   "module/claude_storage_core",
@@ -146,6 +149,21 @@ default-features = false
 [workspace.dependencies.claude_core]
 path = "module/claude_core"
 version = "=1.4.1"
+default-features = false
+
+[workspace.dependencies.claude_pty_core]
+path = "module/claude_pty_core"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.claude_session_core]
+path = "module/claude_session_core"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.claude_daemon_core]
+path = "module/claude_daemon_core"
+version = "=0.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile_core]
