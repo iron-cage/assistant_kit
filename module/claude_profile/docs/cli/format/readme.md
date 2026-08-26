@@ -4,6 +4,7 @@ clp supports multiple output format modes, selected via the [`format::`](../para
 
 | # | File | Format | Trigger | Scope |
 |---|------|--------|---------|-------|
+| — | [procedure.md](procedure.md) | — | — | Workflow for maintaining format instances |
 | 1 | [001_text.md](001_text.md) | text | `format::text` (default) | All format-capable commands |
 | 2 | [002_json.md](002_json.md) | json | `format::json` | All format-capable commands |
 | 3 | [003_table.md](003_table.md) | table | `format::table` | `.accounts`, `.models`, `.provider.select` |

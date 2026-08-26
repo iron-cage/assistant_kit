@@ -4,6 +4,7 @@ Domain object documentation for the `clp` CLI. Each noun represents a domain obj
 
 | File | Noun | Commands | Purpose |
 |------|------|---------|---------|
+| [procedure.md](procedure.md) | — | — | Workflow for maintaining command_noun instances |
 | [001_account.md](001_account.md) | account | 8 active (11 total; 1 DEPRECATED: .account.rotate Feature 038; 2 REMOVED: .account.assign Feature 037, .account.unclaim Feature 064) | Saved credential profile in the per-machine account store |
 | [002_token.md](002_token.md) | token | 0 active (1 total; 1 REMOVED: `.token.status`) | OAuth access token for the active Claude Code session |
 | [003_credentials.md](003_credentials.md) | credentials | 1 | Live OAuth credential metadata independent of the account store |

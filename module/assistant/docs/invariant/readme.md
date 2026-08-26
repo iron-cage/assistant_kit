@@ -11,5 +11,6 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining invariant instances | ✅ |
 | 001 | [Aggregation Completeness](001_aggregation_completeness.md) | Layer 2 register_commands() and COMMANDS_YAML contract enforcement | ✅ |
 | 002 | [Publish Sandbox Safety](002_publish_sandbox_safety.md) | build.rs must not panic during cargo publish verification | ⏳ |

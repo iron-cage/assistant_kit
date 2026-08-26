@@ -13,6 +13,6 @@ Per-env-parameter edge case indices for `clr`. See [003_env_param.md](../../../.
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_max_output_tokens.md` | Edge cases for CLAUDE_CODE_MAX_OUTPUT_TOKENS subprocess env var | ✅ |
-| `02_clr_input_vars.md` | Edge cases for all 40 CLR_* input env var fallbacks (E01–E40) | ✅ |
-| `03_auto_compact_window.md` | Edge cases for `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection and `--no-compact-window` opt-out | ⏳ |
+| [01_max_output_tokens.md](01_max_output_tokens.md) | Edge cases for CLAUDE_CODE_MAX_OUTPUT_TOKENS subprocess env var | ✅ |
+| [02_clr_input_vars.md](02_clr_input_vars.md) | Edge cases for all 40 CLR_* input env var fallbacks (E01–E40) | ✅ |
+| [03_auto_compact_window.md](03_auto_compact_window.md) | Edge cases for `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection and `--no-compact-window` opt-out | ⏳ |

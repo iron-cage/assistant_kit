@@ -16,12 +16,12 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/` | Per-command detail pages with full parameter tables and cross-refs |
 | `param/` | Per-parameter detail pages with type, defaults, and command cross-refs |
 | `type/` | Per-type constraint and parsing reference (14 type pages) |
-| `001_dictionary.md` | Domain vocabulary and term definitions |
+| [001_dictionary.md](001_dictionary.md) | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (16 groups, all singletons) |
-| `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
+| [003_workflows.md](003_workflows.md) | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
-| `002_env_param.md` | Environment variable catalog with precedence rules |
+| [002_env_param.md](002_env_param.md) | Environment variable catalog with precedence rules |
 | `user_story/` | User story index covering persona goals and acceptance criteria |
 | `pitfall/` | CLI implementation pitfalls and anti-patterns |
 
@@ -34,16 +34,16 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/*.md` (16 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/*.md` (44 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
+| [001_dictionary.md](001_dictionary.md) | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `type/*.md` (15 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `command_group/readme.md` (16 singleton groups) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `003_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| [003_workflows.md](003_workflows.md) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `002_env_param.md` | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
+| [002_env_param.md](002_env_param.md) | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
 | `user_story/readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `user_story/*.md` (6 files) | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `pitfall/readme.md` | ➖ | ✅ | ✅ | ➖ | ➖ | L3 |

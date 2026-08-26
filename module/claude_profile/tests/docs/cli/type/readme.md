@@ -15,10 +15,11 @@ Each file covers one type doc instance and maps its constraints to `TC-N` test c
 
 | File | Responsibility |
 |------|----------------|
-| `01_account_name.md` | TC- spec for AccountName type — email validation and path-safety |
-| `02_output_format.md` | TC- spec for OutputFormat type — mode parsing and rejection |
-| `03_warning_threshold.md` | TC- spec for WarningThreshold type — u64 boundary parsing |
-| `04_account_selector.md` | TC- spec for AccountSelector resolution — prefix and email forms |
+| procedure.md | Steps for adding, updating, or removing type test specs |
+| [01_account_name.md](01_account_name.md) | TC- spec for AccountName type — email validation and path-safety |
+| [02_output_format.md](02_output_format.md) | TC- spec for OutputFormat type — mode parsing and rejection |
+| [03_warning_threshold.md](03_warning_threshold.md) | TC- spec for WarningThreshold type — u64 boundary parsing |
+| [04_account_selector.md](04_account_selector.md) | TC- spec for AccountSelector resolution — prefix and email forms |
 
 ### Coverage Summary
 

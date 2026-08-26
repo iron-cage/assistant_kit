@@ -10,6 +10,7 @@ Reads `Command` events from a `claude_journal` event log, groups them by calenda
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | generate_usage_chart, ClaudeJournalChartsError |
 | `verb/` | Shell scripts implementing do-protocol verbs for this crate. |
 | `docs/` | Public API contract |

@@ -6,4 +6,4 @@ Test specs for workspace-level feature doc instances.
 
 | Name | Responsibility |
 |------|----------------|
-| `001_workspace_design.md` | Verify crate inventory matches documented design |
+| [001_workspace_design.md](001_workspace_design.md) | Verify crate inventory matches documented design |

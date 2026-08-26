@@ -11,8 +11,8 @@
 
 | File | Responsibility |
 |------|----------------|
-| `001_run_ask_isolated.md` | Parity matrix: run, ask, isolated across all behavioral dimensions |
-| `002_isolated_refresh.md` | Parity matrix: isolated vs refresh (credential operation commands) |
+| [001_run_ask_isolated.md](001_run_ask_isolated.md) | Parity matrix: run, ask, isolated across all behavioral dimensions |
+| [002_isolated_refresh.md](002_isolated_refresh.md) | Parity matrix: isolated vs refresh (credential operation commands) |
 
 ### See Also
 

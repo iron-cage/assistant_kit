@@ -18,13 +18,13 @@ Each spec covers one pitfall document instance and asserts that the described gu
 
 | File | Responsibility |
 |------|----------------|
-| `001_quota_gate_pitfalls.md` | PP- spec for quota gate pitfall guards (Pitfalls 1–5) |
-| `002_subprocess_integration_pitfalls.md` | PP- spec for subprocess integration pitfall guards (Pitfalls 1–4) |
-| `003_credential_sync_pitfalls.md` | PP- spec for credential sync pitfall guards (Pitfalls 1–5) |
-| `004_account_identity_pitfalls.md` | PP- spec for account identity pitfall guards (Pitfalls 1–2) |
-| `005_ownership_gate_pitfalls.md` | PP- spec for ownership gate pitfall guards (Pitfalls 1–4) |
-| `006_model_override_pitfalls.md` | PP- spec for model override pitfall guards (Pitfalls 1–4) |
-| `007_label_selection_branch_priority_pitfalls.md` | PP- spec for label selection branch-priority pitfall guards (Pitfalls 1–4) |
+| [001_quota_gate_pitfalls.md](001_quota_gate_pitfalls.md) | PP- spec for quota gate pitfall guards (Pitfalls 1–5) |
+| [002_subprocess_integration_pitfalls.md](002_subprocess_integration_pitfalls.md) | PP- spec for subprocess integration pitfall guards (Pitfalls 1–4) |
+| [003_credential_sync_pitfalls.md](003_credential_sync_pitfalls.md) | PP- spec for credential sync pitfall guards (Pitfalls 1–5) |
+| [004_account_identity_pitfalls.md](004_account_identity_pitfalls.md) | PP- spec for account identity pitfall guards (Pitfalls 1–2) |
+| [005_ownership_gate_pitfalls.md](005_ownership_gate_pitfalls.md) | PP- spec for ownership gate pitfall guards (Pitfalls 1–4) |
+| [006_model_override_pitfalls.md](006_model_override_pitfalls.md) | PP- spec for model override pitfall guards (Pitfalls 1–4) |
+| [007_label_selection_branch_priority_pitfalls.md](007_label_selection_branch_priority_pitfalls.md) | PP- spec for label selection branch-priority pitfall guards (Pitfalls 1–4) |
 
 ### Coverage Summary
 

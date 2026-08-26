@@ -9,11 +9,11 @@
 
 | File | Responsibility |
 |------|----------------|
-| `01_filtering.md` | Time window, event type, and field-match filter params |
-| `02_display.md` | Output format, sort, limit, and destination params |
-| `03_aggregation.md` | Stats grouping and prune retention params |
-| `04_search.md` | Search pattern param |
-| `05_global.md` | Cross-command params (journal_dir, no_color, serve config) |
+| [01_filtering.md](01_filtering.md) | Time window, event type, and field-match filter params |
+| [02_display.md](02_display.md) | Output format, sort, limit, and destination params |
+| [03_aggregation.md](03_aggregation.md) | Stats grouping and prune retention params |
+| [04_search.md](04_search.md) | Search pattern param |
+| [05_global.md](05_global.md) | Cross-command params (journal_dir, no_color, serve config) |
 
 ### All Groups (5 total)
 

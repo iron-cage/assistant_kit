@@ -20,6 +20,9 @@
 | claude_journal | Layer * standalone primitive: append-only event journal library |
 | json_redact | Layer * standalone primitive: sensitive-value redaction for strings and JSON |
 | svg_chart | Layer * standalone primitive: minimal SVG line/bar chart rendering |
+| claude_pty_core | Layer * standalone primitive: pseudo-terminal session mechanics via hand-rolled POSIX FFI (zero deps) |
+| claude_session_core | Layer 0 primitive: observes live Claude Code sessions via registry scan and turn detection |
+| claude_daemon_core | Layer 1 domain logic: single-instance session daemon, wire protocol, and IPC framing |
 | claude_journal_charts | Layer 1 domain logic: journal Command events aggregated into daily-usage SVG chart |
 | claude_journal_viewer | CLI and web viewer for CLR journal events (clj binary) |
 | claude_memory | Skeleton placeholder (not a workspace member): no crate manifest yet |

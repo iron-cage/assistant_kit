@@ -4,6 +4,7 @@ Domain action documentation for the `clp` CLI. Each verb represents an action ap
 
 | File | Verb | Nouns | Commands | Idempotent |
 |------|------|-------|---------|-----------|
+| [procedure.md](procedure.md) | — | — | — | — |
 | [001_save.md](001_save.md) | save | account | 1 | Conditional |
 | [002_use.md](002_use.md) | use | account | 1 | Conditional |
 | [003_delete.md](003_delete.md) | delete | account | 1 | Conditional |

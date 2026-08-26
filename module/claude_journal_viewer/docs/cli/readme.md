@@ -17,8 +17,8 @@ All commands use unilang `.command param::value` syntax. The binary is `clj` (st
 | `param/` | Per-parameter detail pages with type, defaults, and command cross-refs |
 | `type/` | Per-type constraint and validation reference |
 | `param_group/` | Per-group detail pages with membership and interaction rules |
-| `001_dictionary.md` | Domain vocabulary and term definitions |
-| `002_env_param.md` | Environment variable catalog with precedence rules |
+| [001_dictionary.md](001_dictionary.md) | Domain vocabulary and term definitions |
+| [002_env_param.md](002_env_param.md) | Environment variable catalog with precedence rules |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (8 groups, all singletons) |
 | `user_story/` | User story index covering persona goals and acceptance criteria |
 
@@ -35,8 +35,8 @@ All commands use unilang `.command param::value` syntax. The binary is `clj` (st
 | `type/*.md` (11 files) | Y | Y | Y | -- | -- | L3 |
 | `param_group/readme.md` | Y | Y | Y | -- | -- | L3 |
 | `param_group/*.md` (5 files) | Y | Y | Y | -- | -- | L3 |
-| `001_dictionary.md` | Y | Y | Y | -- | -- | L3 |
-| `002_env_param.md` | Y | Y | Y | -- | -- | L3 |
+| [001_dictionary.md](001_dictionary.md) | Y | Y | Y | -- | -- | L3 |
+| [002_env_param.md](002_env_param.md) | Y | Y | Y | -- | -- | L3 |
 | `command_group/readme.md` | Y | Y | Y | -- | -- | L3 |
 | `user_story/readme.md` | Y | Y | Y | -- | -- | L3 |
 | `user_story/*.md` (5 files) | Y | Y | Y | -- | -- | L3 |

@@ -13,5 +13,5 @@ Per-parity-matrix test case indices for `clr`. See [parity/](../../../../docs/cl
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_run_ask_isolated.md` | Parity spec for run / ask / isolated cross-command assertions | ✅ |
-| `02_isolated_refresh.md` | Parity spec for isolated / refresh cross-command assertions | ✅ |
+| [01_run_ask_isolated.md](01_run_ask_isolated.md) | Parity spec for run / ask / isolated cross-command assertions | ✅ |
+| [02_isolated_refresh.md](02_isolated_refresh.md) | Parity spec for isolated / refresh cross-command assertions | ✅ |

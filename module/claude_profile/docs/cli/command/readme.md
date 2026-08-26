@@ -4,6 +4,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing command instances |
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
 | [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.account.tag` |
 | [005_token.md](005_token.md) | **DEPRECATED** — Token namespace: `.token.status` (removed; see `.credentials.status`) |

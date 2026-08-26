@@ -9,11 +9,11 @@
 
 | File | Responsibility |
 |------|----------------|
-| `001_cost_tracking.md` | Track API costs over time by model and project |
-| `002_failure_diagnosis.md` | Diagnose failures and identify error patterns |
-| `003_automation_audit.md` | Audit automated CLR sessions for compliance |
-| `004_capacity_planning.md` | Plan API capacity and manage journal storage |
-| `005_team_reporting.md` | Generate usage reports for teams and leads |
+| [001_cost_tracking.md](001_cost_tracking.md) | Track API costs over time by model and project |
+| [002_failure_diagnosis.md](002_failure_diagnosis.md) | Diagnose failures and identify error patterns |
+| [003_automation_audit.md](003_automation_audit.md) | Audit automated CLR sessions for compliance |
+| [004_capacity_planning.md](004_capacity_planning.md) | Plan API capacity and manage journal storage |
+| [005_team_reporting.md](005_team_reporting.md) | Generate usage reports for teams and leads |
 
 ### All User Stories (5 total)
 

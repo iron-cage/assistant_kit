@@ -11,9 +11,9 @@ surface (see `tests/docs/cli/readme.md`). Min 4 FM- cases per spec.
 
 | File | Format | FM-N Cases |
 |------|--------|-----------|
-| `001_text.md` | `format::text` — default human-readable output | FM-1 through FM-4 |
-| `002_json.md` | `format::json` — single-line machine-parseable JSON | FM-1 through FM-4 |
-| `003_table.md` | `format::table` — compact aligned table (`.accounts` only) | FM-1 through FM-4 |
+| [001_text.md](001_text.md) | `format::text` — default human-readable output | FM-1 through FM-4 |
+| [002_json.md](002_json.md) | `format::json` — single-line machine-parseable JSON | FM-1 through FM-4 |
+| [003_table.md](003_table.md) | `format::table` — compact aligned table (`.accounts` only) | FM-1 through FM-4 |
 
 ### Coverage Summary
 

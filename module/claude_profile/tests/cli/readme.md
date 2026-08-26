@@ -49,3 +49,8 @@
 | `user_story_test.rs` | User acceptance tests: account rotation (UA-1..5), onboarding (UA-1..6), quota monitoring (UA-1..5), scripted automation (UA-1..4), credential diagnostics (UA-1..4). |
 | `account_tag_test.rs` | Feature 075 `.account.tag`, `.accounts tags::`, save `tags::`/role removal (t01–t17, t19–t20). |
 | `identity_filter_test.rs` | Feature 076 `.identity.filter`, `.tags`, `.identities` routines (t01–t08, t10, t13–t16, t18; Gate 11 cases live in `tests/usage/sort_next_tests_b.rs`). |
+| `account_provider_test.rs` | Feature 072 `inference_provider::` save dispatch and the `.accounts` Provider column. |
+| `account_redirect_backend_test.rs` | Feature 071 redirect-backend account save via the compiled `clp` binary. |
+| `model_select_test.rs` | `.model.select` retirement-stub migration error tests (Feature 035, task 465). |
+| `models_test.rs` | `.models` model list command tests (Feature 068 AC-01–AC-10). |
+| `telemetry_test.rs` | CLI invocation telemetry tests T01–T06 (task 470). |

@@ -11,5 +11,6 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining algorithm instances | ✅ |
 | 001 | [Agent Session Tracking](001_agent_session_tracking.md) | Discover and enumerate agent sessions across flat and hierarchical storage layouts | ✅ |
 | 002 | [Session Liveness](002_session_liveness.md) | Infer which projects have a Claude Code process attached, and which conversation it drives | ✅ |

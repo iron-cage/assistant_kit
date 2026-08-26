@@ -10,6 +10,7 @@ Renders a small, domain-agnostic `ChartSpec` (title, axis labels, chart kind, da
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | ChartSpec, ChartKind, Series, render_to_string, render_to_file |
 | `verb/` | Shell scripts implementing do-protocol verbs for this crate. |
 | `docs/` | Public API contract |

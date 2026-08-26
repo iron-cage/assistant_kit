@@ -15,21 +15,22 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 
 | File | Responsibility |
 |------|----------------|
-| `01_entry_count.md` | EntryCount — non-negative integer for entry thresholds |
-| `02_entry_type.md` | EntryType — author filter enum (user/assistant/all) |
-| `03_export_format.md` | ExportFormat — serialization format enum (markdown/json/text) |
-| `04_path_substring.md` | PathSubstring — case-insensitive path filter string |
-| `05_project_id.md` | ProjectId — multi-format project identifier |
-| `06_project_type.md` | ProjectType — project naming scheme enum (path/uuid/all) |
-| `07_scope_value.md` | ScopeValue — discovery boundary enum (local/relevant/under/global/around) |
-| `08_session_filter.md` | SessionFilter — case-insensitive session ID substring |
-| `09_session_id.md` | SessionId — exact session identifier |
-| `10_storage_path.md` | StoragePath — filesystem path (absolute or ~-prefixed) |
-| `11_target_type.md` | TargetType — count target enum (projects/sessions/entries) |
-| `12_topic_name.md` | TopicName — session topic identifier string |
-| `13_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
-| `14_detail_level.md` | DetailLevel — output verbosity enum (projects/sessions) |
-| `15_field_selector.md` | FieldSelector — comma-separated attribute-projection field list (or `all`) |
+| procedure.md | Steps for adding, updating, or removing type instances |
+| [01_entry_count.md](01_entry_count.md) | EntryCount — non-negative integer for entry thresholds |
+| [02_entry_type.md](02_entry_type.md) | EntryType — author filter enum (user/assistant/all) |
+| [03_export_format.md](03_export_format.md) | ExportFormat — serialization format enum (markdown/json/text) |
+| [04_path_substring.md](04_path_substring.md) | PathSubstring — case-insensitive path filter string |
+| [05_project_id.md](05_project_id.md) | ProjectId — multi-format project identifier |
+| [06_project_type.md](06_project_type.md) | ProjectType — project naming scheme enum (path/uuid/all) |
+| [07_scope_value.md](07_scope_value.md) | ScopeValue — discovery boundary enum (local/relevant/under/global/around) |
+| [08_session_filter.md](08_session_filter.md) | SessionFilter — case-insensitive session ID substring |
+| [09_session_id.md](09_session_id.md) | SessionId — exact session identifier |
+| [10_storage_path.md](10_storage_path.md) | StoragePath — filesystem path (absolute or ~-prefixed) |
+| [11_target_type.md](11_target_type.md) | TargetType — count target enum (projects/sessions/entries) |
+| [12_topic_name.md](12_topic_name.md) | TopicName — session topic identifier string |
+| [13_strategy_type.md](13_strategy_type.md) | StrategyType — resume strategy enum (resume/fresh) |
+| [14_detail_level.md](14_detail_level.md) | DetailLevel — output verbosity enum (projects/sessions) |
+| [15_field_selector.md](15_field_selector.md) | FieldSelector — comma-separated attribute-projection field list (or `all`) |
 
 ### Type Index
 

@@ -13,4 +13,4 @@ Per-api-doc test case indices for `claude_runner`. See [api/readme.md](../../../
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_public_api.md` | Test cases for the public API doc instance | ✅ |
+| [001_public_api.md](001_public_api.md) | Test cases for the public API doc instance | ✅ |
