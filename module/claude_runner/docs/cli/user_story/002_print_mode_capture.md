@@ -40,3 +40,9 @@
 2. `result=$(clr "task")` — capture the response in a shell variable
 3. `clr "task" | grep pattern` — pipe the response to another tool
 4. `clr "task" --strip-fences` — strip outermost code fence from captured output
+
+### Related User Stories
+
+| # | User Story | Relationship |
+|---|------------|--------------|
+| 32 | [032_hosted_session_chat.md](032_hosted_session_chat.md) | The same shape — prompt in, answer out, pipeable — against a session that survives the command instead of a subprocess that does not |

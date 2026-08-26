@@ -35,9 +35,11 @@ clv .status format::JSON       # error: case-sensitive
 | 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `format::` |
 | 10 | [`.config`](../command/config.md#command-13-config) | `format::` |
 | 11 | [`.params`](../command/params.md#command-14-params) | `format::` |
+| 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | `format::` |
+| 13 | [`.version.mark`](../command/version.md#command-17-versionmark) | `format::` |
 
 ### Referenced Parameters
 
 | # | Parameter | Commands |
 |---|-----------|---------|
-| 1 | [`format::`](../param/05_format.md) | 11 |
+| 1 | [`format::`](../param/05_format.md) | 13 |

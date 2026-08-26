@@ -21,7 +21,7 @@ workspace = true
 # The PTY layer is hand-rolled POSIX FFI rather than `pty-process` (edition 2024,
 # needs Rust 1.85 vs the workspace's 1.75) or `portable-pty` (exposes `anyhow` in
 # its public API, which collides with the error_tools-exclusive rule, and pulls
-# 18 transitive packages). See docs/algorithm/001_pty_allocation.md.
+# 18 transitive packages). See docs/invariant/002_zero_dependencies.md.
 
 [features]
 default = [ "enabled" ]

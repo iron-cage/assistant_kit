@@ -42,6 +42,7 @@
 | 029_scope_inspection.md | User story: inspect all 6 CLAUDE_* path variables for any directory |
 | 030_topic_creation.md | User story: auto-named or explicitly-named topic workspace via clr topic |
 | 031_topic_discovery.md | User story: list topic sessions and resolve a topic name to its path via clr topics |
+| 032_hosted_session_chat.md | User story: chat with a session that outlives the command via clr chat |
 
 ### Index
 
@@ -78,6 +79,7 @@
 | 029 | Scope Inspection | `--dir` | `scope` |
 | 030 | Topic Creation | `--topic`, `--from` | `topic` |
 | 031 | Topic Discovery | `--path`, `--global`, `--dir` | `topics` |
+| 032 | Hosted Session Chat | `--dir`, `--session`, `--timeout`, `--raw`, `--json` | `chat`, `sessions`, `daemon` |
 
 ### Adding User Stories
 

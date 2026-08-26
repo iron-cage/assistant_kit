@@ -11,6 +11,23 @@
 //!
 //! The distinction is critical: `.output()` captures process output which prevents Claude Code from
 //! accessing the terminal for interactive sessions. Interactive mode uses `.status()` to preserve TTY access.
+//!
+//! ## Construction
+//!
+//! All fields are `pub(super)` — the only way to build a `ClaudeCommand` is [`new`](ClaudeCommand::new)
+//! followed by the chainable `with_*()` methods; there is no public struct-literal construction path.
+//!
+//! ## Lower-Level Entry Points
+//!
+//! Beyond `execute()`/`execute_interactive()`, three lower-level methods give callers direct control
+//! over the spawned process instead of a captured [`ExecutionOutput`](crate::types::ExecutionOutput).
+//! All five methods still resolve through the same private `build_command()` — see the Single
+//! Execution Point invariant (`docs/invariant/001_single_execution_point.md`): there is exactly one
+//! `Command::new("claude")` call site in the workspace, regardless of which entry point a caller uses.
+//!
+//! - [`spawn_piped`](ClaudeCommand::spawn_piped): piped-stdio `Child`, for callers that stream output themselves (used by the `clr` CLI's retry loop and credential handling)
+//! - [`spawn_tty`](ClaudeCommand::spawn_tty): TTY-inherited `Child`, for callers managing their own interactive passthrough
+//! - [`spawn_control_session`](ClaudeCommand::spawn_control_session): a [`ControlSession`](crate::control::ControlSession) over stream-json stdio, for the bidirectional control protocol
 
 use std::io;
 use std::path::PathBuf;

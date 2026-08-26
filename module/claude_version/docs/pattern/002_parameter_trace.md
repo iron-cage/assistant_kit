@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the unconditional stderr parameter-trace convention applied to every public mutating function in `claude_version_core` and the shared `claude_core::settings_io` module.
 - **Responsibility**: Describe the problem, trace line format, rationale, and non-goals of the parameter-trace design.
-- **In Scope**: The 11 traced functions, trace line format, stderr-only placement, unconditional (ungated) emission.
+- **In Scope**: The 13 traced functions, trace line format, stderr-only placement, unconditional (ungated) emission.
 - **Out of Scope**: Leveled/structured logging (see Non-Goals), the sibling `claude_version` CLI crate's own pre-existing `eprintln!` diagnostics (an unrelated, already-existing idiom this pattern does not touch).
 
 ### Problem
@@ -13,7 +13,7 @@ Before this pattern, none of `claude_version_core`'s public mutating functions e
 
 ### Solution
 
-Every one of the 11 public mutating functions emits exactly one unconditional `eprintln!` call as its first statement, before any other logic runs. The trace line names the function and every one of its parameters:
+Every one of the 13 public mutating functions emits exactly one unconditional `eprintln!` call as its first statement, before any other logic runs. The trace line names the function and every one of its parameters:
 
 ```rust
 pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< StoredAs, io::Error >
@@ -42,8 +42,10 @@ pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< Stor
 | 9 | `set_env_var` | `claude_core/src/settings_io.rs` | `path`, `key`, `value` |
 | 10 | `remove_env_var` | `claude_core/src/settings_io.rs` | `path`, `key` |
 | 11 | `unlock_settings_for_install` | `claude_version_core/src/version.rs` | (none — promoted from `fn` to `pub fn` per BUG-017) |
+| 12 | `save_custom_marker` | `claude_version_core/src/version.rs` | `name`, `value` |
+| 13 | `remove_custom_marker` | `claude_version_core/src/version.rs` | `name` |
 
-4 of the 11 functions live in `claude_core::settings_io` — a shared L0 primitive also used by `claude_profile` and `claude_runner_core` for their own settings/prefs files. `claude_version_core::settings_io` is a thin re-export shim over the same functions (`pub use claude_core::settings_io::*;`), so tracing the `claude_core` copy covers every caller, including `claude_version_core`'s own.
+4 of the 13 functions live in `claude_core::settings_io` — a shared L0 primitive also used by `claude_profile` and `claude_runner_core` for their own settings/prefs files. `claude_version_core::settings_io` is a thin re-export shim over the same functions (`pub use claude_core::settings_io::*;`), so tracing the `claude_core` copy covers every caller, including `claude_version_core`'s own.
 
 ### Applicability
 
@@ -60,7 +62,7 @@ It does not apply to private helper functions (e.g. `atomic_write`) — every pr
 **Benefits:**
 - Every mutating call leaves a diagnostic trail on stderr, even when it fails partway through
 - No new dependency — plain `eprintln!`, consistent with the sibling `claude_version` CLI crate's own pre-existing (unrelated) diagnostic idiom
-- Deterministically testable: 6 of the 11 sites (`purge_stale_versions`, `unlock_settings_for_install`, and the 4 `settings_io` functions) get a static source-guard test (`include_str!`/`extract_fn_body`, asserting the trace is the function's first statement, no runtime capture); the other 5 (`hot_swap_binary`, `unlock_versions_dir`, `lock_version`, `perform_install`, `store_preferred_version` — real `$HOME`/`PATH`/network, no injectable seam) get CLI-subprocess-isolated tests capturing real stderr output
+- Deterministically testable: 6 of the 13 sites (`purge_stale_versions`, `unlock_settings_for_install`, and the 4 `settings_io` functions) get a static source-guard test (`include_str!`/`extract_fn_body`, asserting the trace is the function's first statement, no runtime capture); the other 7 (`hot_swap_binary`, `unlock_versions_dir`, `lock_version`, `perform_install`, `store_preferred_version`, `save_custom_marker`, `remove_custom_marker` — real `$HOME`/`PATH`/network, no injectable seam) get CLI-subprocess-isolated tests capturing real stderr output
 
 **Costs:**
 - Every traced call now prints to stderr unconditionally — any script or tooling that treats non-empty stderr as a failure signal must account for this
@@ -76,14 +78,15 @@ It does not apply to private helper functions (e.g. `atomic_write`) — every pr
 
 | File | Relationship |
 |------|-------------|
-| [feature/001_version_management.md](../feature/001_version_management.md) | `.version.install`/`.version.guard` reach 7 of the 11 traced functions |
+| [feature/001_version_management.md](../feature/001_version_management.md) | `.version.install`/`.version.guard` reach 7 of the 13 traced functions |
+| [feature/010_custom_markers.md](../feature/010_custom_markers.md) | `.version.mark` reaches `save_custom_marker`/`remove_custom_marker` |
 
 ### Sources
 
 | File | Relationship |
 |------|-------------|
-| `../../../claude_version_core/src/version.rs` | 7 of the 11 traced functions |
-| `../../../claude_core/src/settings_io.rs` | 4 of the 11 traced functions |
+| `../../../claude_version_core/src/version.rs` | 9 of the 13 traced functions |
+| `../../../claude_core/src/settings_io.rs` | 4 of the 13 traced functions |
 
 ### Provenance
 
@@ -98,3 +101,4 @@ It does not apply to private helper functions (e.g. `atomic_write`) — every pr
 | [../../../claude_version_core/tests/version_test.rs](../../../claude_version_core/tests/version_test.rs) | Structural guards for `purge_stale_versions` and `unlock_settings_for_install` |
 | [../../../claude_core/tests/settings_io_test.rs](../../../claude_core/tests/settings_io_test.rs) | Structural guards for `set_setting`/`remove_setting`/`set_env_var`/`remove_env_var` |
 | [../../tests/cli/mutation_version_guard_test.rs](../../tests/cli/mutation_version_guard_test.rs) | Subprocess-isolated stderr assertions for `hot_swap_binary`/`unlock_versions_dir`/`lock_version`/`perform_install`/`store_preferred_version` |
+| [../../tests/cli/mutation_version_mark_test.rs](../../tests/cli/mutation_version_mark_test.rs) | Subprocess-isolated coverage for `save_custom_marker`/`remove_custom_marker` |

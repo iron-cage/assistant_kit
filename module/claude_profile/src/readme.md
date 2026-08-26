@@ -6,7 +6,8 @@
 | `registry.rs` | Command registration: argument definitions and routines for 18 commands. |
 | `cli.rs` | CLI pipeline: adapter → parser → semantic analysis → execution. |
 | `paths.rs` | ClaudePaths — all `~/.claude/` canonical paths from HOME. |
-| `token.rs` | TokenStatus — read expiresAt, classify Valid/ExpiringSoon/Expired. |
+| `token.rs` | Re-export shim over `claude_profile_core::token` (authoritative implementation there). |
+| `telemetry.rs` | CLI invocation telemetry — appends one redacted `Command` event per invocation. |
 | `account.rs` | Re-export shim over `claude_profile_core::account` (authoritative implementation there). |
 | `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |

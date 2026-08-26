@@ -99,7 +99,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/account/store.rs` | `save()` implementation — validate, init dir, copy credentials |
+| `claude_profile_core/src/account/store.rs` | `save()` implementation — validate, init dir, copy credentials |
 | `src/commands/account_ops.rs` | `account_save_routine()` — CLI handler |
 
 ### Tests

@@ -31,7 +31,7 @@
 //! | sess18 | `resize` after spawn | Child observes the new size |
 //! | sess19 | Reported slave path matches the child's view | `tty` output contains it |
 //! | sess20 | stderr reaches the master | Output visible on the master |
-//! | sess21 | `shutdown` on a child blocked reading stdin | Returns; the child is hung up |
+//! | sess21 | `shutdown` on a child blocked reading stdin | Returns promptly rather than hanging |
 //! | sess22 | `resize` after `shutdown` | `Error::SessionClosed` |
 //! | sess23 | `slave_path` and a second `shutdown` afterwards | Path survives; status repeats |
 //! | sess24 | The child's open descriptors | Only the slave — no `/dev/ptmx` |
@@ -469,13 +469,20 @@ fn sess21_shutdown_hangs_up_a_child_blocked_on_stdin()
 
   let started = Instant::now();
   let status = session.shutdown().expect( "shutdown failed" );
+  let elapsed = started.elapsed();
 
+  // How the child ends is deliberately not asserted. Losing a terminal races two
+  // kernel events: `SIGHUP` to the foreground process group, and `EIO` returned
+  // to the `read` the child is blocked in. `cat` dies by the signal when it wins
+  // and exits 1 on the I/O error when it does not — both have been observed from
+  // this very test on one machine, minutes apart. What the daemon depends on is
+  // that `shutdown` returns a status promptly instead of hanging; *which* status
+  // is sess12's claim, where draining to `EOF` first leaves the child's own exit
+  // as the only possible ending.
   assert!(
-    started.elapsed() < READ_TIMEOUT,
-    "shutdown of pid {pid} took {:?} — the master was not closed",
-    started.elapsed(),
+    elapsed < READ_TIMEOUT,
+    "shutdown of pid {pid} took {elapsed:?} (ended {status:?}) — the master was not closed",
   );
-  assert!( status.success() || status.code().is_none(), "unexpected exit: {status:?}" );
 }
 
 /// sess22: resizing after shutdown reports the closed session instead of lying.

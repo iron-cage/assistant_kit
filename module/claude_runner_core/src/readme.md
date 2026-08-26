@@ -46,7 +46,7 @@ src/
 - Environment variable automation (tier 1 defaults: bash_timeout=3.6M, bash_max_timeout=7.2M, auto_continue=true, telemetry=false, max_output_tokens=128K)
 - Type safety via enums (ActionMode, LogLevel)
 - Private field encapsulation (prevents direct construction)
-- Single execution point (execute() method)
+- Command execution via `execute()`/`execute_interactive()`, plus lower-level `spawn_*()` entry points for direct process/stream control (see `command/mod.rs` doc comment for the full set)
 - Test-only helpers for verification without actual execution
 - `/proc` scanning for running Claude Code processes
 - Signal delivery (SIGTERM, SIGKILL) to Claude processes
@@ -58,14 +58,10 @@ src/
 - Interactive terminal UI (→ terminal-based tools)
 - Configuration hierarchy (→ config_hierarchy crate)
 
-### Design Principles
+### Invariants
 
-1. **Single Execution Point**: All commands go through execute()
-2. **Builder Pattern**: Configuration via chainable with_*() methods
-3. **Private Fields**: Cannot construct with struct literals
-4. **No Session Logic**: Pure execution, no state management
-5. **Migration Complete**: Old factory pattern impossible (from_message/create/generate removed)
-6. **Type Safety**: Enums replace string literals (ActionMode, LogLevel)
+Formally documented and test-enforced — see `docs/invariant/readme.md` for the full index:
+- [`001_single_execution_point.md`](../docs/invariant/001_single_execution_point.md) — all `Command::new("claude")` calls centralize in `build_command()`; `execute()`, `execute_interactive()`, `spawn_piped()`, `spawn_tty()`, and `spawn_control_session()` all resolve through it. Enforced by `tests/responsibility_single_execution_point_test.rs`.
 
 ### Test Coverage
 

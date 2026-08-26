@@ -48,4 +48,4 @@ This is the WYSIWYG invariant: every `env_remove()` call in `build_command()` mu
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | `execute()` contract — env modification effect |
 | doc | [feature/003_describe.md](003_describe.md) | WYSIWYG invariant: describe() mirrors build_command() env manipulations |
 | doc | [feature/004_run_isolated.md](004_run_isolated.md) | Isolated subprocess which manages its own env separately |
-| source | `../../src/command.rs` | `with_unset_claudecode()`, `unset_claudecode` field, `build_command()` implementation |
+| source | `../../src/command/mod.rs` | `with_unset_claudecode()`, `unset_claudecode` field, `build_command()` implementation |

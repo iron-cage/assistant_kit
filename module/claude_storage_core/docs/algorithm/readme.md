@@ -13,4 +13,5 @@
 |----|------|---------|--------|
 | 001 | [Path Encoding](001_path_encoding.md) | Lossy filesystem path encoding/decoding scheme | ✅ |
 | 002 | [JSON Parser](002_json_parser.md) | Hand-written zero-dependency recursive descent parser | ✅ |
+| 003 | [Agent Session Tracking](003_agent_session_tracking.md) | Filename-based agent/main session classification | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating algorithm doc instances | ✅ |

@@ -39,6 +39,7 @@
 //! | `slot_owner_pid` | `concurrency_gate_ext_test`, `concurrency_gate_ext2_test` |
 //! | `spawn_parked_helper_thread` (unix) | `concurrency_gate_test`, `ps_command_test` |
 //! | `wait_for_marker_in_files` | `concurrency_gate_ext_test` |
+//! | `DaemonGuard` | `daemon_command_test`, `sessions_command_test`, `chat_command_test` |
 //!
 //! # Testing Techniques
 //!
@@ -959,6 +960,53 @@ pub fn run_isolated( args : &[ &str ] ) -> std::process::Output
   let mut full = vec![ "isolated" ];
   full.extend_from_slice( args );
   run_cli( &full )
+}
+
+/// Stops whatever session daemon a test started, however the test ends.
+///
+/// Without this, a failing assertion leaves a daemon holding a lock on a file in
+/// a temporary directory that is about to be deleted — a process with nothing
+/// left to serve and no path anyone can reach it by, contending for the instance
+/// lock with the next test run.
+///
+/// Shared by `daemon_command_test`, `sessions_command_test`, and
+/// `chat_command_test` — every file that starts a real daemon against an
+/// injected `HOME`.
+#[ derive( Debug ) ]
+#[ allow( dead_code ) ]
+pub struct DaemonGuard
+{
+  home : std::path::PathBuf,
+}
+
+impl DaemonGuard
+{
+  /// Guard the daemon reachable through `home`, stopping it on drop.
+  #[ must_use ]
+  #[ inline ]
+  #[ allow( dead_code ) ]
+  pub fn for_home( home : &std::path::Path ) -> Self
+  {
+    Self { home : home.to_path_buf() }
+  }
+}
+
+impl Drop for DaemonGuard
+{
+  #[ inline ]
+  fn drop( &mut self )
+  {
+    // Deliberately not `run_cli_with_env`: that panics if the binary cannot be
+    // spawned, and a panic raised while this drop is already unwinding aborts the
+    // process — turning a readable assertion failure into a bare SIGABRT.
+    drop
+    (
+      Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+        .args( [ "daemon", "stop" ] )
+        .env( "HOME", &self.home )
+        .output(),
+    );
+  }
 }
 
 /// Poll `child` with `try_wait()` until it exits or `deadline` passes, sleeping

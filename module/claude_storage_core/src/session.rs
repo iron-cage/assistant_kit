@@ -355,7 +355,7 @@ impl Session
   ///
   /// Root cause: the doc comment (present since the initial commit) described
   /// an aspirational second signal that was never implemented and doesn't
-  /// match the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`),
+  /// match the canonical algorithm (`docs/algorithm/003_agent_session_tracking.md`),
   /// which deliberately keeps filename-based session classification
   /// (`is_agent_session`) separate from entry-level sidechain tagging
   /// (`is_agent_entry` — itself never implemented, since it depends on an
@@ -372,7 +372,7 @@ impl Session
   /// Checks the filename convention only: `agent-{id}.jsonl` (`id` = filename
   /// without the `.jsonl` extension). Entry-level `isSidechain`/`agentId`
   /// tagging is a deliberately separate, per-entry concept — see
-  /// `docs/algorithm/001_agent_session_tracking.md`'s `is_agent_entry` — not
+  /// `docs/algorithm/003_agent_session_tracking.md`'s `is_agent_entry` — not
   /// combined here because doing so would require loading entries (I/O) into
   /// what is otherwise a cheap, synchronous, filename-only check. In practice
   /// this doesn't lose detections: Claude Code always writes sidechain entries

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 12 clr commands, all 85 parameters, all 14 types, all 7 parameter groups, 3 env parameter specs, 32 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 15 clr commands, all 85 parameters, all 14 types, all 7 parameter groups, 3 env parameter specs, 32 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -27,7 +27,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 12 | ≥8 IT each |
+| Commands | 15 | ≥8 IT each |
 | Parameters | 85 (84 active + 1 deprecated) | ≥6 EC each |
 | Parameter groups | 7 | ≥4 CC each |
 | Command groups | 1 | 3 CG (indexed from `command/05_ask.md`, `command/11_topic.md`) |
@@ -52,6 +52,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`query`](command/10_query.md)
 - [`topic`](command/11_topic.md)
 - [`topics`](command/12_topics.md)
+- [`daemon`](command/13_daemon.md)
+- [`chat`](command/14_chat.md)
+- [`sessions`](command/15_sessions.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/001_message.md)
@@ -200,6 +203,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Scope Inspection](user_story/029_scope_inspection.md)
 - [Topic Creation](user_story/030_topic_creation.md)
 - [Topic Discovery](user_story/031_topic_discovery.md)
+- [Hosted Session Chat](user_story/032_hosted_session_chat.md)
 
 #### Parity
 - [run / ask / isolated](parity/01_run_ask_isolated.md)

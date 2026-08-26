@@ -8,7 +8,7 @@ Pure library for the single-instance session daemon and its IPC protocol.
 |------|----------------|
 | `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/` | Core library implementation |
-| `tests/` | Test suite for protocol round-trips, IPC framing, and instance locking |
+| `tests/` | Test suite for protocol round-trips, IPC framing, session output, and instance locking |
 | `docs/` | Behavioral requirements: features, invariants, api, data structures |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
@@ -28,6 +28,10 @@ Clients talk to it over a Unix domain socket, one JSON object per line.
   which changes the PID
 - **Capped protocol framing**: an unterminated line is refused at 1 MiB rather
   than allocated without bound
+- **Output drained and read by cursor**: every session's terminal is pumped
+  continuously into a bounded buffer, and reading it consumes nothing — so two
+  clients can watch one session, and neither `send` nor the daemon's accept loop
+  ever blocks waiting for a turn to finish
 - **Composes, does not absorb**: PTY mechanics live in `claude_pty_core`,
   liveness and turn detection in `claude_session_core`
 

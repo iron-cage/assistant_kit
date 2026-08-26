@@ -22,6 +22,9 @@
 | query | Start or dispatch against a persistent PID-addressed control session; canonical form `clr query "<message>"` or `clr query <pid> <method>` |
 | topic | Create a topic session (fork mode for new names, dir mode for existing `-NAME` directories), or continue one if it already exists; auto-names via slug generation when `--topic` is omitted; canonical form `clr topic "<prompt>"` |
 | topics | List the topics under a base (both modes), or resolve one topic name to its dir-mode directory (`--path`) or fork-mode session file (`--file`); read-only, spawns nothing; canonical form `clr topics`, `clr topics --path <NAME>`, or `clr topics --file <NAME>` |
+| daemon | Manage the single session daemon — the long-lived process hosting interactive sessions on terminals of their own; canonical forms `clr daemon status` (also the bare `clr daemon`), `clr daemon start`, `clr daemon stop`, `clr daemon log` |
+| chat | Send one prompt to a hosted interactive session and print the answer, leaving the session alive to continue the conversation; reuses the session in the working directory, or starts the daemon and a session when there is none; canonical form `clr chat "<message>"` |
+| sessions | List the sessions the daemon is hosting — conversation id, PID, turn state, and directory; a pure query that starts no daemon, unlike `chat`; canonical forms `clr sessions` and `clr sessions --json` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
 <!-- BUG-480 — fixed: the three per-surface "active" senses and "slot occupancy" are defined in § Architecture below -->

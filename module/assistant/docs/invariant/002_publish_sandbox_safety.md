@@ -15,7 +15,7 @@
 
 2. **Sandbox-safe fallback required** — when any sibling YAML file is absent, `build.rs` must complete with exit 0 and produce a valid (possibly empty) build artifact. `cargo package` must not emit `panicked at build.rs` in stderr.
 
-**Current status (2026-07-02):** FIX APPLIED — `build.rs` lines 117-127 add an existence guard; absent sibling YAML files produce an empty registry instead of panicking (BUG-003 fix, Option B). Full `cargo package` verification blocked: `claude_journal v0.1.0` and `claude_journal_viewer v0.1.0` are not yet published to crates.io; `cargo package --verify` fails with "no matching package named `claude_journal_viewer` found". Publication order: (1) `cargo publish -p claude_journal`, (2) `cargo publish -p claude_journal_viewer` (after index propagates), (3) re-run `cargo package --allow-dirty -p assistant` to verify. `claude_journal` has only external deps (`serde`, `serde_json`, `chrono`) and is ready to publish immediately.
+**Current status (2026-07-02):** FIX APPLIED — `build.rs` lines 117-129 add an existence guard; absent sibling YAML files produce an empty registry instead of panicking (BUG-003 fix, Option B). Full `cargo package` verification blocked: `claude_journal v0.1.0` and `claude_journal_viewer v0.1.0` are not yet published to crates.io; `cargo package --verify` fails with "no matching package named `claude_journal_viewer` found". Publication order: (1) `cargo publish -p claude_journal`, (2) `cargo publish -p claude_journal_viewer` (after index propagates), (3) re-run `cargo package --allow-dirty -p assistant` to verify. `claude_journal` has only external deps (`serde`, `serde_json`, `chrono`) and is ready to publish immediately.
 
 ### Enforcement Mechanism
 
@@ -43,8 +43,8 @@ When `build.rs` panics in the sandbox, `cargo publish` aborts with `error: faile
 
 | File | Relationship |
 |------|--------------|
-| [../../build.rs](../../build.rs) | YAML path constants at lines 22-24; existence guard + empty-registry fallback at lines 117-127 — fix applied |
-| [../../Cargo.toml](../../Cargo.toml) | `exclude` list; absence of `include` list — determines which files enter the package tarball |
+| [../../build.rs](../../build.rs) | YAML path constants at lines 22-25; existence guard + empty-registry fallback at lines 117-129 — fix applied |
+| [../../Cargo.toml](../../Cargo.toml) | No `exclude` or `include` list — default VCS-tracked-file packaging determines the tarball contents |
 
 ### Tests
 

@@ -101,6 +101,27 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
+### Not Listed Here
+
+The session-management flags — `chat --session`, `chat --raw`, `chat --timeout`, and
+`sessions --json` — have no instance in this collection. Each belongs to exactly one
+command, and each is defined by that command's algorithm rather than by the value it
+takes: `--raw` selects which of two output paths runs, and `--timeout` bounds a
+client-side wait rather than arming a subprocess watchdog (contrast
+[020](020_timeout.md) and [036](036_timeout.md), which do). They are specified in
+[`../command/14_chat.md`](../command/14_chat.md) and
+[`../command/15_sessions.md`](../command/15_sessions.md), beside the steps that give them
+their meaning, and tested in `tests/docs/cli/command/14_chat.md` (CH-1–CH-10) and
+`15_sessions.md` (SC-1–SC-8).
+
+`chat --dir` is the exception, folded into [008_dir.md](008_dir.md): it names the same
+directory every other command's `--dir` names, so a second file would be a second place
+for that answer to drift.
+
+Positionals are likewise specified by the command that takes them — `kill <PID>`,
+`query <PID> <METHOD> [ARGS...]`, `daemon [SUBCOMMAND]`, `chat <MESSAGE>`.
+`[MESSAGE]` ([001](001_message.md)) predates that line.
+
 ### All Parameters (83 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
@@ -112,7 +133,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 5 | `--no-skip-permissions` | bool | false | present/absent | Disable automatic permission bypass | 1 cmd |
 | 6 | `--interactive` | bool | false | present/absent | Forces TTY passthrough, overriding all auto-print triggers | 1 cmd |
 | 7 | `--new-session` | bool | false | present/absent | Start fresh session (disables default continuation) | 1 cmd |
-| 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 1 cmd |
+| 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 7 cmds |
 | 9 | `--max-tokens` | [`TokenLimit`](../type/03_token_limit.md) | 128000 | 0 to 4294967295 | Max output tokens | 1 cmd |
 | 10 | `--session-dir` | [`DirectoryPath`](../type/02_directory_path.md) | — | Any path | Session storage directory — **DEPRECATED**, inert (BUG-493) | 1 cmd |
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |

@@ -2,8 +2,16 @@
 //!
 //! Promoted verbatim in behaviour from `claude_runner/src/cli/gate_liveness.rs`,
 //! where it was `pub( super )` inside a binary crate and therefore unreachable by
-//! any other consumer. The two fixes documented below were paid for in
-//! production; re-deriving this predicate elsewhere would re-introduce both.
+//! any other consumer. That file is gone — this is the only copy, which is the
+//! point: the two fixes documented below were paid for in production, and a
+//! second copy is how the predicate acquires a third hole.
+//!
+//! Every consumer reads from here. `claude_runner`'s `gate_slot::acquire_slot`
+//! for reclaim eligibility, its `ps::build_queued_table` for the queued-waiter
+//! display self-heal (BUG-479/BUG-488 are the same defect seen from those two
+//! sides), and `claude_daemon_core`'s registration wait for whether a spawned
+//! child is still worth waiting on. The reclaim decision and the display cannot
+//! drift apart from each other because there is nothing left to drift.
 
 // BUG-479 — bare /proc/{pid} existence read unreaped zombies as live, blocking
 // acquire_slot()'s owner-reclaim and reclaim-ticket claimant checks indefinitely.

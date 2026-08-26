@@ -14,6 +14,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
+| `license` | Crate license text |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## overview
@@ -515,7 +516,7 @@ For programmatic access to Claude Code storage, use `claude_storage_core` direct
 
 ```toml
 [dependencies]
-claude_storage_core = "1.0.0"
+claude_storage_core = "1.5.1"
 # Or for local development:
 # claude_storage_core = { path = "../claude_storage_core" }
 ```
@@ -583,7 +584,7 @@ fn main() -> claude_storage_core::Result< () >
 - Statistics aggregation
 - Bug reproducers with comprehensive documentation
 
-**CLI tests**: 999 tests across 94 integration test files
+**CLI tests**: 1025 tests across 99 integration test files
 - Storage operations tests (global stats, project listing)
 - Session operations tests (show, stats, entry counts)
 - Counting operations tests (projects, sessions, entries)

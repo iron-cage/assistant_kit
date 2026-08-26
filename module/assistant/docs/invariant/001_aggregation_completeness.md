@@ -53,4 +53,4 @@ A Layer 2 crate that declares CLI commands but is not registered in `build_regis
 | File | Relationship |
 |------|--------------|
 | [../../tests/cli_sanity.rs](../../tests/cli_sanity.rs) | Verifies Layer 2 crate commands are reachable through ast binary |
-| [../../tests/aggregation.rs](../../tests/aggregation.rs) | Aggregation completeness invariant tests (IC-1..2) |
+| [../../tests/aggregation.rs](../../tests/aggregation.rs) | Aggregation completeness invariant tests (IC-1..3) |
