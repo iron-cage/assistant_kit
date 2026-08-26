@@ -42,6 +42,7 @@ clv .ps format::json v::2
 | 10 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
 | 11 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
 | 12 | [`.version.paths`](../command/version.md#command-16-versionpaths) | Partial | `count::` |
+| 13 | [`.version.mark`](../command/version.md#command-17-versionmark) | Partial | `count::` |
 
 ### Referenced Parameters
 
