@@ -4,7 +4,7 @@
 
 | Entity | Purpose | Master File | Instances |
 |--------|---------|-------------|----------:|
-| `feature/` | Behavioral requirements for instance locking, the wire protocol, the session table, session output, registration, serving clients, readable output, and turn state | [feature/readme.md](feature/readme.md) | 8 |
+| `feature/` | Behavioral requirements for instance locking, the wire protocol, the session table, session output, registration, serving clients, and turn state | [feature/readme.md](feature/readme.md) | 7 |
 | `invariant/` | Measurable constraints on framing and session identity | [invariant/readme.md](invariant/readme.md) | 2 |
 | `api/` | Public library API contracts | [api/readme.md](api/readme.md) | 1 |
 
@@ -18,7 +18,6 @@
 | feature | 004 | Session Output | [feature/004_session_output.md](feature/004_session_output.md) |
 | feature | 005 | Session Registration | [feature/005_session_registration.md](feature/005_session_registration.md) |
 | feature | 006 | Serving Clients | [feature/006_serving_clients.md](feature/006_serving_clients.md) |
-| feature | 007 | Readable Output | [feature/007_readable_output.md](feature/007_readable_output.md) |
 | feature | 008 | Turn State | [feature/008_turn_state.md](feature/008_turn_state.md) |
 | invariant | 001 | Capped Line Reads | [invariant/001_capped_line_reads.md](invariant/001_capped_line_reads.md) |
 | invariant | 002 | Conversation Id Key | [invariant/002_conversation_id_key.md](invariant/002_conversation_id_key.md) |

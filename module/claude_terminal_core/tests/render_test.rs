@@ -8,11 +8,13 @@
 //! The cases worth having are the ones where a naive implementation is *nearly*
 //! right: stripping escapes but not honouring the `\r` they accompany (rnd04),
 //! honouring `\r` but not the erase that follows it (rnd05), or trimming so
-//! eagerly that a blank line the session actually printed disappears (rnd12).
+//! eagerly that a blank line the program actually printed disappears (rnd12).
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/007_readable_output.md` — what is modelled and what is not
+//! - `docs/feature/001_readable_output.md` — what is modelled and what is not
+//! - `docs/invariant/002_line_renderer_boundary.md` — why rnd10 removes rather
+//!   than obeys
 //!
 //! ## Coverage
 //!
@@ -35,7 +37,7 @@
 //! | rnd15 | A truncated sequence at the very end | Dropped, no panic |
 //! | rnd16 | Multi-byte characters around an escape | Preserved whole |
 
-use claude_daemon_core::render::{ to_plain_text, MAX_ESCAPE_PARAM_CHARS };
+use claude_terminal_core::{ to_plain_text, MAX_ESCAPE_PARAM_CHARS };
 
 /// rnd01: text with nothing in it to render comes back as it went in.
 #[ test ]

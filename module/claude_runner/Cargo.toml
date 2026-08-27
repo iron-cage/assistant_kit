@@ -58,6 +58,8 @@ enabled = [
   "claude_daemon_core/enabled",
   "dep:claude_pty_core",
   "claude_pty_core/enabled",
+  "dep:claude_terminal_core",
+  "claude_terminal_core/enabled",
   "dep:claude_session_core",
   "claude_session_core/enabled",
   "dep:error_tools",
@@ -84,21 +86,22 @@ enabled = [
 ]
 
 [dependencies]
-claude_core         = { workspace = true, optional = true }
-claude_runner_core  = { workspace = true, optional = true }
-claude_storage_core = { workspace = true, optional = true }
-claude_daemon_core  = { workspace = true, optional = true }
-claude_pty_core     = { workspace = true, optional = true }
-claude_session_core = { workspace = true, optional = true }
-error_tools         = { workspace = true, optional = true }
-unilang             = { workspace = true, optional = true }
-data_fmt            = { workspace = true, optional = true }
-cli_fmt             = { workspace = true, optional = true }
-claude_journal      = { workspace = true, optional = true }
-claude_profile_core = { workspace = true, optional = true }
-serde_json          = { workspace = true, optional = true }
-serde               = { workspace = true, optional = true, features = [ "std", "derive" ] }
-toml                = { workspace = true, optional = true }
+claude_core          = { workspace = true, optional = true }
+claude_runner_core   = { workspace = true, optional = true }
+claude_storage_core  = { workspace = true, optional = true }
+claude_daemon_core   = { workspace = true, optional = true }
+claude_pty_core      = { workspace = true, optional = true }
+claude_terminal_core = { workspace = true, optional = true }
+claude_session_core  = { workspace = true, optional = true }
+error_tools          = { workspace = true, optional = true }
+unilang              = { workspace = true, optional = true }
+data_fmt             = { workspace = true, optional = true }
+cli_fmt              = { workspace = true, optional = true }
+claude_journal       = { workspace = true, optional = true }
+claude_profile_core  = { workspace = true, optional = true }
+serde_json           = { workspace = true, optional = true }
+serde                = { workspace = true, optional = true, features = [ "std", "derive" ] }
+toml                 = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

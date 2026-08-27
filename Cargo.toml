@@ -19,6 +19,7 @@ members = [
   "module/claude_assets",
   "module/claude_core",
   "module/claude_pty_core",
+  "module/claude_terminal_core",
   "module/claude_session_core",
   "module/claude_daemon_core",
   "module/claude_profile_core",
@@ -153,6 +154,11 @@ default-features = false
 
 [workspace.dependencies.claude_pty_core]
 path = "module/claude_pty_core"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.claude_terminal_core]
+path = "module/claude_terminal_core"
 version = "=0.1.0"
 default-features = false
 

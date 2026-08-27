@@ -11,6 +11,7 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `project.rs` | Represent and query project directories |
 | `session.rs` | Represent and query conversation sessions |
 | `entry.rs` | Parse conversation entry types from JSONL |
+| `event.rs` | Parse every JSONL line kind, including context attachments |
 | `json.rs` | Parse JSON with zero dependencies |
 | `path.rs` | Encode and decode storage path representations |
 | `filter.rs` | Filter projects and sessions by criteria |

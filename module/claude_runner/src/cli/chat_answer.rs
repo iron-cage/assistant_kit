@@ -8,7 +8,7 @@
 //! over the pty is what a person would *see*: an input box redrawn on every
 //! frame, a status bar, spinner glyphs, a tip banner, box rules, and the answer
 //! threaded somewhere through all of it. Rendering those bytes faithfully — which
-//! is what [`claude_daemon_core::to_plain_text`] does — produces exactly that
+//! is what [`claude_terminal_core::to_plain_text`] does — produces exactly that
 //! picture, spinner frames and all. Correct, and unusable as the output of a
 //! command whose whole promise is "prompt in, answer out".
 //!

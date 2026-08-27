@@ -16,6 +16,5 @@ Core library implementation for `claude_daemon_core`.
 | `paths.rs` | Lock, socket, and registry directory resolution |
 | `protocol.rs` | Request and response wire types |
 | `registration.rs` | Waiting for a spawned process to publish its conversation id |
-| `render.rs` | Rendering raw terminal output as readable plain text |
 | `serve.rs` | Request dispatch and one-request-per-connection serving |
 | `table.rs` | Hosted-session table keyed by conversation id |

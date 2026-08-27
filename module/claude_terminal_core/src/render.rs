@@ -1,8 +1,8 @@
 //! Turning a terminal's raw output into something readable.
 //!
-//! A hosted session runs on a real terminal, so its output is not text — it is a
-//! byte stream addressed to a screen, carrying escape sequences, carriage-return
-//! rewrites and padding. Handed to a client verbatim it is unreadable; handed
+//! A program running on a real terminal does not emit text — it emits a byte
+//! stream addressed to a screen, carrying escape sequences, carriage-return
+//! rewrites and padding. Handed to a reader verbatim it is unreadable; handed
 //! through here it reads like a transcript.
 //!
 //! # What this is, and is not
@@ -36,8 +36,9 @@
 ///
 /// A sequence whose parameters run past this is not a sequence any more — it is
 /// a stream that lost sync, and the only useful thing to do is stop swallowing
-/// text into it. Same reasoning as [`crate::ipc::MAX_IPC_LINE_BYTES`]: a cap
-/// bounds the damage a malformed stream can do to the reader of it.
+/// text into it. Same reasoning as `claude_daemon_core`'s `MAX_IPC_LINE_BYTES`
+/// one layer up: a cap bounds the damage a malformed stream can do to the reader
+/// of it.
 pub const MAX_ESCAPE_PARAM_CHARS : usize = 64;
 
 /// Columns a tab advances to, as a multiple of.
@@ -52,7 +53,7 @@ const TAB_STOP : usize = 8;
 /// they are the author's, not the terminal's.
 ///
 /// ```
-/// use claude_daemon_core::render::to_plain_text;
+/// use claude_terminal_core::to_plain_text;
 ///
 /// // A spinner rewriting its own line leaves only what it settled on.
 /// assert_eq!( to_plain_text( "working... \r\u{1b}[Kdone" ), "done" );

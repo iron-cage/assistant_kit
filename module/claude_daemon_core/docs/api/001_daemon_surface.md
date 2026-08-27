@@ -173,17 +173,18 @@ The accept *loop* is not here — a loop inside a library is one the caller cann
 | `request_within( socket_path : &Path, request : &Request, timeout : Duration ) -> Result< Response >` | As above, with an explicit read and write timeout |
 | `call( socket_path : &Path, request : &Request ) -> Result< serde_json::Value >` | `request`, with `Response::Err` turned into `Error::Remote` |
 
-### `render`
+### Not On This Surface — Rendering
 
-| Signature | Contract |
-|-----------|----------|
-| `MAX_ESCAPE_PARAM_CHARS : usize` | 64 — parameter run past which an escape sequence is abandoned |
-| `to_plain_text( raw : &str ) -> String` | In-line cursor motion obeyed, escape sequences removed, trailing whitespace and outer blank lines trimmed |
+`to_plain_text` is **not** exported here, and this crate does not depend on the
+crate that exports it. Turning a session's raw terminal bytes into readable text
+needs neither a daemon nor a pty — it is a function of a `&str` — so it lives at
+Layer `*` in
+[`claude_terminal_core`](../../../claude_terminal_core/docs/api/001_terminal_surface.md),
+which a client depends on directly.
 
-Also re-exported at the crate root as `to_plain_text`. Total, never failing: a
-malformed or truncated escape sequence yields text, not an error. What the
-function models and what it merely removes is [feature/007](../feature/007_readable_output.md);
-the short version is that it renders lines, not a screen.
+What this crate hands back is the raw stream, unrendered, by design: `read`
+returns the bytes as they arrived, and rendering is the client's own step. That
+is what makes `clr chat --raw` a flag rather than a second protocol request.
 
 ### Verification
 
@@ -204,7 +205,7 @@ cd module/claude_daemon_core && cargo doc --no-deps --all-features
 | doc | [feature/004_session_output.md](../feature/004_session_output.md) | Behavior behind `OutputPump` |
 | doc | [feature/005_session_registration.md](../feature/005_session_registration.md) | Behavior behind `await_session_id` |
 | doc | [feature/006_serving_clients.md](../feature/006_serving_clients.md) | Behavior behind `Listener`, `Daemon`, and `client` |
-| doc | [feature/007_readable_output.md](../feature/007_readable_output.md) | Behavior behind `to_plain_text` |
+| doc | [`claude_terminal_core` api/001](../../../claude_terminal_core/docs/api/001_terminal_surface.md) | `to_plain_text`, which this surface deliberately does not carry |
 | doc | [feature/008_turn_state.md](../feature/008_turn_state.md) | Behavior behind `with_background_reporting` and `SessionSummary::busy` |
 | test | `tests/lock_test.rs` | Exclusion and release |
 | test | `tests/ipc_test.rs` | Framing and the cap |

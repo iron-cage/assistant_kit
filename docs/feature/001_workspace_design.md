@@ -25,13 +25,13 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | json_redact | — | primitives | Domain-agnostic redaction of sensitive values from strings and JSON |
 | claude_pty_core | — | primitives | Pseudo-terminal session mechanics: allocation, writer thread, resize |
 | claude_core | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
-| claude_profile_core | — | 1 | Token status + account domain logic (no CLI deps) |
+| claude_session_core | — | 0 | Observe live Claude Code sessions: registry, liveness, turn boundaries |
+| claude_profile_core | — | 1 † | Token status + account domain logic (no CLI deps) |
 | claude_version_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |
 | claude_runner_core | — | 1 | Builder pattern for constructing and executing claude commands |
 | claude_assets_core | — | 1 | Symlink-based artifact installer domain logic (no CLI deps) |
 | claude_journal_charts | — | 1 | Aggregates journal events into daily usage counts; renders as SVG via `svg_chart` |
-| claude_session_core | — | 1 | Observe live Claude Code sessions: registry, liveness, turn boundaries |
-| claude_daemon_core | — | 1 † | Single-instance session daemon and its IPC protocol |
+| claude_daemon_core | — | 1 | Single-instance session daemon and its IPC protocol |
 | claude_profile | clp / claude_profile | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
 | claude_storage | clg / claude_storage | 2 | CLI for exploring Claude Code filesystem storage |
 | claude_journal_viewer | clj | 2 | CLI and web viewer for CLR journal events |
@@ -42,7 +42,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | assistant | ast / assistant | 3 | Agent-agnostic super-app aggregator: all Layer 2 CLI crates in one binary |
 | assistant_kit | — | 3 | Library facade for the five Claude Code Layer 2 CLI crates (excludes journal viewer) |
 
-`†` `claude_daemon_core` depends on `claude_session_core`, also Layer 1 — a deviation from the Layer Invariant, recorded in [pattern/001_crate_layering.md](../pattern/001_crate_layering.md).
+`†` `claude_profile_core` → `claude_runner_core` is the one sanctioned same-layer dependency (optional, `enabled`-gated), recorded in [pattern/001_crate_layering.md](../pattern/001_crate_layering.md).
 
 **Binaries** (14 targets — 6 crates expose both canonical name and short alias; `claude_runner` additionally exposes alias `c`; `claude_journal_viewer` exposes alias `clj` only):
 

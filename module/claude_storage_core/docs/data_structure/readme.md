@@ -13,4 +13,5 @@
 |----|------|---------|--------|
 | 001 | [Storage Hierarchy](001_storage_hierarchy.md) | Storage → Project → Session → Entry model | ✅ |
 | 002 | [Filter Types](002_filter_types.md) | SessionFilter, ProjectFilter, StringMatcher composition | ✅ |
+| 003 | [Session Event](003_session_event.md) | SessionEvent, EventKind, Attachment — every JSONL line kind | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating data structure doc instances | ✅ |

@@ -1,28 +1,32 @@
-# Behavior B11: CLAUDE_CODE_AUTO_CONTINUE Env Var
+# Behavior B11: CLAUDE_CODE_AUTO_CONTINUE Env Var — REFUTED
 
 ### Scope
 
-- **Purpose**: Document that `CLAUDE_CODE_AUTO_CONTINUE` env var enables automated continuation mode in the `claude` binary.
-- **Responsibility**: Authoritative instance for behavior B11 — defines the behavior statement, certainty level, and supporting evidence. Tier is NEG-ONLY.
-- **In Scope**: `CLAUDE_CODE_AUTO_CONTINUE` env var; how it is set by the `clr` runner; NEG-ONLY test tier explanation.
-- **Out of Scope**: `CLAUDE_CODE_SESSION_DIR` (different env var, different purpose, → [B23](023_b23_session_dir_override.md)).
+- **Purpose**: Record that the hypothesised `CLAUDE_CODE_AUTO_CONTINUE` env var is not read by the `claude` binary, and flag that the workspace still sets it.
+- **Responsibility**: Authoritative instance for behavior B11 — retained as a refuted hypothesis with the disconfirming evidence, per the collection's no-silent-deletion policy.
+- **In Scope**: Disconfirmation of `CLAUDE_CODE_AUTO_CONTINUE`; the live workspace call site that still exports it; why the NEG-ONLY tier could not catch this.
+- **Out of Scope**: `CLAUDE_CODE_SESSION_DIR` (separately refuted, → [B23](023_b23_session_dir_override.md)); the `--continue` flag itself, which is real (→ [B4](004_b4_continue_flag.md)).
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: NEG-ONLY | **Since**: pre-v1.0 | **Evidence**: E10, E21
+**Status**: ❌ Refuted | **Certainty**: 95% refuted | **Tier**: NEG-ONLY (insufficient — see below) | **Refuted at**: v2.1.220 | **Evidence**: E10, E21, E72
 
-`CLAUDE_CODE_AUTO_CONTINUE` environment variable enables automated continuation mode in the `claude` binary.
+**The original hypothesis was:** *"`CLAUDE_CODE_AUTO_CONTINUE` environment variable enables automated continuation mode in the `claude` binary."*
 
-This env var is set by the `clr` runner before spawning `claude` (via `cmd.env("CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string())`). The binary's acceptance of this env var cannot be confirmed beyond the negative assertion that it does not explicitly reject it.
+**That hypothesis is refuted.** The literal string `CLAUDE_CODE_AUTO_CONTINUE` does not occur anywhere in the v2.1.220 binary (0 occurrences across 271 MB), under the same scan whose positive and negative controls are recorded in E72. It appears in no official Claude Code documentation. Automated continuation is driven by the `--continue` flag (→ [B4](004_b4_continue_flag.md)), which is real and documented; no env-var equivalent exists.
 
-**NEG-ONLY tier**: The test asserts that the binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when the env var is set — it cannot distinguish acceptance from silent ignore. Exit code is trivially 0 and cannot discriminate.
+**The evidence never supported the hypothesis in the first place.** E10 proves only that *this workspace sets* the variable — it says nothing about whether the *binary reads* it. That is a claim about `claude_runner_core`, not about `claude`. Reading a producer-side call site as evidence of consumer-side behavior is the specific reasoning error this refutation corrects.
+
+**Why the test tier could not catch this.** NEG-ONLY asserts that the binary does not name the variable in stderr when it is set. A variable the binary has never heard of also goes unmentioned, so the assertion passes identically whether the variable is honored, silently ignored, or entirely absent from the binary. See [B23](023_b23_session_dir_override.md), refuted by the same method on the same day.
+
+**Live consumer impact — unresolved.** Unlike [B23](023_b23_session_dir_override.md), whose dead export the workspace already removed under BUG-490/BUG-493, this variable is still exported on every run: `module/claude_runner_core/src/command/mod.rs:290` pushes it into the child environment, and at least six tests in `claude_runner_core` and `claude_runner` assert that it appears there. Those tests verify that the workspace sets the variable; none verifies that setting it changes anything. The export is a no-op against v2.1.220 and the assertions lock the no-op in place. Removing it is a workspace change outside this contract crate and is left to the owner's decision.
 
 ### Evidence
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command.rs` | line 647-648 | `cmd.env("CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string())` — env var set before spawning `claude` |
-| E21 | B11 | Test | `../../tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | Binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when env var is set — negative assertion |
+| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | line 290 | `pairs.push( ( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() ) )` — env var exported before spawning `claude`. Proves the workspace *sets* the variable; carries no information about whether the binary *reads* it. Location corrected 2026-08-27: previously cited as `src/command.rs` lines 647–648, a path and line range that no longer exist. |
+| E21 | B11 | Test | `../../tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | Binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when env var is set — negative assertion; passes identically for a variable absent from the binary, which is why it did not catch this refutation |
 
 ### Cross-References
 

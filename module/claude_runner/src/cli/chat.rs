@@ -56,7 +56,8 @@ use core::time::Duration;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use claude_daemon_core::{ client, to_plain_text, OutputSlice, Request, SessionSummary };
+use claude_daemon_core::{ client, OutputSlice, Request, SessionSummary };
+use claude_terminal_core::to_plain_text;
 
 use super::chat_answer;
 use super::daemon::{ daemon_paths, ensure_running };

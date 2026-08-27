@@ -17,4 +17,3 @@ PTY-attached children — no mocks.
 | `table_test.rs` | Conversation-id keying, replacement, removal, summary ordering, and teardown |
 | `listener_test.rs` | Binding over wreckage, socket permissions, and leaving nothing behind |
 | `serve_test.rs` | End-to-end dispatch: a real socket, the real client, real children |
-| `render_test.rs` | Escape removal, in-line cursor motion, and what survives trimming |

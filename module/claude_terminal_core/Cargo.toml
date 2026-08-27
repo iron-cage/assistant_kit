@@ -1,0 +1,28 @@
+[package]
+name = "claude_terminal_core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_terminal_core"
+description = "Core library for interpreting terminal output as plain text (zero dependencies)"
+keywords = [ "terminal", "ansi", "escape", "vt100", "render" ]
+categories = [ "development-tools", "text-processing" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# ZERO dependencies - this is a core guarantee.
+# Interpreting an escape-sequence stream is a scanner over `&str`; a terminal
+# emulator crate would bring a screen model this crate deliberately does not
+# have. See docs/invariant/001_zero_dependencies.md.
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]

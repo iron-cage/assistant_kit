@@ -1,23 +1,35 @@
-# Behavior B5: Current Session Selected by Mtime
+# Behavior B5: Continue Session Selection Rule
 
 ### Scope
 
-- **Purpose**: Document the inferred mechanism by which `--continue` selects the "most recent" session — filesystem modification time (mtime).
-- **Responsibility**: Authoritative instance for behavior B5 — defines the behavior statement, certainty level, and supporting evidence. Certainty is capped at 60% (closed-source binary).
-- **In Scope**: Mtime-based selection inference; VALIDATED† tier explanation; investigation priority.
-- **Out of Scope**: UUID-based session selection (→ [B19](019_b19_resume_flag.md)); fork-session mechanics (→ [B21](021_b21_fork_session.md)).
+- **Purpose**: Document which session `--continue` resumes — the documented candidate filter, and the still-unconfirmed ordering key within that filtered set.
+- **Responsibility**: Authoritative instance for behavior B5 — defines the behavior statement, certainty level, and supporting evidence. Splits the confirmed candidate-set rule from the inferred ordering key.
+- **In Scope**: Officially documented exclusion filter; the interactive vs `-p` filter difference; mtime-as-ordering-key inference; VALIDATED† tier explanation.
+- **Out of Scope**: UUID-based session selection (→ [B19](019_b19_resume_flag.md)); fork-session mechanics (→ [B21](021_b21_fork_session.md)); storage path encoding (→ [B9](009_b9_storage_path_encoding.md)).
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 60% | **Tier**: VALIDATED† | **Since**: pre-v1.0 | **Evidence**: E4, E15
+**Status**: ✅ Confirmed (candidate filter) / ❓ Uncertain (ordering key) | **Certainty**: 95% filter, 55% mtime key | **Tier**: VALIDATED† | **Since**: pre-v1.0 | **Evidence**: E4, E15, E71
 
-The "current" session resumed by `--continue` is the most recently modified `.jsonl` file (mtime).
+This behavior has two separable claims. Official documentation settles the first and is silent on the second.
 
-No explicit "current session pointer" metadata was found in the storage format. The most probable mechanism is filesystem mtime: `claude` reads the directory listing, sorts by modification time, and resumes the newest non-agent, non-empty `.jsonl` file.
+**1. Candidate filter — ✅ Confirmed (95%).** `claude --continue` resumes the most recent *interactive* session in the current directory. It is not a plain "newest `.jsonl` in the directory" rule: Claude Code excludes specific session classes from the candidate set (E71):
 
-Certainty is capped at 60% because the Claude Code binary is closed-source and this mechanism has not been confirmed by source inspection or official documentation. The test tier `VALIDATED†` reflects that distinct mtimes were confirmed to exist (feasibility proven) but that mtime is the actual selection key is unproven.
+| Session class | Excluded from `claude --continue` | Excluded from `claude -p --continue` |
+|---------------|-----------------------------------|--------------------------------------|
+| Background sessions | Yes | Yes |
+| Sessions created by `claude -p` or the Agent SDK | Yes | No — included |
+| Sessions whose first prompt was `/loop` | Yes | No — included |
 
-**Investigation priority:** High — can be confirmed by reading Claude Code changelog or public source if made available.
+The interactive and print-mode filters therefore differ: `-p --continue` widens the candidate set to everything except background sessions. Running `/loop` later in a conversation does not exclude the session — only a `/loop` first prompt does.
+
+**2. Ordering key — ❓ Uncertain (55%).** Within the filtered candidate set, "most recent" is not defined by official documentation in terms of any concrete on-disk field. Filesystem mtime remains the most probable key, since no "current session pointer" metadata exists in the storage format and mtime is the only per-file ordering signal available without parsing every transcript. Last-activity time parsed from transcript entries is an equally consistent alternative that the available evidence does not rule out — the session picker displays "time since last activity", which would be derivable either way.
+
+Certainty on the ordering key stays below 60% because the binary is closed-source and official documentation describes the *selection outcome* rather than the *sort key*. The `VALIDATED†` tier reflects that distinct mtimes were confirmed to exist (feasibility proven) while mtime-as-selection-key is unproven.
+
+**Known test gap:** `b05_mtime_selection.rs` asserts only that distinct mtimes exist. It does not exercise the documented exclusion filter — a regression that made `--continue` pick a `-p` or background session would not turn this test RED.
+
+**Superseded claim:** before this revision, B5 stated flatly that `--continue` resumes "the most recently modified `.jsonl` file (mtime)". That statement is incorrect as written — it omits the exclusion filter that official documentation specifies.
 
 ### Evidence
 
@@ -25,6 +37,7 @@ Certainty is capped at 60% because the Claude Code binary is closed-source and t
 |----|----------|------|--------|----------|---------|
 | E4 | B5 | Inference | Storage observation | `~/.claude/projects/*/` | Multiple `.jsonl` files in one project; `--continue` must pick one; mtime is the only per-file ordering signal available without metadata |
 | E15 | B5 | Test | `../../tests/behavior/b05_mtime_selection.rs` | `b5_real_sessions_have_distinct_mtimes` | Real project with 2+ sessions has distinct mtimes — mtime ordering is possible |
+| E71 | B5 | Doc | Official Claude Code documentation (code.claude.com/docs/en/sessions § Resume a session) | `--continue` row and following paragraph | "`claude --continue` — Resumes the most recent interactive session in the current directory." And: "Claude Code leaves sessions created with `claude -p` or the Agent SDK out of the session picker and out of `claude --continue`… With `claude --continue`, Claude Code also skips background sessions and sessions whose first prompt was `/loop`. When you run `claude -p --continue`, Claude Code includes `-p`, SDK, and `/loop` sessions and still skips background sessions." No sort key is stated. |
 
 ### Cross-References
 

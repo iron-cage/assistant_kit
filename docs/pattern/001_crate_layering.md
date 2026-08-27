@@ -21,10 +21,11 @@ Layer 3: assistant · assistant_kit                                   (cli + lib
 Layer 2: dream                                                      (lib — not claude_-prefixed by design)
          claude_assets · claude_version · claude_runner · claude_profile · claude_storage · claude_journal_viewer  (cli)
              ↓
-Layer 1: claude_assets_core · claude_profile_core · claude_version_core · claude_runner_core · claude_journal_charts
-         claude_session_core · claude_daemon_core †
+Layer 1: claude_assets_core · claude_profile_core † · claude_version_core · claude_runner_core · claude_journal_charts
+         claude_daemon_core
              ↓
 Layer 0: claude_core                                                  (zero workspace deps — ClaudePaths + process utilities)
+         claude_session_core                                            (live-session registry; deps only on Layer * claude_storage_core)
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
@@ -34,13 +35,14 @@ Layer 0: claude_core                                                  (zero work
 *        claude_pty_core                                                 (zero workspace deps — pseudo-terminal session mechanics)
 ```
 
-`†` participates in a known Layer Invariant deviation — see **Layer Invariant Deviations** below.
+`†` participates in the one sanctioned same-layer exception — see **Sanctioned Same-Layer Exception** below.
 
 **Dependencies per crate:**
 
 | Layer | Crate | Kind | Binaries |
 |-------|-------|------|----------|
 | 0 | `claude_core` | lib | — |
+| 0 | `claude_session_core` | lib | — |
 | * | `claude_storage_core` | lib | — |
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
@@ -53,8 +55,7 @@ Layer 0: claude_core                                                  (zero work
 | 1 | `claude_version_core` | lib | — |
 | 1 | `claude_runner_core` | lib | — |
 | 1 | `claude_journal_charts` | lib | — |
-| 1 | `claude_session_core` | lib | — |
-| 1 | `claude_daemon_core` † | lib | — |
+| 1 | `claude_daemon_core` | lib | — |
 | 2 | `dream` | lib | — |
 | 2 | `claude_assets` | cli | `claude_assets`, `cla` |
 | 2 | `claude_profile` | cli | `clp`, `claude_profile` |
@@ -76,18 +77,17 @@ Layer 0: claude_core                                                  (zero work
 - `json_redact` — domain-agnostic sensitive-value redaction; zero workspace deps; consumed by Layer 2's `claude_profile`
 - `claude_pty_core` — pseudo-terminal session mechanics; zero workspace deps; consumed by Layer 1's `claude_daemon_core` and Layer 2's `claude_runner`
 
-### Layer Invariant Deviations
+### Sanctioned Same-Layer Exception
 
-Two dependency edges in the current workspace violate the Layer Invariant stated above. Both are **default-on** (not opt-in), both are recorded here rather than silently tolerated, and neither has an agreed resolution yet:
+The Layer Invariant admits exactly one exception, registered in `ALLOWED_SAME_LAYER_DEPS` in `module/assistant/tests/workspace_invariants.rs` and enforced by the `cl1_no_same_layer_deps` test — any same-layer edge not on that list fails the suite.
 
-| # | Edge | Both at | Conditionality | Status |
-|---|------|---------|----------------|--------|
-| D1 | `claude_profile_core` → `claude_runner_core` | Layer 1 | `optional = true`, but reached via `default = [ "enabled" ]` → active in a default build | Unresolved |
-| D2 | `claude_daemon_core` → `claude_session_core` | Layer 1 | Unconditional | Unresolved |
+| Edge | Both at | Conditionality | Status |
+|------|---------|----------------|--------|
+| `claude_profile_core` → `claude_runner_core` | Layer 1 | `optional = true`; activates only when the `enabled` feature is requested | Sanctioned |
 
-**D1** predates the daemon stack. **D2** arrived with it: `claude_daemon_core` composes `claude_session_core` (session observation) with `claude_pty_core` (terminal mechanics) and `claude_core`, and is itself consumed by Layer 2's `claude_runner` — so it cannot move up to Layer 2 without creating a Layer 2 → Layer 2 edge instead.
+It creates no build cycle precisely because it is optional: the dependency is absent unless a consumer asks for `enabled`. Adding any further same-layer edge requires both a new `ALLOWED_SAME_LAYER_DEPS` entry with a justification comment and a corresponding row here — the test is the enforcement point, this table is its documentation counterpart.
 
-The three resolutions the Consequences section already anticipates apply here: move the shared code down a layer, introduce an intermediate layer, or amend the Layer Invariant to permit an explicit, documented intra-layer ordering. Choosing among them is an open architectural decision, not a documentation fix — this section records the deviation so the diagram and table above are not read as claiming an invariant that the manifests do not currently satisfy.
+**The daemon stack introduces no exception.** `claude_daemon_core` (Layer 1) depends on `claude_session_core`, which is Layer 0 — its only workspace dependency is Layer `*`'s `claude_storage_core`, so it sits alongside `claude_core` rather than in Layer 1. `claude_pty_core` has zero workspace dependencies and is Layer `*`. Every daemon-stack edge therefore flows strictly downward and is verified by `cl2_deps_flow_downward_only`.
 
 ### Applicability
 

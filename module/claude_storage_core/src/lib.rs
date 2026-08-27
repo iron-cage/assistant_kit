@@ -69,6 +69,7 @@
 mod path;
 mod error;
 mod entry;
+mod event;
 mod session;
 mod project;
 mod storage;
@@ -102,6 +103,13 @@ pub use entry::
   AssistantMessage,
   ContentBlock,
   ThinkingMetadata,
+};
+pub use event::
+{
+  SessionEvent,
+  EventKind,
+  Attachment,
+  InvokedSkill,
 };
 pub use session::Session;
 pub use project::{ Project, ProjectId };

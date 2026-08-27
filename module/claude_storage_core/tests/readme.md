@@ -4,12 +4,12 @@
 
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
-discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, and canonical
-path resolution. Every test is
+discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, canonical
+path resolution, and the wider session-event schema covering every JSONL line kind. Every test is
 hermetic: storage-facing tests build their own `TempDir` tree — shared builders live in
 `storage_fixture/` — and environment-facing tests override `HOME`/`CLAUDE_HOME` to a temp
 directory, so no test reads the developer's real `~/.claude/`.
-Fourteen of the twenty-seven files are bug reproducers — each documents a parse,
+Fourteen of the twenty-eight files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -32,6 +32,7 @@ tests/
 ├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── entries_count_stats_line_read_failure_bug.rs # Bug Reproducer (BUG-508): entries()/count_entries()/stats() hard-failed whole file on one non-UTF-8 line
+├── event_test.rs                          # Unit tests for SessionEvent — every JSONL line kind and attachment subtype
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── family_test.rs                         # Unit tests for family::find_family() — both agent layouts
 ├── filtering.rs                           # Session and project filtering integration tests
@@ -68,6 +69,7 @@ tests/
 | `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `entries_count_stats_line_read_failure_bug.rs` | Lock in per-line skip for `entries()`/`count_entries()`/`stats()` on a non-UTF-8 line; regression guard for BUG-508 |
+| `event_test.rs` | Unit tests for `SessionEvent`: envelope fields, all 9 line kinds, all 14 attachment subtypes, forward compatibility |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
 | `family_test.rs` | Unit tests for `find_family()`: hierarchical and flat agent association |
 | `filtering.rs` | Session and project filter composition integration tests |

@@ -20,7 +20,10 @@
 //! - [`Request`] / [`Response`] — the wire protocol
 //! - [`Daemon`] / [`serve_once`] — what a request means, and the body of a loop
 //! - [`client::call`] — the other end of that exchange
-//! - [`to_plain_text`] — a terminal's output stream, made readable
+//!
+//! Rendering a session's raw terminal output as readable text is deliberately
+//! *not* here: it needs no daemon and no pty, so it lives one layer down in
+//! `claude_terminal_core`, which this crate does not depend on.
 //!
 //! ## Two decisions worth knowing
 //!
@@ -46,7 +49,6 @@ pub mod output;
 pub mod paths;
 pub mod protocol;
 pub mod registration;
-pub mod render;
 pub mod serve;
 pub mod table;
 
@@ -58,7 +60,6 @@ pub use output::{ OutputBuffer, OutputPump, OutputSlice, DEFAULT_OUTPUT_CAP };
 pub use paths::DaemonPaths;
 pub use protocol::{ Request, Response, SessionSummary };
 pub use registration::{ await_session_id, REGISTRATION_TIMEOUT };
-pub use render::to_plain_text;
 pub use serve::{ serve_connection, serve_once, Daemon };
 // Re-exported rather than left to the caller to depend on `claude_session_core`
 // for: [`Daemon::with_background_reporting`] takes it, and an argument type a

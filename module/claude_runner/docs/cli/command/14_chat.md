@@ -70,7 +70,7 @@ Failing there would suggest the work was lost, which it was not.
 1. Before `send`, count the conversation entries already in the session's transcript. That count is the mark: everything past it is this turn.
 2. `--raw` → the accumulated terminal bytes, exactly as they arrived. The transcript is not consulted at all, so no time is spent looking for a nicer answer nobody asked for.
 3. Otherwise → read the transcript entries past the mark, keep the assistant ones, keep their **text** blocks only, and join them. Thinking blocks, tool calls, and tool results are how the answer was reached, and print mode does not print those either.
-4. A transcript that is not there yet is polled for up to 5 seconds — the turn ends when the session goes idle and quiet, which is slightly before Claude Code has finished flushing the file. Still nothing → fall back to [`to_plain_text`](../../../../claude_daemon_core/docs/feature/007_readable_output.md) over the terminal bytes, and say so on stderr.
+4. A transcript that is not there yet is polled for up to 5 seconds — the turn ends when the session goes idle and quiet, which is slightly before Claude Code has finished flushing the file. Still nothing → fall back to [`to_plain_text`](../../../../claude_terminal_core/docs/feature/001_readable_output.md) over the terminal bytes, and say so on stderr.
 5. Warnings about gaps, session end, and timeouts go to stderr, so a caller redirecting stdout gets the answer alone. The gap warning is suppressed when the answer came from the transcript — `missed` describes an eviction from the terminal's ring buffer, which is not a gap in a file.
 
 ### Examples
