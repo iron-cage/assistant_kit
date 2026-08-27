@@ -22,9 +22,9 @@ A change to `Request` or `Response` is a wire-format change, not an implementati
 
 ## Example
 
-Adding feature document `004_client_reconnect`:
+Adding feature document `009_client_reconnect`:
 
-1. Check `readme.md` Overview Table — current highest ID is `003`
-2. Create `004_client_reconnect.md` in this directory
-3. Add row: `| 004 | Client Reconnect | Reattach to a hosted session after a client restart | ✅ |`
-4. Add the matching `../entity.md` instance row and bump `feature/` Instances from 3 to 4
+1. Check `readme.md` Overview Table — current highest ID is `008`
+2. Create `009_client_reconnect.md` in this directory
+3. Add row: `| 009 | Client Reconnect | Reattach to a hosted session after a client restart | ✅ |`
+4. Add the matching `../entity.md` instance row and bump `feature/` Instances from 8 to 9

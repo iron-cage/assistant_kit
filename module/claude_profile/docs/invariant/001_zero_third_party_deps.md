@@ -14,7 +14,7 @@ The `claude_profile` **library path** must have zero third-party (crates.io) dep
 **Permitted:**
 - Internal workspace crates: `claude_core`, `claude_profile_core`
   - `claude_profile_core` unconditionally depends on `serde_json` (not feature-gated); this is a known gap in the zero-crates.io-deps threshold below — see Enforcement Mechanism
-- Under the `enabled` feature (CLI binary only): `cli_fmt`, `unilang`, `error_tools`, `claude_quota`, `data_fmt`
+- Under the `enabled` feature (CLI binary only): `cli_fmt`, `unilang`, `error_tools`, `claude_quota`, `data_fmt`, `claude_runner_core`, `claude_journal`, `json_redact`
   - `cli_fmt` is gated behind `dep:cli_fmt` in the `enabled` feature; it renders CLI help text via `cli_fmt::help::CliHelpTemplate`
   - `claude_quota` is gated behind `dep:claude_quota` in the `enabled` feature; it is an internal workspace crate that encapsulates the HTTP transport and exposes `fetch_rate_limits(token: &str)`
   - `data_fmt` is gated behind `dep:data_fmt` in the `enabled` feature; it is used for all table rendering in the CLI binary

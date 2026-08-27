@@ -35,7 +35,7 @@ pub fn refresh_token(refresh_tok: &str, scope: &str) -> Result<TokenRefreshResul
 |------|---------------|
 | `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | Types, errors, constants, `parse_response`, `refresh_token` (feature-gated) |
+| `docs/` | Behavioral requirements: wire protocol, response parsing, invariants, API contract |
 | `tests/readme.md` | Test directory organization guide |
 | `tests/auth_test.rs` | Unit tests T01–T06 for `parse_response` and `AuthError` (offline, no ureq) |
-| `docs/` | Behavioral requirements: wire protocol, response parsing, invariants, API contract |
 | `verb/` | Shell scripts for each `do` protocol verb. |

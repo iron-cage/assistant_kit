@@ -40,13 +40,13 @@ The recycled-PID row is the one that matters most, and it is the same class of f
 
 The runtime directory is hyphen-prefixed, so the workspace's global `-*` ignore rule keeps it out of version control. These files are machine-local: a lock file or socket path committed to a repository is meaningless on any other machine and actively confusing on the same one.
 
-`DaemonPaths::new()` returns `None` when neither `CLAUDE_HOME` nor `HOME` is set. `DaemonPaths::with_home( path )` takes an explicit base — the form tests use, so a test never touches the developer's real Claude home.
+`DaemonPaths::new()` returns `None` when `HOME` is not set — it resolves through `claude_core::ClaudePaths`, which reads `HOME` and nothing else. `DaemonPaths::with_home( path )` takes an explicit base — the form tests use, so a test never touches the developer's real Claude home.
 
 ### Verification
 
 ```bash
 # Who holds the lock right now, if anyone:
-fuser -v "${CLAUDE_HOME:-$HOME/.claude}/-daemon/instance.lock" 2>&1
+fuser -v "$HOME/.claude/-daemon/instance.lock" 2>&1
 
 # The second acquire fails rather than blocking:
 cargo test -p claude_daemon_core --test lock_test

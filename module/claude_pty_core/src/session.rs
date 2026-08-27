@@ -245,12 +245,45 @@ impl PtySession
     self.child.try_wait().map_err( | source | Error::Os { op : "waitpid", source } )
   }
 
+  /// Kill the child outright with `SIGKILL`.
+  ///
+  /// The escalation path for a child that will not end on its own. Prefer
+  /// [`PtySession::shutdown`]: closing the terminal lets a child exit through its
+  /// own shutdown path, and an interactive program generally has one worth taking
+  /// — flushing a transcript, releasing a lock. `SIGKILL` takes none of it.
+  ///
+  /// Where a reader from [`PtySession::take_reader`] is still held elsewhere,
+  /// this is also the only way out of the deadlock that reader creates: it is a
+  /// master descriptor `shutdown` cannot reach, so the child never sees the
+  /// hangup, and whoever holds the reader is blocked waiting for output that will
+  /// never come. Killing the child closes the slave from the other side, which
+  /// ends that read.
+  ///
+  /// Returns `Ok( () )` for an already-exited child rather than an error — a
+  /// child that is gone satisfies the caller's intent.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`Error::Os`] if the signal cannot be delivered for any reason other
+  /// than the child having already exited.
+  #[ inline ]
+  pub fn kill( &mut self ) -> Result< () >
+  {
+    match self.child.kill()
+    {
+      Ok( () ) => Ok( () ),
+      // `Child::kill` reports `InvalidInput` for a child it has already reaped.
+      Err( source ) if source.kind() == std::io::ErrorKind::InvalidInput => Ok( () ),
+      Err( source ) => Err( Error::Os { op : "kill", source } ),
+    }
+  }
+
   /// Close every master descriptor and reap the child.
   ///
   /// Does not signal the child. Closing the last master descriptor is what ends
   /// the session: the child's reads from the slave see `EOF` and the kernel
-  /// delivers `SIGHUP` to its process group. Killing outright is the caller's
-  /// decision, not this crate's.
+  /// delivers `SIGHUP` to its process group. Killing outright is
+  /// [`PtySession::kill`], and a separate decision.
   ///
   /// All three master descriptors must go, in order — the writer thread's clone,
   /// this session's read clone, and the `Pty`'s own. Leaving any one open leaves

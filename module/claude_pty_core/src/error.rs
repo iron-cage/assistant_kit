@@ -32,7 +32,7 @@ pub enum Error
   /// A write was refused because the writer queue is at capacity.
   ///
   /// Signals a child that has stopped draining its stdin. The write is dropped,
-  /// never buffered without bound — see `docs/feature/002_writer_thread.md`.
+  /// never buffered without bound — see `docs/feature/003_writer_thread.md`.
   WriterFull,
   /// The writer thread has exited, so no further writes can be delivered.
   WriterGone,

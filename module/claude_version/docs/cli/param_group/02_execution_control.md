@@ -14,7 +14,7 @@ All three parameters modify the execution mode of destructive operations.
 | [`force::`](../param/03_force.md) | bool | Bypass safety guards |
 | [`record_only::`](../param/15_record_only.md) | bool | Persist preference without installing |
 
-**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::` or `record_only::`). `.version.guard` and `.ps.kill` implement `dry::`/`force::` but not `record_only::` (install-only concept — see `15_record_only.md`).
+**Partial implementors:** `.settings.set`, `.config`, and `.version.mark` implement `dry::` only (no `force::` or `record_only::`). `.version.guard` and `.ps.kill` implement `dry::`/`force::` but not `record_only::` (install-only concept — see `15_record_only.md`).
 
 **Why NOT in this group:**
 - `version::`: specifies *what* to install, not *whether* to install
@@ -40,6 +40,7 @@ clv .ps.kill dry::1 force::1  # preview forced kill
 | 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | Partial | `record_only::` |
 | 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Partial | `force::`, `record_only::` |
 | 5 | [`.config`](../command/config.md#command-13-config) | Partial | `force::`, `record_only::` |
+| 6 | [`.version.mark`](../command/version.md#command-17-versionmark) | Partial | `force::`, `record_only::` |
 
 ### Referenced Parameters
 

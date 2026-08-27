@@ -16,7 +16,7 @@ Version contract: a reader compiled against schema v1 can read any event where `
 ### Measurement
 
 - **Threshold**: 100% of events emitted by this version have `v == 1`
-- **Method**: Unit test in `writer_test.rs` — serialize one event per type and assert the `"v":1` prefix is present in each serialized line
+- **Method**: Integration test `it7_schema_version_is_one_on_all_events` in `tests/journal_integration_test.rs` — serialize one event per type and assert both the deserialized `v` field and the raw JSONL `"v":1` prefix equal 1
 
 ### Violation Consequences
 

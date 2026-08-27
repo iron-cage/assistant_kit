@@ -26,7 +26,7 @@ dream_agent → ClaudeCommand::new().with_session_dir(path).execute()
 
 claude_runner_core never calls into claude_profile. It receives resolved paths as plain `PathBuf` values via `with_*()` methods.
 
-**Single execution surface:** All `Command::new("claude")` calls in the workspace are centralized in `command.rs`. Other crates use the builder and call `execute()` or `execute_interactive()` — they never spawn the `claude` binary directly. The `claude_version()` function is the second permitted location for `Command::new("claude")`.
+**Single execution surface:** All `Command::new("claude")` calls in the workspace are centralized in `command/mod.rs`. Other crates use the builder and call `execute()` or `execute_interactive()` — they never spawn the `claude` binary directly. The `claude_version()` function is the second permitted location for `Command::new("claude")`.
 
 **Tier-1 automation defaults:** `ClaudeCommand::new()` sets defaults appropriate for automation, not the Claude CLI's own defaults. This prevents common automation failures (token limit exceeded, telemetry noise, premature timeout).
 
@@ -38,7 +38,7 @@ claude_runner_core never calls into claude_profile. It receives resolved paths a
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() method contracts |
 | doc | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | Rule: all Command::new("claude") in one place |
 | doc | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that intercepts execute() |
-| source | `../../src/command.rs` | execute() and execute_interactive() implementation |
+| source | `../../src/command/mod.rs` | execute() and execute_interactive() implementation |
 
 ### Sources
 

@@ -12,3 +12,5 @@ Source code for the `claude_version_core` crate.
 | `params_catalog.rs` | Claude Code parameter catalog: CLI/env/config forms plus catalog defaults |
 | `paths.rs` | `ClaudeVersionPaths` struct — composed path resolution for clv-known filesystem locations |
 | `version.rs` | Version detection, alias resolution, install, and spec validation |
+
+See [`docs/algorithm/002_config_resolution.md`](../docs/algorithm/002_config_resolution.md) for the `config_resolve.rs`/`config_catalog.rs` algorithm, and [`docs/pattern/002_parameter_trace.md`](../docs/pattern/002_parameter_trace.md) for the stderr trace convention applied across `version.rs`.

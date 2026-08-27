@@ -174,7 +174,7 @@ All cases except IN-12 and IN-14 are integration tests split across `tests/concu
 ### IN-12: Queued-waiter gate file keyed to a zombie PID → not rendered, self-heal-deleted
 
 - **Given:** `{pid}.json` waiter gate file pre-seeded with the PID of a real exited-but-unreaped child (state `Z`); empty proc dir; `clr ps` invocation
-- **When:** `build_queued_table()` filters gate files through the shared `gate::pid_alive()` predicate
+- **When:** `build_queued_table()` filters gate files through the shared `claude_session_core::pid_alive()` predicate
 - **Then:** the zombie's row is NOT rendered (no `Queued` table appears when it is the only gate file) AND the waiter file is deleted by the self-healing cleanup
 - **Note:** `bug_reproducer(BUG-479)` — empirically confirmed to fail pre-fix (phantom `Queued · 1 waiting` row rendered; file survived) and pass post-fix. Lives in `tests/ps_command_test.rs` beside IT-13 (the absent-PID orphan case); together they cover both dead-PID states — absent and zombie
 - **Source:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) "Owner-liveness definition" convention paragraph; Provenance : BUG-479; [cli/command/06_ps.md](../../../docs/cli/command/06_ps.md) self-heal contract
@@ -194,7 +194,7 @@ All cases except IN-12 and IN-14 are integration tests split across `tests/concu
 ### IN-14: Queued-waiter gate file keyed to a live non-leader thread TID → not rendered, self-heal-deleted
 
 - **Given:** `{tid}.json` waiter gate file pre-seeded with a parked helper thread's TID (same fixture as IN-13); empty proc dir; `clr ps` invocation
-- **When:** `build_queued_table()` filters gate files through the shared `gate::pid_alive()` predicate
+- **When:** `build_queued_table()` filters gate files through the shared `claude_session_core::pid_alive()` predicate
 - **Then:** the thread-masked row is NOT rendered (no `Queued` table appears when it is the only gate file) AND the waiter file is deleted by the self-healing cleanup
 - **Note:** `bug_reproducer(BUG-488)` — pre-fix, the row renders as a live waiter indefinitely and self-heal never fires (observed live: 76h phantom `Queued` row masked by a dockerd startup thread). Registered as IT-47 in the `ps` command spec; completes the dead-PID triad with IT-13 (absent) and IN-12/IT-46 (zombie)
 - **Source:** [invariant/012_gate_slot_atomicity.md](../../../docs/invariant/012_gate_slot_atomicity.md) pid_alive contract clause (c); Provenance : BUG-488; [cli/command/06_ps.md](../../../docs/cli/command/06_ps.md) self-heal contract

@@ -9,24 +9,25 @@
 
 ### Design
 
-**Architecture:** assistant is the Layer 3 super-app. It owns no domain logic of its own — its sole responsibility is to compose commands from five Layer 2 crates (`claude_assets`, `claude_version`, `claude_profile`, `claude_runner`, `claude_storage`) into a single `CommandRegistry` and run the shared unilang pipeline.
+**Architecture:** assistant is the Layer 3 super-app. It owns no domain logic of its own — its sole responsibility is to compose commands from six Layer 2 crates (`claude_assets`, `claude_version`, `claude_profile`, `claude_runner`, `claude_storage`, `claude_journal_viewer`) into a single `CommandRegistry` and run the shared unilang pipeline.
 
 **Registration sequence:** `build_registry()` calls each Layer 2 crate's `register_commands()` in a fixed order that determines first-wins precedence for any command name collision:
 
 ```
-claude_assets::register_commands(&mut registry)    // .list, .install, .uninstall, .kinds
-claude_version::register_commands(&mut registry)   // .status, .version.*, .ps.*, .settings.*, .config
-claude_profile::register_commands(&mut registry)   // .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
-claude_runner::register_commands(&mut registry)    // runner programmatic commands
-claude_storage::register_commands(&mut registry)   // .status (skipped — already registered by version)
-register_static_commands(&mut registry)            // YAML-backed: .claude/.claude.help (stub), 11 storage commands
+claude_assets::register_commands(&mut registry)          // .list, .install, .uninstall, .kinds
+claude_version::register_commands(&mut registry)         // .status, .version.*, .ps.*, .settings.*, .config
+claude_profile::register_commands(&mut registry)         // .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
+claude_runner::register_commands(&mut registry)          // runner programmatic commands
+claude_storage::register_commands(&mut registry)         // .status (skipped — already registered by version)
+claude_journal_viewer::register_commands(&mut registry)  // journal viewer programmatic commands
+register_static_commands(&mut registry)                  // YAML-backed: .claude/.claude.help (stub), storage + journal commands
 ```
 
 Duplicate registrations via `command_add_runtime` are silently skipped — the first registration wins. This means `claude_version`'s `.status` takes precedence over `claude_storage`'s `.status`.
 
-**Static YAML aggregation:** `build.rs` concatenates the `unilang.commands.yaml` files from `claude_runner` and `claude_storage` into a compile-time-generated `static_commands.rs` (written to `OUT_DIR`). `register_static_commands()` maps each YAML-declared command name to a concrete routine function using a `phf::phf_map!` lookup table.
+**Static YAML aggregation:** `build.rs` aggregates YAML command definitions from `claude_runner` (`claude.commands.yaml`), `claude_storage` (`unilang.commands.yaml`), and optionally `claude_journal_viewer` (`claude_journal.commands.yaml`, when present) into a compile-time-generated `static_commands.rs` (written to `OUT_DIR`). `register_static_commands()` maps each YAML-declared command name to a concrete routine function using a `phf::phf_map!` lookup table.
 
-**Help rendering:** When `needs_help` is true (empty argv, `.help`, `--help`, `-h`), `print_usage()` renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Help is intercepted before the unilang pipeline. Commands are displayed in 8 groups: "Asset Management" (from cla), "Version Management" / "Settings & Config" / "Process Lifecycle" (from clv), "Account Management" / "Token & Model" (from clp), "Storage Query" / "System" (from YAML-backed static commands). Binary name is extracted via `std::env::args().next()`, not from `argv`, because `run_cli()` already applies `skip(1)` before passing `argv` to `cli::run()`.
+**Help rendering:** When `needs_help` is true (empty argv, `.help`, `--help`, `-h`), `print_usage()` renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Help is intercepted before the unilang pipeline. Commands are displayed in 9 groups: "Asset Management" (from cla), "Version Management" / "Settings & Config" / "Process Lifecycle" (from clv), "Account Management" / "Token & Model" (from clp), "Storage Query" / "Journal Viewing" / "System" (from YAML-backed static commands). Binary name is extracted via `std::env::args().next()`, not from `argv`, because `run_cli()` already applies `skip(1)` before passing `argv` to `cli::run()`.
 
 **Adapter reuse:** `src/lib.rs` calls `claude_version::adapter::argv_to_unilang_tokens()` for argv preprocessing. assistant does not implement its own adapter — it delegates to the manager's adapter, which covers all commands in the registry.
 

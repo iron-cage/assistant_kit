@@ -11,7 +11,7 @@
 //! **Zero dependencies**: the PTY layer is hand-rolled POSIX FFI. `pty-process`
 //! declares `edition = "2024"` (Rust 1.85) against this workspace's 1.75, and
 //! `portable-pty` exposes `anyhow::Error` in its public API, which collides with
-//! the error_tools-exclusive rule. See `docs/algorithm/001_pty_allocation.md`.
+//! the error_tools-exclusive rule. See `docs/invariant/002_zero_dependencies.md`.
 //!
 //! ## Core types
 //!

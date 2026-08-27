@@ -3,11 +3,11 @@
 //! Split out of `gate.rs` (which was over the line-count guideline) — this is the on-disk
 //! CAS protocol (`slot_{index}.json` plus `reclaim_*.lock` tickets) that decides admission,
 //! kept separate from the poll loop in `gate.rs` that drives it. Consumes
-//! `gate_liveness::pid_alive` for reclaim eligibility.
+//! `claude_session_core::pid_alive` for reclaim eligibility.
 
 use claude_runner_core::ps_table::parse_json_u64;
 use std::path::{ Path, PathBuf };
-use super::gate_liveness::pid_alive;
+use claude_session_core::pid_alive;
 
 // Return current Unix timestamp in seconds — the `since` stamp every slot,
 // ticket, and waiter record below is keyed on, which is why it lives here
@@ -118,8 +118,9 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 fn claim_slot_file( path : &Path, pid : u32, since : u64, starttime : Option< u64 > ) -> bool
 {
   // Fix(BUG-488): record the writer's own start time when available, binding
-  // the claim to this process incarnation — see pid_alive() in gate_liveness.rs
-  // for the full fix comment. None (start time unreadable) writes the legacy shape.
+  // the claim to this process incarnation — see pid_alive() in
+  // claude_session_core::liveness for the full fix comment. None (start time
+  // unreadable) writes the legacy shape.
   let starttime_field = starttime.map_or_else( String::new, | st | format!( r#","starttime":{st}"# ) );
   let content = format!( r#"{{"pid":{pid},"since":{since}{starttime_field}}}"# );
   let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );

@@ -342,7 +342,7 @@ cargo nextest run --all-features -- --include-ignored
 - **File**: `is_agent_session_doc_mismatch_bug.rs`
 - **Component**: `src/session.rs::is_agent_session()`
 - **Issue**: Doc comment claimed detection via filename prefix OR `isSidechain: true` in entries; code only ever checked the filename prefix — a reader could reasonably (and incorrectly) assume a non-`agent-`-prefixed session with sidechain entries would be detected
-- **Fix**: Corrected the doc comment to describe only the actual filename-based check; no code logic changed — the implementation already matched the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`), which keeps filename-based `is_agent_session` and entry-based `is_agent_entry` deliberately separate
+- **Fix**: Corrected the doc comment to describe only the actual filename-based check; no code logic changed — the implementation already matched the canonical algorithm (`docs/algorithm/003_agent_session_tracking.md`), which keeps filename-based `is_agent_session` and entry-based `is_agent_entry` deliberately separate
 - **Root Cause**: The doc comment (present since the initial commit) described an aspirational second signal that was never implemented and never matched the canonical algorithm doc
 
 ### BUG-506: sessions_filtered() Discarded an Entire Project's Session List on One Corrupted Session

@@ -16,7 +16,7 @@ The safety guarantee derives from the write protocol: each `append()` call write
 ### Measurement
 
 - **Threshold**: At most 1 corrupted line per crash event
-- **Method**: Integration test `crash_safety_test.rs` — write N events, simulate crash after partial write of event N+1, read back file and assert N events parse successfully
+- **Method**: Integration test `it5_corrupt_lines_are_skipped` in `tests/journal_integration_test.rs` — write 2 valid events with a corrupt line between them, read back and assert exactly the 2 valid events parse successfully
 
 ### Violation Consequences
 

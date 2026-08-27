@@ -9,7 +9,6 @@ mod credential;
 mod help;
 mod gate;
 mod gate_limits;
-mod gate_liveness;
 mod gate_slot;
 mod column_validate;
 mod ps;
@@ -22,6 +21,10 @@ mod topic_path;
 mod topic_registry;
 mod topics;
 mod query;
+mod daemon;
+mod chat;
+mod chat_answer;
+mod sessions;
 mod summary;
 mod json_config;
 mod json_config_isolated;
@@ -42,6 +45,13 @@ pub use gate_limits::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_s
 // sync-guard tests (BUG-409). Same false-positive unused_imports rationale as above.
 #[ allow( unused_imports ) ]
 pub use tools::TOOLS;
+
+// chat_answer_test.rs (external test) imports these three via the public API.
+// Same false-positive unused_imports rationale as above — `dispatch_chat` is the
+// only in-crate caller and it lives behind a `super::` path the lint cannot see
+// through when the module is private.
+#[ allow( unused_imports ) ]
+pub use chat_answer::{ answer_since, mark as transcript_mark, transcript_path };
 
 use std::io::IsTerminal;
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
@@ -67,6 +77,9 @@ pub( crate ) use scope::dispatch_scope;
 pub( crate ) use topic::dispatch_topic;
 pub( crate ) use topics::dispatch_topics;
 pub( super ) use query::{ dispatch_query, run_query_daemon };
+pub( super ) use daemon::{ dispatch_daemon, run_daemon_serve, SERVE_TOKEN as DAEMON_SERVE_TOKEN };
+pub( super ) use chat::dispatch_chat;
+pub( super ) use sessions::dispatch_sessions;
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -123,7 +136,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand, prep : &builder::RunPr
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query", "topic", "topics" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope", "query", "topic", "topics", "daemon", "chat", "sessions" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any

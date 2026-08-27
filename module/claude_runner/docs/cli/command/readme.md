@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the eleven clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the fifteen clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics, daemon, chat, sessions commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -23,8 +23,11 @@
 | 10_query.md | Command spec: start or dispatch PID-addressed bidirectional control sessions |
 | 11_topic.md | Command spec: `run`/`ask` alias with an auto-naming `--topic` default |
 | 12_topics.md | Command spec: list topics (fork + dir modes), or resolve one name to a path or session file |
+| 13_daemon.md | Command spec: start, stop, and inspect the single session daemon |
+| 14_chat.md | Command spec: send one prompt to a hosted session and print the answer |
+| 15_sessions.md | Command spec: list the sessions the daemon is hosting |
 
-### All Commands (12 total)
+### All Commands (15 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -40,7 +43,10 @@
 | 10 | `query` | Start or dispatch PID-addressed bidirectional control sessions | 1 | `clr query "Fix bug"` |
 | 11 | `topic` | `run`/`ask` alias with an auto-naming `--topic` default | 65 | `clr topic "Investigate the flaky test"` |
 | 12 | `topics` | List topics (fork + dir modes), or resolve one name to its dir-mode path or fork-mode session file | 4 | `clr topics --global --path auth-refactor` |
+| 13 | `daemon` | Start, stop, and inspect the single session daemon | 1 | `clr daemon status` |
+| 14 | `chat` | Send one prompt to a hosted session and print the answer | 5 | `clr chat "what does this do?"` |
+| 15 | `sessions` | List the sessions the daemon is hosting | 1 | `clr sessions` |
 
-**Total:** 12 commands
+**Total:** 15 commands
 
 **Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/003_env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

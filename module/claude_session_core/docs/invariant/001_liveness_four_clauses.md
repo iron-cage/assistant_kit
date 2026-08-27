@@ -34,6 +34,15 @@ No clause may be dropped. Two of the four were paid for by production failures:
 
 This predicate was `pub( super )` inside a binary crate, unreachable by any other consumer. Promoting it verbatim is what prevents the next consumer from re-deriving it — and re-introducing both bugs, since the naive implementation is the one that fails.
 
+The original copy in `claude_runner/src/cli/gate_liveness.rs` is deleted, not deprecated. Leaving it in place would have been the same defect one level up: two implementations of a four-clause rule whose whole history is clauses being missing from one of them. Its consumers — `gate_slot::acquire_slot` for reclaim eligibility, `ps::build_queued_table` for the queued-waiter display self-heal — now call this one, alongside `claude_daemon_core`'s registration wait.
+
+Verify nothing re-derives it:
+
+```bash
+# Only src/liveness.rs should define these. Every other hit is a call or a comment.
+grep -rn "fn pid_alive\|fn proc_tgid\|fn starttime_from_stat" module/
+```
+
 ### Verification
 
 ```bash
@@ -57,3 +66,4 @@ awk '{ print $3 }' /proc/self/stat        # R — running
 | source | `src/registry.rs` | `SessionRecord::is_alive` and `scan_live` |
 | doc | [feature/001_registry_scan.md](../feature/001_registry_scan.md) | Where liveness is applied |
 | test | `tests/liveness_test.rs` | Zombie, non-leader, and starttime-mismatch cases |
+| doc | [`claude_runner/docs/invariant/012_gate_slot_atomicity.md`](../../../claude_runner/docs/invariant/012_gate_slot_atomicity.md) | The gate consumer, and the contract it depends on |

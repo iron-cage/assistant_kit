@@ -12,4 +12,5 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Auth Surface](001_auth_surface.md) | Every exported constant, type, and function with its contract | ✅ |
+| 001 | [Token Refresh API](001_token_refresh_api.md) | TokenRefreshResult, AuthError, parse_response, refresh_token contract | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating API doc instances | ✅ |

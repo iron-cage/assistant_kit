@@ -71,3 +71,4 @@
 |---|------------|--------------|
 | 22 | [022_session_isolation_topic.md](022_session_isolation_topic.md) | `--topic` isolates sessions by topic; `--max-sessions` limits total concurrent count |
 | 18 | [018_env_var_configuration.md](018_env_var_configuration.md) | `CLR_MAX_SESSIONS` is an instance of the CLR_* env var system |
+| 32 | [032_hosted_session_chat.md](032_hosted_session_chat.md) | The gate bounds how many sessions exist at once; a hosted session keeps its slot between commands rather than releasing it on exit |

@@ -39,7 +39,7 @@ Directly — a peer that opens the socket and never sends a newline should be re
 # Sends 2 MiB with no newline; expect the daemon to answer with an error and
 # close, not to grow.
 head -c 2097152 /dev/zero | tr '\0' 'x' \
-  | nc -U "${CLAUDE_HOME:-$HOME/.claude}/-daemon/daemon.sock"
+  | nc -U "$HOME/.claude/-daemon/daemon.sock"
 ```
 
 `tests/ipc_test.rs` feeds a reader that produces bytes without a newline and asserts `Error::LineTooLong` rather than growth.
