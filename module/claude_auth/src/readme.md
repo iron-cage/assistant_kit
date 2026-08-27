@@ -20,4 +20,4 @@ Anthropic OAuth token refresh transport — Layer `*` standalone primitive, zero
 - Profile/account management, credential storage (→ `claude_profile`, `dream`)
 - Redaction of tokens in logs (→ `json_redact`)
 
-See [`docs/api/001_token_refresh_api.md`](../docs/api/001_token_refresh_api.md) for the full behavioral contract.
+See [`docs/api/002_token_refresh_api.md`](../docs/api/002_token_refresh_api.md) for the full behavioral contract.

@@ -6,7 +6,7 @@
 |--------|---------|-------------|----------:|
 | `feature/` | Behavioral requirements for OAuth token refresh and response parsing | [feature/readme.md](feature/readme.md) | 2 |
 | `invariant/` | Measurable constraints on dependencies and offline parseability | [invariant/readme.md](invariant/readme.md) | 2 |
-| `api/` | Public library API contracts | [api/readme.md](api/readme.md) | 1 |
+| `api/` | Public library API contracts | [api/readme.md](api/readme.md) | 2 |
 
 ## Master Doc Instances Table
 
@@ -17,3 +17,7 @@
 | invariant | 001 | Zero Workspace Dependencies | [invariant/001_zero_workspace_deps.md](invariant/001_zero_workspace_deps.md) |
 | invariant | 002 | Offline Parse Core | [invariant/002_offline_parse_core.md](invariant/002_offline_parse_core.md) |
 | api | 001 | Auth Surface | [api/001_auth_surface.md](api/001_auth_surface.md) |
+| api | 002 | Token Refresh API | [api/002_token_refresh_api.md](api/002_token_refresh_api.md) |
+
+`api/` carries two instances documenting the same surface, pending consolidation into one — see
+[api/readme.md](api/readme.md) § Overview Table.

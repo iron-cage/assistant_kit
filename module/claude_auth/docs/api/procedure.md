@@ -16,6 +16,11 @@ Because `claude_auth` has one public surface, prefer editing
 warranted only if the crate grows a genuinely separate surface (e.g. a device-authorization
 flow alongside refresh).
 
+`002_token_refresh_api.md` currently sits alongside 001 in apparent violation of that rule. It
+is not a sanctioned second surface — it is an unconsolidated merge artifact awaiting a
+keep/fold decision, per [readme.md](readme.md) § Overview Table. Do not treat it as precedent
+for adding a third.
+
 Any signature change is a semver event: adding a variant to `AuthError` is breaking, since the
 enum is exhaustively matchable by consumers. Record the new contract here in the same change
 that edits `src/lib.rs`.
