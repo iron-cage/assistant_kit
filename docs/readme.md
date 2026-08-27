@@ -38,27 +38,36 @@ duplicated here, where they would silently drift:
 | Crate | Entity dirs |
 |-------|-------------|
 | `module/assistant/` | `feature/`, `invariant/` |
+| `module/assistant_kit/` | `feature/`, `invariant/` |
 | `module/claude_assets/` | `feature/`, `invariant/` |
 | `module/claude_assets_core/` | `feature/`, `invariant/` |
+| `module/claude_auth/` | `api/`, `feature/`, `invariant/` |
 | `module/claude_core/` | `api/` |
-| `module/claude_journal/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_daemon_core/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_journal/` | `api/`, `entity/`, `feature/`, `invariant/` |
 | `module/claude_journal_charts/` | `api/` |
-| `module/claude_journal_viewer/` | `cli/`, `feature/`, `invariant/` |
+| `module/claude_journal_viewer/` | `cli/`, `entity/`, `feature/`, `invariant/` |
+| `module/claude_memory/` | — (reserved skeleton: `docs/` exists, no instances yet) |
 | `module/claude_patch/` | `feature/`, `invariant/` (docs-only planned crate) |
 | `module/claude_patch_core/` | `feature/`, `invariant/` (docs-only planned crate) |
+| `module/claude_profile/` | `algorithm/`, `cli/`, `entity/`, `feature/`, `invariant/`, `pattern/`, `pitfall/`, `research_interactive/`, `schema/`, `state_machine/`, `subprocess/`, `type/` |
 | `module/claude_profile_core/` | `api/` |
-| `module/claude_profile/` | `algorithm/`, `cli/`, `feature/`, `invariant/`, `pattern/`, `pitfall/`, `research_interactive/`, `schema/`, `state_machine/`, `subprocess/` |
-| `module/claude_runner/` | `algorithm/`, `api/`, `cli/`, `feature/`, `invariant/`, `variable/` |
+| `module/claude_pty_core/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_quota/` | `api/` |
+| `module/claude_runner/` | `algorithm/`, `api/`, `cli/`, `feature/`, `guide/`, `invariant/`, `variable/` |
 | `module/claude_runner_core/` | `api/`, `claude_params/`, `data_structure/`, `failure_mode/`, `feature/`, `invariant/`, `pattern/` |
+| `module/claude_session_core/` | `api/`, `feature/`, `invariant/` |
 | `module/claude_storage/` | `algorithm/`, `cli/`, `feature/`, `invariant/`, `operation/` |
 | `module/claude_storage_core/` | `algorithm/`, `api/`, `data_structure/`, `feature/`, `invariant/` |
 | `module/claude_version/` | `algorithm/`, `cli/`, `feature/`, `pattern/`, `pitfall/`, `runtime_file/` |
+| `module/claude_version_core/` | `algorithm/`, `api/`, `invariant/`, `pattern/` |
 | `module/dream/` | `feature/`, `invariant/` |
 | `module/json_redact/` | `api/` |
 | `module/svg_chart/` | `api/` |
 
-Crates without a `docs/` collection yet: `assistant_kit`, `claude_auth`,
-`claude_quota`. Test-side mirrors live under each crate's `tests/docs/`.
+Every crate now carries a `docs/` collection. `claude_memory` is the sole
+directory whose `docs/` holds no instances yet — a reserved skeleton with no
+crate manifest. Test-side mirrors live under each crate's `tests/docs/`.
 
 ### Instance Naming
 
