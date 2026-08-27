@@ -4,7 +4,7 @@
 
 | Entity | Purpose | Master File | Instances |
 |--------|---------|-------------|----------:|
-| `algorithm/` | Core parsing and encoding algorithms | [algorithm/readme.md](algorithm/readme.md) | 2 |
+| `algorithm/` | Core parsing and encoding algorithms | [algorithm/readme.md](algorithm/readme.md) | 3 |
 | `api/` | Public API contract for zero-dep storage library | [api/readme.md](api/readme.md) | 1 |
 | `data_structure/` | Domain type documentation for storage hierarchy | [data_structure/readme.md](data_structure/readme.md) | 2 |
 | `feature/` | Behavioral requirements for the storage core | [feature/readme.md](feature/readme.md) | 5 |
@@ -16,6 +16,7 @@
 |--------|----|------|------|
 | algorithm | 001 | Path Encoding | [algorithm/001_path_encoding.md](algorithm/001_path_encoding.md) |
 | algorithm | 002 | JSON Parser | [algorithm/002_json_parser.md](algorithm/002_json_parser.md) |
+| algorithm | 003 | Agent Session Tracking | [algorithm/003_agent_session_tracking.md](algorithm/003_agent_session_tracking.md) |
 | api | 001 | Public API | [api/001_public_api.md](api/001_public_api.md) |
 | data_structure | 001 | Storage Hierarchy | [data_structure/001_storage_hierarchy.md](data_structure/001_storage_hierarchy.md) |
 | data_structure | 002 | Filter Types | [data_structure/002_filter_types.md](data_structure/002_filter_types.md) |

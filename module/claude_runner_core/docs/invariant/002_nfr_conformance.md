@@ -43,7 +43,7 @@ Configuration parameters that have a fixed value set must use enum types, not ra
 
 Negative token limits are prevented by using `u32` or similar unsigned types where applicable.
 
-**Enforced by:** Type signatures in `src/types.rs` and `src/command.rs`.
+**Enforced by:** Type signatures in `src/types.rs` and `src/command/mod.rs`.
 
 #### NFR-5: No Deprecated API
 

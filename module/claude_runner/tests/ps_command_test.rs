@@ -773,7 +773,7 @@ fn it_19_task_column_no_underscores()
 ///
 /// ## Fix Applied
 /// The filter now calls the shared zombie-aware `pid_alive()` predicate exported
-/// from `gate_liveness.rs` (`/proc/{pid}/stat` readable AND state field ≠ `Z`), so zombie
+/// from `claude_session_core` (`/proc/{pid}/stat` readable AND state field ≠ `Z`), so zombie
 /// waiters fail liveness and are self-heal-deleted.
 ///
 /// ## Prevention

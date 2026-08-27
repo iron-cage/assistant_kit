@@ -13,7 +13,7 @@
 //!
 //! | TC | Scenario | Expected |
 //! |----|----------|----------|
-//! | proto01 | `Ping` / `ListSessions` | `{"method":"ping"}` / `{"method":"list_sessions"}` |
+//! | proto01 | `Ping` / `ListSessions` / `StopDaemon` | Method name and nothing else |
 //! | proto02 | `Spawn` with and without a prompt | `cwd` plus a `prompt` that may be null |
 //! | proto03 | `Spawn` with `prompt` absent | Deserializes to `None` |
 //! | proto04 | `Send`, `Resize`, `Shutdown` | Each names `session_id`, never a pid |
@@ -25,10 +25,13 @@
 //! | proto10 | An unknown method | Rejected |
 //! | proto11 | `SessionSummary` | Field names as documented |
 //! | proto12 | One line per message | No embedded newlines |
+//! | proto13 | `Read` | Names a session id and a cursor |
+//! | proto14 | `Read` with `cursor` absent | Deserializes to `0` |
+//! | proto15 | `OutputSlice` | Field names as documented |
 
 use std::path::PathBuf;
 
-use claude_daemon_core::{ Request, Response, SessionSummary };
+use claude_daemon_core::{ OutputSlice, Request, Response, SessionSummary };
 use serde_json::json;
 
 /// Serialize `request` to a `Value` for shape comparison.
@@ -46,17 +49,21 @@ fn every_request() -> Vec< Request >
     Request::Spawn { cwd : PathBuf::from( "/work" ), prompt : None },
     Request::Spawn { cwd : PathBuf::from( "/work" ), prompt : Some( "hello".into() ) },
     Request::Send { session_id : "conv-1".into(), text : "hi".into() },
+    Request::Read { session_id : "conv-1".into(), cursor : 0 },
+    Request::Read { session_id : "conv-1".into(), cursor : 8_192 },
     Request::Resize { session_id : "conv-1".into(), rows : 40, cols : 132 },
     Request::Shutdown { session_id : "conv-1".into() },
+    Request::StopDaemon,
   ]
 }
 
-/// proto01: the two unit requests carry only their method name.
+/// proto01: the requests with no arguments carry only their method name.
 #[ test ]
 fn proto01_unit_requests_carry_only_a_method()
 {
   assert_eq!( wire( &Request::Ping ), json!( { "method" : "ping" } ) );
   assert_eq!( wire( &Request::ListSessions ), json!( { "method" : "list_sessions" } ) );
+  assert_eq!( wire( &Request::StopDaemon ), json!( { "method" : "stop_daemon" } ) );
 }
 
 /// proto02: `Spawn` carries the working directory and an optional prompt.
@@ -230,4 +237,58 @@ fn proto12_serialized_messages_are_single_lines()
     !response.contains( '\n' ),
     "a newline inside an error message reached the wire unescaped: {response}",
   );
+}
+
+/// proto13: `Read` names a session and a position within it.
+///
+/// The cursor is what makes reading non-destructive: two clients watching one
+/// session each hold their own, and neither consumes the other's output.
+#[ test ]
+fn proto13_read_carries_a_session_id_and_cursor()
+{
+  assert_eq!(
+    wire( &Request::Read { session_id : "conv-1".into(), cursor : 8_192 } ),
+    json!( { "method" : "read", "session_id" : "conv-1", "cursor" : 8192 } ),
+  );
+}
+
+/// proto14: an omitted `cursor` starts from the beginning.
+///
+/// A client attaching to a session for the first time has no cursor to send, and
+/// what it wants is everything still retained — which is what `0` means.
+#[ test ]
+fn proto14_absent_cursor_defaults_to_zero()
+{
+  let request : Request = serde_json::from_str( r#"{ "method": "read", "session_id": "conv-1" }"# )
+    .expect( "read without a cursor should parse" );
+
+  assert_eq!( request, Request::Read { session_id : "conv-1".into(), cursor : 0 } );
+}
+
+/// proto15: an output slice reports its text, the next cursor, and what was lost.
+///
+/// `missed` is on the wire rather than inferred by the client, because only the
+/// daemon knows how much it evicted. A client that quietly renders a gap as
+/// continuous output is worse than one that prints a warning.
+#[ test ]
+fn proto15_output_slice_shape()
+{
+  let slice = OutputSlice
+  {
+    text : "hello".into(),
+    cursor : 5,
+    missed : 2,
+    ended : false,
+  };
+
+  assert_eq!(
+    serde_json::to_value( &slice ).expect( "serialize failed" ),
+    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
+  );
+
+  let back : OutputSlice = serde_json::from_value(
+    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
+  )
+  .expect( "slice failed to parse" );
+  assert_eq!( back, slice );
 }

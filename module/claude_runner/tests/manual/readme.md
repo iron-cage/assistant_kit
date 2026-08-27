@@ -1466,3 +1466,122 @@ NO_COLOR=1 "$CLJ" .stats by::agent dir::"$SB/journal"
 prints the same events grouped by the full composed agent id
 (`mtuser@mthost<dir>/`). Totals equal the journal's event count. Verified 2026-08-20.
 
+## Manual Testing Plan — Daemon Stack End-to-End (`clr daemon` / `chat` / `sessions`)
+
+The one part of `clr` that cannot be automated, and the reason is specific rather than
+general. Everything below depends on the behaviour of a real `claude` interface — its
+first-run prompts, its input handling, the transcript it writes — and a fake shim has
+none of that. A shim that echoed its input would pass every case here while proving
+nothing, which is worse than not running them.
+
+What *is* automated is everything under it, against real implementations rather than
+mocks: the terminal in `claude_pty_core`, the spawn/send/read cycle and the socket in
+`claude_daemon_core`'s `serve_test.rs`, the transcript reading in `claude_runner`'s
+`chat_answer_test.rs`, the argument surface in `chat_command_test.rs`.
+
+### Prerequisites
+
+Two things, neither optional, and both learned by hitting them.
+
+**A `claude` that has finished its first run.** A session parked on a theme picker or a
+trust dialog never opens a conversation, so it never registers, so the daemon gives up
+waiting and reports a spawn failure with no visible cause. `clr chat` prints a hint when
+that happens; the fix is to run `claude` once in this environment and answer the prompts.
+State lives in `$HOME/.claude.json` (`hasCompletedOnboarding`, and per-project
+`hasTrustDialogAccepted`) — a container whose `$HOME` is a fresh tmpfs has neither.
+
+**An isolated `HOME`, if you do not want this in your real one.** Everything the daemon
+stack touches hangs off `HOME`: the runtime dir, the lock, the socket, the registry it
+scans, the transcripts it reads answers from. Injecting a `HOME` exercises the real
+default-path code with no test-only override — but it must be a `HOME` whose
+`.claude.json` satisfies the paragraph above.
+
+```sh
+CLR=${CARGO_TARGET_DIR:-target}/debug/clr
+W=$(mktemp -d)                     # a working directory to hold the session
+cd "$W"
+```
+
+### MD-1: A Chat Prints an Answer, Not a Terminal
+
+```sh
+"$CLR" chat "Reply with exactly one word and nothing else: pineapple" | cat -A
+```
+
+**Expected:** Exit 0. stdout is exactly `pineapple$` — one word, one newline, nothing
+else. No box rules, no `❯` prompt line, no `manual mode on … /effort` status bar, no
+spinner frames. `Starting a session in <dir> …` goes to stderr, so the pipe above shows
+the answer alone.
+
+This is the whole promise of the command, and the failure mode it guards is not a crash:
+before the answer was read from the transcript, this printed a faithful rendering of
+Claude Code's interface with the word buried in it.
+
+### MD-2: The Session Survives, and Remembers
+
+```sh
+"$CLR" sessions
+"$CLR" chat "What single word did I ask you to reply with a moment ago? Answer with just that word."
+```
+
+**Expected:** `sessions` shows one row — a conversation id, a pid, `idle`, and this
+directory. The second `chat` answers `pineapple`, which is only possible if it reached
+the same session rather than a fresh one. That is the difference between this and
+`clr ask`, and the reason the daemon exists.
+
+Note the length of that second prompt: 85 bytes, deliberately. See MD-3.
+
+### MD-3: Long Prompts Submit (the Submit Gap)
+
+```sh
+for n in 26 54 68 79 88 137; do
+  msg=$( printf 'Reply with one word: ok%*s' "$(( n - 22 ))" '' | tr ' ' 'x' )
+  printf '%3s bytes: ' "$n"
+  timeout 120 "$CLR" chat "$msg" 2>/dev/null | head -1
+done
+```
+
+**Expected:** Every length answers. Nothing returns empty, and nothing returns a box rule.
+
+The regression this pins: with the prompt's text and its submitting carriage return
+written back to back, prompts up to about 55 bytes submitted normally and everything
+longer silently did not — the text landed in the input box and stayed there, with the
+next prompt appearing underneath it on a second line. No error on either side. `send`
+now pauses 200ms between the two writes so the return cannot be read as part of a paste;
+see `claude_daemon_core/docs/feature/006_serving_clients.md`. `serve_test.rs`'s srv13
+guards the pause mechanically, but the paste heuristic it exists for lives only here.
+
+### MD-4: `--raw` Still Shows the Terminal
+
+```sh
+"$CLR" chat "Say OK." --raw | head -20
+```
+
+**Expected:** Escape sequences, box rules, the input box — the session's actual terminal
+bytes. This is the contrast that makes MD-1 meaningful: the chrome is still there and
+still reachable; the default simply stops printing it.
+
+### MD-5: A Question That Starts Nothing
+
+```sh
+"$CLR" daemon stop
+"$CLR" sessions ; echo "exit=$?"
+ls "$HOME/.claude/-daemon/daemon.sock" 2>&1
+```
+
+**Expected:** `sessions` reports that no daemon is running, on stderr, and exits 0 —
+"nothing is hosted" is a complete answer, not a failure. The socket does not exist
+afterwards: `sessions` asks a question, and a question that starts a process to answer
+itself has changed the thing it was asking about. `chat` auto-starts a daemon because a
+caller asking to talk to a session wants one; that asymmetry is deliberate.
+
+### MD-6: An Argument Error Costs Nothing
+
+```sh
+"$CLR" chat hello --loudly ; echo "exit=$?"
+ls "$HOME/.claude/-daemon/daemon.sock" 2>&1
+```
+
+**Expected:** Exit 1, stderr names `--loudly`, and the socket still does not exist.
+Parsing happens before the daemon is touched, so a typo leaves no process behind.
+

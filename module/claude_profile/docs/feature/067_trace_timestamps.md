@@ -11,7 +11,7 @@
 
 All diagnostic trace lines previously began with the literal string `"[trace] "`. This prefix was statically embedded in every `eprintln!`/`writeln!` format string, making it impossible to correlate `clp` trace output with time-stamped logs (watchdog, cron, journald).
 
-`trace_ts()` is added to `claude_profile_core`'s account module immediately after `chrono_now_utc()` (both since moved to `claude_core`, re-exported from `src/account/mod.rs`):
+`trace_ts()` is added to `claude_profile_core`'s account module immediately after `chrono_now_utc()` (both since moved to `claude_core`, re-exported from `claude_profile_core/src/account/mod.rs`):
 
 ```rust
 #[inline]

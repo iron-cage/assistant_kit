@@ -43,6 +43,21 @@ pub enum Request
     /// Text to deliver.
     text : String,
   },
+  /// Read a session's output since `cursor`.
+  ///
+  /// Non-destructive: the same cursor returns the same bytes again, and two
+  /// clients reading one session do not steal each other's output. A `send`
+  /// followed by repeated `read` calls is what makes a hosted session look like
+  /// print mode from the outside.
+  Read
+  {
+    /// Target session's conversation id.
+    session_id : String,
+    /// Absolute byte cursor from the previous read; `0` starts at the beginning
+    /// of what is still retained.
+    #[ serde( default ) ]
+    cursor : u64,
+  },
   /// Change a session's terminal dimensions.
   Resize
   {
@@ -59,6 +74,13 @@ pub enum Request
     /// Target session's conversation id.
     session_id : String,
   },
+  /// Shut down every session, then stop the daemon itself.
+  ///
+  /// A request rather than a signal, so the client gets an acknowledgement on
+  /// the same connection it asked over — a signal is fire-and-hope, and tells a
+  /// client nothing about whether the daemon it was aimed at was even the one
+  /// running.
+  StopDaemon,
 }
 
 /// What the daemon answers.

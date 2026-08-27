@@ -37,3 +37,9 @@
 1. `clr` — launch the REPL; session continues automatically from the most recent conversation
 2. `clr --dir <path>` — scope the REPL to a specific project directory
 3. `clr --new-session` — start a fresh conversation with no prior context
+
+### Related User Stories
+
+| # | User Story | Relationship |
+|---|------------|--------------|
+| 32 | [032_hosted_session_chat.md](032_hosted_session_chat.md) | The same real interactive session, hosted by a daemon on a terminal it owns instead of attached to the caller's |

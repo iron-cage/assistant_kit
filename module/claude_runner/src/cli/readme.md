@@ -11,7 +11,6 @@
 | `gate.rs` | Session count check and blocking wait for concurrent-session limit. |
 | `gate_limits.rs` | Gate knob resolution and external deadline-budget clamping. |
 | `gate_slot.rs` | Atomic slot reservation, dead-owner reclaim, and denial causes. |
-| `gate_liveness.rs` | PID liveness and start-time incarnation checks via `/proc`. |
 | `ps.rs` | `clr ps` dispatch — active sessions and queued waiters in two plain-style tables. |
 | `ps_snapshot.rs` | `clr ps` temporal-diff state: read/write `~/.clr/ps` snapshot, build the "Ended Since Last Check" table. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh, scope). |
@@ -30,4 +29,8 @@
 | `json_config_isolated.rs` | JSON config application for `isolated`/`refresh` subcommands: `apply_json_config_isolated`, `apply_json_config_refresh`, `load_and_apply_isolated`, `load_and_apply_refresh`. |
 | `column_validate.rs` | `validate_columns` — shared comma-separated column-key validation used by `ps` and `tools`. |
 | `query.rs` | `clr query` — PID-addressed control-session dispatch (start daemon / dispatch method). |
+| `daemon.rs` | `clr daemon` — session-daemon lifecycle, and the hidden serve entry point. |
+| `chat.rs` | `clr chat` — one prompt to a hosted session, and knowing when the answer ended. |
+| `chat_answer.rs` | Reading a turn's answer out of the session transcript, not the terminal. |
+| `sessions.rs` | `clr sessions` — one row per session the daemon is hosting. |
 | `config.rs` | Config-file parameter tier: `~/.clr/config.toml` and project-level `.clr.toml` loading. |

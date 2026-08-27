@@ -19,7 +19,7 @@ clr <command> [OPTIONS] [MESSAGE]
 
 | File | Responsibility |
 |------|----------------|
-| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics (12 commands) |
+| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics, daemon, chat, sessions (15 commands) |
 | [001_dictionary.md](001_dictionary.md) | Domain vocabulary for clr CLI concepts |
 | [002_command_defaults.md](002_command_defaults.md) | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
@@ -28,35 +28,35 @@ clr <command> [OPTIONS] [MESSAGE]
 | `param_group/` | Logical parameter groupings (7 groups) |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
-| `param/` | Individual parameter reference docs (83 active; 1 deprecated) |
-| `user_story/` | User goal and usage pattern docs (31 user stories) |
+| `param/` | Individual parameter reference docs (83 active; 2 deprecated) |
+| `user_story/` | User goal and usage pattern docs (32 user stories) |
 
 ### Completion Matrix
 
 | Entity | L1 | L2 | L3 | L4 | L5 | Status |
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| command/ (12 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (85 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| command/ (15 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (85 instances; 2 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | command_group/ (10 groups; 1 multi-member detail file) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| user_story/ (31 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| user_story/ (32 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 003_env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/dictionary.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/command/ (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/command/ (15 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param/ (85 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (7 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/command_group/ (1 file) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (3 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/parity/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/user_story/ (32 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/user_story/ (33 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
 **Current Level:** L5
 **Design Completeness:** 100%
@@ -64,13 +64,13 @@ clr <command> [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](command/readme.md) — command reference (12 commands)
-- [Parameters](param/readme.md) — flag and argument reference (83 active; 1 deprecated)
+- [Commands](command/readme.md) — command reference (15 commands)
+- [Parameters](param/readme.md) — flag and argument reference (83 active; 2 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (7 groups)
 - [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons)
 - [Dictionary](001_dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (31 user stories)
+- [User Stories](user_story/readme.md) — user goals and usage patterns (32 user stories)
 - [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (95 variables)
 - [Config File Parameters](config_param.md) — TOML config-file parameter tier (41 eligible parameters)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)

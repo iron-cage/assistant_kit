@@ -21,6 +21,9 @@ pub( crate ) fn print_help()
     "clr refresh [OPTIONS]".to_string(),
     "clr query \"<MSG>\" [--dir <PATH>]".to_string(),
     "clr query <PID> <METHOD> [ARGS...]".to_string(),
+    "clr daemon [start | status | stop | log]".to_string(),
+    "clr chat \"<MSG>\" [--dir <PATH>] [--session <ID>]".to_string(),
+    "clr sessions [--json]".to_string(),
   ];
   data.groups          = vec!
   [
@@ -39,6 +42,9 @@ pub( crate ) fn print_help()
         CommandEntry { name : "kill".to_string(),     desc : "Terminate a Claude Code session by PID".to_string() },
         CommandEntry { name : "scope".to_string(),    desc : "Print all 6 CLAUDE_* path variables for a directory".to_string() },
         CommandEntry { name : "query".to_string(),    desc : "Start or control a PID-addressed control session".to_string() },
+        CommandEntry { name : "daemon".to_string(),   desc : "Manage the session daemon that hosts interactive sessions".to_string() },
+        CommandEntry { name : "chat".to_string(),     desc : "Send a prompt to a hosted session and print the answer".to_string() },
+        CommandEntry { name : "sessions".to_string(), desc : "List the sessions the daemon is hosting".to_string() },
         CommandEntry { name : "tools".to_string(),    desc : "List all Claude Code built-in tools".to_string() },
         CommandEntry { name : "help".to_string(),     desc : "Print this help and exit".to_string() },
       ],

@@ -16,7 +16,7 @@ Integration test planning for help output. See [command/02_help.md](../../../../
 | IT-8 | Help output is stable across repeated invocations | Stability |
 | EC-01 | stdout contains `"RUNNER OPTIONS:"` section header | Section Split |
 | EC-02 | stdout contains `"CLAUDE CODE OPTIONS (forwarded):"` section header | Section Split |
-| EC-03 | exactly 13 lines start with `"  clr "` (usage forms) | Section Split |
+| EC-03 | exactly 16 lines start with `"  clr "` (usage forms) | Section Split |
 | EC-04 | stdout contains `"Commands:"` section | Section Split |
 | EC-05 | stdout contains `--model`, `--timeout`, `--max-sessions` | Section Split |
 | EC-06 | stdout does NOT contain `"\nOPTIONS:\n"` as standalone section header | Section Split |
@@ -125,12 +125,12 @@ Integration test planning for help output. See [command/02_help.md](../../../../
 
 ---
 
-### EC-03: exactly 13 lines start with `"  clr "` (usage forms)
+### EC-03: exactly 16 lines start with `"  clr "` (usage forms)
 
 - **Command:** `clr --help`
-- **Expected behavior:** splitting stdout by newline and counting lines that start with `"  clr "` (two-space indent) yields exactly 13
+- **Expected behavior:** splitting stdout by newline and counting lines that start with `"  clr "` (two-space indent) yields exactly 16
 - **Exit:** 0
-- **Source:** `tests/cli_args_ext_test.rs::ec03_help_has_thirteen_usage_forms`
+- **Source:** `tests/cli_args_ext_test.rs::ec03_help_has_sixteen_usage_forms`
 
 ---
 

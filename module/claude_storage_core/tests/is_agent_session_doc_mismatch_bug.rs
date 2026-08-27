@@ -6,7 +6,7 @@
 //! `is_agent_session()`'s own doc comment claimed two detection signals — a filename prefix
 //! ("agent-{id}.jsonl") OR `isSidechain: true` in the session's entries — but the implementation
 //! only ever checked the filename prefix. The doc comment (present since the initial commit) never
-//! matched the canonical algorithm (`docs/algorithm/001_agent_session_tracking.md`), which
+//! matched the canonical algorithm (`docs/algorithm/003_agent_session_tracking.md`), which
 //! deliberately keeps filename-based session classification (`is_agent_session`) separate from
 //! entry-level sidechain tagging (`is_agent_entry` — itself never implemented, since it depends on
 //! an `Entry::agent_id` field that was deliberately never added to the `Entry` struct).

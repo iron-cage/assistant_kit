@@ -99,7 +99,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/account/switch.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `oauthAccount` patch in `~/.claude.json` with `emailAddress` enforced to equal `name` |
+| `claude_profile_core/src/account/switch.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `oauthAccount` patch in `~/.claude.json` with `emailAddress` enforced to equal `name` |
 | `src/commands/account_ops.rs` | `account_use_routine()` — CLI handler |
 
 ### Tests

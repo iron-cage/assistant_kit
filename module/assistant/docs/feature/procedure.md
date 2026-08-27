@@ -17,8 +17,8 @@
 
 ## Example
 
-Adding feature document `005_output_format`:
+Adding feature document `002_output_format`:
 
-1. Check `readme.md` Overview Table — current highest ID is `004`
-2. Create `005_output_format.md` in this directory
-3. Add row: `| 005 | Feature Name | [005_output_format.md](005_output_format.md) | Active |`
+1. Check `readme.md` Overview Table — current highest ID is `001`
+2. Create `002_output_format.md` in this directory
+3. Add row: `| 002 | Feature Name | [002_output_format.md](002_output_format.md) | Active |`

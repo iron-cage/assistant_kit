@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clr command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: `run` command tests, `help` command tests, `isolated` command tests, `refresh` command tests, `ask` command tests, `ps` command tests, `kill` command tests, `tools` command tests, `scope` command tests, `query` command tests, `topic` command tests.
+- **In Scope**: `run` command tests, `help` command tests, `isolated` command tests, `refresh` command tests, `ask` command tests, `ps` command tests, `kill` command tests, `tools` command tests, `scope` command tests, `query` command tests, `topic` command tests, `topics` command tests, `daemon` command tests, `chat` command tests, `sessions` command tests.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 Per-command integration test case indices for `clr`. See [command/](../../../../docs/cli/command/) for specification.
@@ -25,3 +25,6 @@ Per-command integration test case indices for `clr`. See [command/](../../../../
 | [10_query.md](10_query.md) | Integration tests for the `query` command | ✅ |
 | [11_topic.md](11_topic.md) | Integration tests for the `topic` command | ✅ |
 | [12_topics.md](12_topics.md) | Integration tests for the `topics` command | ✅ |
+| [13_daemon.md](13_daemon.md) | Integration tests for the `daemon` command | ✅ |
+| [14_chat.md](14_chat.md) | Integration tests for the `chat` command | ✅ |
+| [15_sessions.md](15_sessions.md) | Integration tests for the `sessions` command | ✅ |

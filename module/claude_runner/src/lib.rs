@@ -74,6 +74,14 @@ pub use cli::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from
 #[ allow( unused_imports ) ]
 pub use cli::TOOLS;
 
+// answer_since/transcript_mark/transcript_path are used by tests/chat_answer_test.rs —
+// same rationale as above. `mark` is re-exported as `transcript_mark`: at crate scope
+// the bare name says nothing about what is being marked.
+#[ cfg( feature = "enabled" ) ]
+#[ doc( hidden ) ]
+#[ allow( unused_imports ) ]
+pub use cli::{ answer_since, transcript_mark, transcript_path };
+
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
 ///
@@ -85,6 +93,7 @@ pub fn run_cli()
     print_help, dispatch_run,
     dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps, dispatch_kill,
     dispatch_tools, dispatch_scope, dispatch_topic, dispatch_topics, dispatch_query, run_query_daemon, guard_unknown_subcommand,
+    dispatch_daemon, run_daemon_serve, DAEMON_SERVE_TOKEN, dispatch_chat, dispatch_sessions,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -129,7 +138,11 @@ pub fn run_cli()
     Some( "topic" )    => dispatch_topic( &tokens ),
     Some( "topics" )   => dispatch_topics( &tokens ),
     Some( "query" )    => dispatch_query( &tokens ),
+    Some( "daemon" )   => dispatch_daemon( &tokens ),
+    Some( "chat" )     => dispatch_chat( &tokens ),
+    Some( "sessions" ) => dispatch_sessions( &tokens ),
     Some( "__query_daemon" ) => run_query_daemon( &tokens ),
+    Some( t ) if t == DAEMON_SERVE_TOKEN => run_daemon_serve(),
     _                  => {}
   }
 

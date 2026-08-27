@@ -3,7 +3,7 @@
 -- **Summary:** Preview the action that would be performed without executing side effects.
 -- **Type:** bool
 -- **Default:** false (0)
--- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set`, `.config`
+-- **Commands:** `.version.install`, `.version.guard`, `.ps.kill`, `.settings.set`, `.config`, `.version.mark`
 -- **Group:** Execution Control
 
 Output is prefixed with `[dry-run] would ...`.
@@ -28,6 +28,7 @@ clv.settings.set key::theme value::dark dry::1
 | 3 | [`.ps.kill`](../command/ps.md#command-8-pskill) | false | Preview kill targets without sending signals |
 | 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | false | Preview write without file change |
 | 5 | [`.config`](../command/config.md#command-13-config) | false | Preview set/unset without file change |
+| 6 | [`.version.mark`](../command/version.md#command-17-versionmark) | false | Preview marker set/unset without file change |
 
 ### Referenced Type
 

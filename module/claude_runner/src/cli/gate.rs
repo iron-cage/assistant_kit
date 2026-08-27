@@ -3,15 +3,15 @@
 //!
 //! The knobs it polls with are resolved in `gate_limits.rs`, the on-disk reservation
 //! protocol it arbitrates through lives in `gate_slot.rs`, and the `/proc` liveness
-//! predicates both rely on live in `gate_liveness.rs`.
+//! predicates both rely on live in `claude_session_core::liveness`.
 
 use claude_core::process::find_claude_processes;
 use claude_runner_core::ps_table::classify_mode;
 use core::fmt::Write as _;
 use std::path::PathBuf;
 use claude_journal::{ EventRecord, EventType, JournalWriter };
+use claude_session_core::proc_starttime;
 use super::gate_limits::effective_gate_attempts;
-use super::gate_liveness::proc_starttime;
 use super::gate_slot::{ acquire_slot, unix_now, SlotDenialCause };
 
 // Return the gate state directory — $CLR_GATE_DIR or <sys-temp>/clr-gate.
@@ -107,7 +107,7 @@ fn emit_gate_wait_event(
 /// tests. Silently proceeding would make [`claude_core::process::find_claude_processes`]'s
 /// deliberately-silent empty-`Vec` fallback look identical to "zero sessions running",
 /// letting the gate wave through unlimited concurrent sessions while believing it
-/// still enforces `max` — see `pid_alive()` in `gate_liveness.rs` for why the gate
+/// still enforces `max` — see [`claude_session_core::pid_alive`] for why the gate
 /// targets Linux hosts only.
 ///
 /// While waiting, writes a JSON state file to `$CLR_GATE_DIR/{pid}.json` so that

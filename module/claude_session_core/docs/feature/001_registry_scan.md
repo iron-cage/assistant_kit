@@ -55,7 +55,7 @@ This crate does depend on `claude_storage_core` — for its hand-rolled JSON par
 
 ```bash
 # Records Claude Code currently has on disk, live or not:
-ls "${CLAUDE_HOME:-$HOME/.claude}/sessions/"
+ls "$HOME/.claude/sessions/"
 
 # What the crate makes of them:
 cargo test -p claude_session_core --test registry_test

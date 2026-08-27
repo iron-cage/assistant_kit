@@ -83,3 +83,4 @@
 | 25 | [025_concurrency_gate.md](025_concurrency_gate.md) | `--max-sessions` counts sessions to gate; `clr ps` lists them for inspection |
 | 27 | [027_session_termination.md](027_session_termination.md) | `clr ps` discovers session PIDs; `clr kill` terminates them |
 | 16 | [016_cli_discoverability.md](016_cli_discoverability.md) | AC-003 verifies `ps` appears in `clr help` output |
+| 32 | [032_hosted_session_chat.md](032_hosted_session_chat.md) | `clr ps` finds every Claude Code process on the machine; `clr sessions` lists only the ones the daemon hosts, with the conversation ids `clr chat --session` takes |

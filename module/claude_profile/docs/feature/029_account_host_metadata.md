@@ -70,7 +70,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 
 | File | Relationship |
 |------|--------------|
-| `src/account/store.rs` | `save()` — `{name}.json` host/role write; host/role capture |
+| `claude_profile_core/src/account/store.rs` | `save()` — `{name}.json` host/role write; host/role capture |
 | `src/commands/account_ops.rs` | `account_save_routine()` — host/role param extraction |
 | `src/usage/render.rs` | host/role column rendering in quota table |
 

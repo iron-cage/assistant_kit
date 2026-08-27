@@ -17,6 +17,9 @@ pub const LOCK_FILE_NAME : &str = "instance.lock";
 /// Filename of the daemon's listening socket.
 pub const SOCKET_FILE_NAME : &str = "daemon.sock";
 
+/// Filename the daemon's own output is appended to once it detaches.
+pub const LOG_FILE_NAME : &str = "daemon.log";
+
 /// Resolved locations for one daemon instance.
 #[ derive( Debug, Clone ) ]
 pub struct DaemonPaths
@@ -29,8 +32,8 @@ impl DaemonPaths
 {
   /// Resolve from the real `~/.claude` location.
   ///
-  /// Returns `None` when neither `CLAUDE_HOME` nor `HOME` is set, matching
-  /// [`ClaudePaths::new`].
+  /// Returns `None` when `HOME` is not set, matching [`ClaudePaths::new`] —
+  /// which reads `HOME` and nothing else.
   #[ inline ]
   #[ must_use ]
   pub fn new() -> Option< Self >
@@ -77,6 +80,19 @@ impl DaemonPaths
   pub fn socket_file( &self ) -> PathBuf
   {
     self.runtime_dir.join( SOCKET_FILE_NAME )
+  }
+
+  /// Path of the daemon's log file.
+  ///
+  /// A detached daemon has no terminal to complain to. Whoever starts it points
+  /// its stdout and stderr here instead, appending rather than truncating — the
+  /// interesting case is a daemon that keeps dying at startup, and truncating
+  /// would erase the evidence on every restart.
+  #[ inline ]
+  #[ must_use ]
+  pub fn log_file( &self ) -> PathBuf
+  {
+    self.runtime_dir.join( LOG_FILE_NAME )
   }
 
   /// Claude Code's live-session registry directory.

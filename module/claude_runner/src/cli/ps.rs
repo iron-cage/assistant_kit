@@ -416,12 +416,12 @@ fn build_queued_table() -> Option< String >
       // Root cause: liveness convention duplicated inline instead of shared —
       // both copies were existence-only, blind to state `Z`.
       // Pitfall: a /proc/{pid} entry proves a PID exists, not that a process
-      // runs; one authoritative predicate (gate_liveness::pid_alive) for every consumer.
+      // runs; one authoritative predicate (claude_session_core::pid_alive) for every consumer.
       // Fix(BUG-488): pass the waiter record's own starttime (absent in
       // legacy files → None) so display liveness applies the same incarnation
       // binding as slot reclaim — a thread-masked or recycled PID number no
       // longer renders a dead waiter as a phantom queued row. Full fix
-      // comment at gate_liveness.rs::pid_alive().
+      // comment at claude_session_core::liveness::pid_alive().
       let alive = e.path()
         .file_stem()
         .and_then( |s| s.to_str() )
@@ -431,7 +431,7 @@ fn build_queued_table() -> Option< String >
           let recorded_starttime = std::fs::read_to_string( e.path() )
             .ok()
             .and_then( | content | parse_json_u64( &content, "starttime" ) );
-          super::gate_liveness::pid_alive( pid, recorded_starttime )
+          claude_session_core::pid_alive( pid, recorded_starttime )
         } );
       if !alive
       {

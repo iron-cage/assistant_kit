@@ -12,8 +12,8 @@
 All `Command::new("claude")` calls in the workspace must reside in `claude_runner_core`. No other crate may spawn the `claude` binary directly.
 
 The two permitted locations are:
-1. `src/command.rs` — `build_command()` method, used by `execute()` and `execute_interactive()`
-2. `src/command.rs` — `claude_version()` function, for version queries only
+1. `src/command/mod.rs` — `build_command()` method, used by `execute()`, `execute_interactive()`, `spawn_piped()`, `spawn_tty()`, and `spawn_control_session()`
+2. `src/command/mod.rs` — `claude_version()` function, for version queries only
 
 No third location is permitted, regardless of crate, module, or justification.
 
@@ -44,7 +44,7 @@ If a crate outside claude_runner_core spawns `claude` directly:
 |------|------|----------------|
 | doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Execution mode design that centralizes spawning here |
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() as the only permitted callers |
-| source | `../../src/command.rs` | The single permitted location for Command::new("claude") |
+| source | `../../src/command/mod.rs` | The single permitted location for Command::new("claude") |
 | test | `../../tests/responsibility_single_execution_point_test.rs` | Automated enforcement test |
 
 ### Sources
