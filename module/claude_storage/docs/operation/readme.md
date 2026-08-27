@@ -6,6 +6,7 @@
 - **Responsibility**: Index of operation doc instances covering upgrade and migration procedures.
 - **In Scope**: Migration guides for version upgrades, crate rename procedures for library consumers.
 - **Out of Scope**: Development workflow (→ crate `readme.md`), CLI usage reference (→ `cli/`).
+- **Operations**: Adding and updating instances → `procedure.md`.
 
 ### Overview Table
 

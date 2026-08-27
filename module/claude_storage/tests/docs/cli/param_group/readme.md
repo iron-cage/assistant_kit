@@ -11,7 +11,7 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| procedure.md | Workflow for creating and updating param_group test specs | ✅ |
+| `procedure.md` | Add and remove parameter group test specs | — |
 | 01_output_control.md | Interaction tests for Group 1 (Output Control) | ✅ |
 | 02_project_scope.md | Interaction tests for Group 2 (Project Scope) | ✅ |
 | 03_session_identification.md | Interaction tests for Group 3 (Session Identification) | ✅ |

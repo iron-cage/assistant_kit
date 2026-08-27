@@ -15,23 +15,23 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing command instances |
-| [01_status.md](01_status.md) | .status — storage overview and statistics |
-| [02_list.md](02_list.md) | .list — DEPRECATED, superseded by .projects |
-| [03_show.md](03_show.md) | .show — display session or project details |
-| [04_count.md](04_count.md) | .count — fast counting of items |
-| [05_search.md](05_search.md) | .search — search session content by query |
-| [06_export.md](06_export.md) | .export — export session to file |
-| [07_projects.md](07_projects.md) | .projects — scoped project list with conversation grouping |
-| [08_project_path.md](08_project_path.md) | .project.path — compute Claude storage path for a directory |
-| [09_project_exists.md](09_project_exists.md) | .project.exists — check conversation history exists |
-| [10_session_dir.md](10_session_dir.md) | .session.dir — compute session working directory path |
-| [11_session_ensure.md](11_session_ensure.md) | .session.ensure — ensure session directory exists |
-| [12_tail.md](12_tail.md) | .tail — print last N conversation turns for current directory |
-| [13_usage.md](13_usage.md) | .usage — per-session usage table (turns/tokens/cache/duration/dir) |
-| [14_rollup.md](14_rollup.md) | .rollup — grouped/filtered/sorted/projected token-usage table |
-| [15_cost.md](15_cost.md) | .cost — per-conversation cost table with agent fold-in |
-| [16_session_path.md](16_session_path.md) | .session.path — resolve a session's absolute transcript file path |
+| `procedure.md` | Add, update, and remove command doc instances |
+| `01_status.md` | .status — storage overview and statistics |
+| `02_list.md` | .list — DEPRECATED, superseded by .projects |
+| `03_show.md` | .show — display session or project details |
+| `04_count.md` | .count — fast counting of items |
+| `05_search.md` | .search — search session content by query |
+| `06_export.md` | .export — export session to file |
+| `07_projects.md` | .projects — scoped project list with conversation grouping |
+| `08_project_path.md` | .project.path — compute Claude storage path for a directory |
+| `09_project_exists.md` | .project.exists — check conversation history exists |
+| `10_session_dir.md` | .session.dir — compute session working directory path |
+| `11_session_ensure.md` | .session.ensure — ensure session directory exists |
+| `12_tail.md` | .tail — print last N conversation turns for current directory |
+| `13_usage.md` | .usage — per-session usage table (turns/tokens/cache/duration/dir) |
+| `14_rollup.md` | .rollup — grouped/filtered/sorted/projected token-usage table |
+| `15_cost.md` | .cost — per-conversation cost table with agent fold-in |
+| `16_session_path.md` | .session.path — resolve a session's absolute transcript file path |
 
 ### Commands Table
 

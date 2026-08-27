@@ -14,10 +14,10 @@ Mirror of [format/](../../../../docs/cli/format/readme.md).
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing format test specs |
-| [01_markdown.md](01_markdown.md) | FM tests for Markdown export — structure, headings, metadata |
-| [02_json.md](02_json.md) | FM tests for JSON export — structure, field presence, parsability |
-| [03_text.md](03_text.md) | FM tests for Text export — content filtering, plain-text constraints |
+| `procedure.md` | Add, update, and remove format test specs |
+| `01_markdown.md` | FM tests for Markdown export — structure, headings, metadata |
+| `02_json.md` | FM tests for JSON export — structure, field presence, parsability |
+| `03_text.md` | FM tests for Text export — content filtering, plain-text constraints |
 
 ### Test ID Convention
 

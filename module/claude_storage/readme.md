@@ -14,7 +14,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
-| `license` | Crate license text |
+| `license` | MIT license text (`license.workspace = true` in `Cargo.toml`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## overview

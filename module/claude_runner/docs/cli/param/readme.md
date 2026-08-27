@@ -122,7 +122,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 `query <PID> <METHOD> [ARGS...]`, `daemon [SUBCOMMAND]`, `chat <MESSAGE>`.
 `[MESSAGE]` ([001](001_message.md)) predates that line.
 
-### All Parameters (83 total)
+### All Parameters (85 total; 2 deprecated)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -210,6 +210,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 | 86 | `--no-stdin` | bool | false | present/absent | Never read piped stdin — disables stdin JSON config detection and stdin forwarding; checked pre-parse (raw token/env scan) so a held-open pipe cannot hang clr (BUG-492) | 2 cmds |
 | 87 | `--global` | bool | false | present/absent | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`); inert without a topic; `--dir` outranks it | 4 cmds |
 | 88 | `--topic-mode` | enum | absent (auto) | `fork`, `dir` | Force `--topic`'s mechanism: `fork` (same-dir session fork) or `dir` (legacy `-NAME` directory); overrides automatic selection | 3 cmds |
+| 89 | `--keep-clone` | bool | false | present/absent | Preserve an existing non-empty destination copy on an explicit `--from` re-clone instead of overwriting it; only its mtime is refreshed, so `-c` continuation still selects it | 3 cmds |
 
 **Total:** 85 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base; param 88 added for the fork/dir topic mechanism override; param 89 added for the `--from` re-clone opt-out)
 

@@ -8,7 +8,7 @@
 
 1. Identify the group's `#` number from `docs/cli/param_group/readme.md`
 2. Create `NN_name.md` (2-digit zero-padded `#`) in this directory
-3. Register in `readme.md` Responsibility Table: add row `| NN_name.md | Interaction tests for Group N |`
+3. Register in `readme.md` Responsibility Table: add row `| NN_name.md | Interaction tests for Group N | ✅ |`
 
 ## Remove Parameter Group Test Spec
 

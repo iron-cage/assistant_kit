@@ -33,7 +33,7 @@ claude_storage .rollup scope::global group::day limit::10
 | `sort::` | String enum | optional | `total` | Column the grouped rows are sorted by |
 | `order::` | String enum | optional | `desc` | Sort direction |
 | `model::` | String | optional | none | Case-insensitive substring filter against each session's recorded model, applied before grouping |
-| `columns::` | String (comma list) | optional | see [Column Projection](#column-projection) below | Which columns to print, and in what order |
+| `columns::` | String (comma list) | optional | see **Column Projection** below | Which columns to print, and in what order |
 | `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `local` | Discovery boundary — reused unchanged from [`.usage`](13_usage.md) |
 | `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Filesystem anchor for scope resolution — reused unchanged from [`.usage`](13_usage.md) |
 | `depth::` | Integer | optional | `3` | Max path-component distance from `path::` for `under`/`relevant`/`around`; `0` = unbounded; ignored for `local`/`global` — reused unchanged from [`.usage`](13_usage.md) |

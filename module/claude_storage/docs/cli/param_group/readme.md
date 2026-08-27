@@ -15,12 +15,12 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing param_group instances |
-| [01_output_control.md](01_output_control.md) | Output Control — show_stat, show_tokens, show_tree, show_topic toggles |
-| [02_project_scope.md](02_project_scope.md) | Project Scope — project:: identifier scoping |
-| [03_session_identification.md](03_session_identification.md) | Session Identification — session_id:: direct access |
-| [04_session_filter.md](04_session_filter.md) | Session Filter — session/agent/min_entries listing filters |
-| [05_scope_configuration.md](05_scope_configuration.md) | Scope Configuration — scope:: and path:: discovery boundary |
+| `procedure.md` | Add, update, and remove parameter group doc instances |
+| `01_output_control.md` | Output Control — show_stat, show_tokens, show_tree, show_topic toggles |
+| `02_project_scope.md` | Project Scope — project:: identifier scoping |
+| `03_session_identification.md` | Session Identification — session_id:: direct access |
+| `04_session_filter.md` | Session Filter — session/agent/min_entries listing filters |
+| `05_scope_configuration.md` | Scope Configuration — scope:: and path:: discovery boundary |
 
 ### Overview
 

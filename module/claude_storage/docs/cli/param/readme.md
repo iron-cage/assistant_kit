@@ -15,51 +15,51 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing param instances |
-| [01_agent.md](01_agent.md) | agent:: — session type filter (main vs agent) |
-| [02_case_sensitive.md](02_case_sensitive.md) | case_sensitive:: — case-sensitive search toggle |
-| [03_entries.md](03_entries.md) | show_entries:: — show all session entries flag |
-| [04_entry_type.md](04_entry_type.md) | entry_type:: — filter search by entry type |
-| [05_format.md](05_format.md) | format:: — export output format selector |
-| [06_metadata.md](06_metadata.md) | show_metadata:: — show metadata only flag |
-| [07_min_entries.md](07_min_entries.md) | min_entries:: — minimum entry count threshold |
-| [08_output.md](08_output.md) | output:: — export output file path |
-| [09_path.md](09_path.md) | path:: — path argument (semantics vary by command) |
-| [10_project.md](10_project.md) | project:: — project scope identifier |
-| [11_query.md](11_query.md) | query:: — search query string (required by .search) |
-| [12_scope.md](12_scope.md) | scope:: — session/project discovery scope |
-| [13_session.md](13_session.md) | session:: — session filter or scope pin |
-| [14_session_id.md](14_session_id.md) | session_id:: — direct session identifier |
-| [15_sessions.md](15_sessions.md) | show_sessions:: — explicit session display toggle |
-| [16_target.md](16_target.md) | target:: — count operation target |
-| [17_topic.md](17_topic.md) | topic:: — session topic suffix |
-| [18_type.md](18_type.md) | type:: — project naming scheme filter |
-| [19_show_stat.md](19_show_stat.md) | show_stat:: — session statistics footer toggle |
-| [20_strategy.md](20_strategy.md) | strategy:: — resume strategy override |
-| [21_count.md](21_count.md) | count:: — output count only flag (`.list`, deprecated; `.projects`) |
-| [22_limit.md](22_limit.md) | limit:: — per-project session display cap |
-| [23_show_tokens.md](23_show_tokens.md) | show_tokens:: — token usage section toggle |
-| [24_show_tree.md](24_show_tree.md) | show_tree:: — agent tree-indented display toggle |
-| [25_last.md](25_last.md) | last:: — trailing entry count for .tail and .show's project overview |
-| [26_depth.md](26_depth.md) | depth:: — path-component depth cap for .usage scope walks |
-| [27_since_days.md](27_since_days.md) | since_days:: — recency window in days for .projects |
-| [28_show_topic.md](28_show_topic.md) | show_topic:: — first user message on session lines toggle |
-| [29_filter.md](29_filter.md) | filter:: — path-substring filter on resolved projects for .projects |
-| [30_detail.md](30_detail.md) | detail:: — output detail level (projects vs sessions) for .projects and .show |
-| [31_ids.md](31_ids.md) | ids:: — raw conversation-ID scripting output toggle for .projects |
-| [32_fields.md](32_fields.md) | fields:: — attribute-projection field selector for .show |
-| [33_index.md](33_index.md) | index:: — single-message position selector for .show |
-| [34_group.md](34_group.md) | group:: — aggregation dimension for .rollup |
-| [35_sort.md](35_sort.md) | sort:: — sort column for .rollup's grouped rows |
-| [36_order.md](36_order.md) | order:: — sort direction for .rollup |
-| [37_model.md](37_model.md) | model:: — model-name substring filter for .rollup |
-| [38_columns.md](38_columns.md) | columns:: — column projection for .rollup |
-| [39_session_ids.md](39_session_ids.md) | session_ids:: — cross-project conversation selector for .cost |
-| [40_agents.md](40_agents.md) | agents:: — agent fold-in toggle for .cost |
-| [41_latest.md](41_latest.md) | latest:: — most-recent session selector for .session.path |
-| [42_full.md](42_full.md) | full:: — unfold long turns for .tail |
-| [43_compact.md](43_compact.md) | compact:: — one line per turn for .tail |
-| [44_live.md](44_live.md) | live:: — attached-process filter for .projects |
+| `procedure.md` | Add, update, and remove parameter doc instances |
+| `01_agent.md` | agent:: — session type filter (main vs agent) |
+| `02_case_sensitive.md` | case_sensitive:: — case-sensitive search toggle |
+| `03_entries.md` | show_entries:: — show all session entries flag |
+| `04_entry_type.md` | entry_type:: — filter search by entry type |
+| `05_format.md` | format:: — export output format selector |
+| `06_metadata.md` | show_metadata:: — show metadata only flag |
+| `07_min_entries.md` | min_entries:: — minimum entry count threshold |
+| `08_output.md` | output:: — export output file path |
+| `09_path.md` | path:: — path argument (semantics vary by command) |
+| `10_project.md` | project:: — project scope identifier |
+| `11_query.md` | query:: — search query string (required by .search) |
+| `12_scope.md` | scope:: — session/project discovery scope |
+| `13_session.md` | session:: — session filter or scope pin |
+| `14_session_id.md` | session_id:: — direct session identifier |
+| `15_sessions.md` | show_sessions:: — explicit session display toggle |
+| `16_target.md` | target:: — count operation target |
+| `17_topic.md` | topic:: — session topic suffix |
+| `18_type.md` | type:: — project naming scheme filter |
+| `19_show_stat.md` | show_stat:: — session statistics footer toggle |
+| `20_strategy.md` | strategy:: — resume strategy override |
+| `21_count.md` | count:: — output count only flag (`.list`, deprecated; `.projects`) |
+| `22_limit.md` | limit:: — per-project session display cap |
+| `23_show_tokens.md` | show_tokens:: — token usage section toggle |
+| `24_show_tree.md` | show_tree:: — agent tree-indented display toggle |
+| `25_last.md` | last:: — trailing entry count for .tail and .show's project overview |
+| `26_depth.md` | depth:: — path-component depth cap for .usage scope walks |
+| `27_since_days.md` | since_days:: — recency window in days for .projects |
+| `28_show_topic.md` | show_topic:: — first user message on session lines toggle |
+| `29_filter.md` | filter:: — path-substring filter on resolved projects for .projects |
+| `30_detail.md` | detail:: — output detail level (projects vs sessions) for .projects and .show |
+| `31_ids.md` | ids:: — raw conversation-ID scripting output toggle for .projects |
+| `32_fields.md` | fields:: — attribute-projection field selector for .show |
+| `33_index.md` | index:: — single-message position selector for .show |
+| `34_group.md` | group:: — aggregation dimension for .rollup |
+| `35_sort.md` | sort:: — sort column for .rollup's grouped rows |
+| `36_order.md` | order:: — sort direction for .rollup |
+| `37_model.md` | model:: — model-name substring filter for .rollup |
+| `38_columns.md` | columns:: — column projection for .rollup |
+| `39_session_ids.md` | session_ids:: — cross-project conversation selector for .cost |
+| `40_agents.md` | agents:: — agent fold-in toggle for .cost |
+| `41_latest.md` | latest:: — most-recent session selector for .session.path |
+| `42_full.md` | full:: — unfold long turns for .tail |
+| `43_compact.md` | compact:: — one line per turn for .tail |
+| `44_live.md` | live:: — attached-process filter for .projects |
 
 ### Parameters Table
 

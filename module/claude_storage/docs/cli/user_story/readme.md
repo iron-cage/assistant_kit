@@ -11,13 +11,13 @@
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing user_story instances |
-| [001_audit_session_history.md](001_audit_session_history.md) | Audit Session History — review conversation timeline |
-| [002_find_past_conversation.md](002_find_past_conversation.md) | Find Past Conversation — locate session by project or content |
-| [003_export_session_for_review.md](003_export_session_for_review.md) | Export Session for Review — save session to file |
-| [004_query_storage_programmatically.md](004_query_storage_programmatically.md) | Query Storage Programmatically — scripted storage access |
-| [005_resume_claude_session.md](005_resume_claude_session.md) | Resume Claude Session — set up session directory for continuation |
-| [006_quick_context_refresh.md](006_quick_context_refresh.md) | Quick Context Refresh — view recent content in the current directory |
+| `procedure.md` | Add and remove user story doc instances |
+| `001_audit_session_history.md` | Audit Session History — review conversation timeline |
+| `002_find_past_conversation.md` | Find Past Conversation — locate session by project or content |
+| `003_export_session_for_review.md` | Export Session for Review — save session to file |
+| `004_query_storage_programmatically.md` | Query Storage Programmatically — scripted storage access |
+| `005_resume_claude_session.md` | Resume Claude Session — set up session directory for continuation |
+| `006_quick_context_refresh.md` | Quick Context Refresh — view recent content in the current directory |
 
 ### User Story Index
 

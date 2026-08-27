@@ -15,7 +15,7 @@ No command_group members exist in `claude_storage` — see the source readme's "
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| procedure.md | Workflow for creating and updating command_group test specs | ✅ |
+| `procedure.md` | Refresh the zero-group verdict; add and remove group test specs | — |
 | `readme.md` | This index — records the zero-group outcome and its evidentiary basis | ✅ |
 
 ### Evidentiary Basis for the Zero-Group Verdict

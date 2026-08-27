@@ -11,8 +11,8 @@
 
 | File | Responsibility |
 |------|----------------|
-| procedure.md | Steps for adding, updating, or removing pitfall instances |
-| [01_parameter_validation.md](01_parameter_validation.md) | Explicit validation required despite defaults |
-| [02_cross_command_propagation.md](02_cross_command_propagation.md) | Bug patterns propagate across all commands |
-| [03_test_data_format.md](03_test_data_format.md) | Test JSONL must match production format |
-| [04_vacuous_assertions_mask_stubs.md](04_vacuous_assertions_mask_stubs.md) | Tests must assert real output, not just process liveness |
+| `procedure.md` | Add, update, and retire pitfall doc instances |
+| `01_parameter_validation.md` | Explicit validation required despite defaults |
+| `02_cross_command_propagation.md` | Bug patterns propagate across all commands |
+| `03_test_data_format.md` | Test JSONL must match production format |
+| `04_vacuous_assertions_mask_stubs.md` | Tests must assert real output, not just process liveness |
