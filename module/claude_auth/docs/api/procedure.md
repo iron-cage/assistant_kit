@@ -42,10 +42,10 @@ that edits `src/lib.rs`.
 
 ## Example
 
-Adding API document `002_device_flow_surface`:
+Adding API document `003_device_flow_surface`:
 
-1. Check `readme.md` Overview Table — current highest ID is `001`
-2. Create `002_device_flow_surface.md` in this directory
+1. Check `readme.md` Overview Table — current highest ID is `002`
+2. Create `003_device_flow_surface.md` in this directory
 3. Document the new items: signature, error set, blocking behavior, required feature
-4. Add row: `| 002 | [Device Flow Surface](002_device_flow_surface.md) | Device-authorization grant contract | ✅ |`
-5. Bump `api/` instances to 2 in `../entity.md` and add the Master Doc Instances row
+4. Add row: `| 003 | [Device Flow Surface](003_device_flow_surface.md) | Device-authorization grant contract | ✅ |`
+5. Bump `api/` instances to 3 in `../entity.md` and add the Master Doc Instances row

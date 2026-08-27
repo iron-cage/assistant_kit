@@ -7,7 +7,7 @@
 | `cli.rs` | CLI pipeline: adapter → parser → semantic analysis → execution. |
 | `paths.rs` | ClaudePaths — all `~/.claude/` canonical paths from HOME. |
 | `token.rs` | Re-export shim over `claude_profile_core::token` (authoritative implementation there). |
-| `telemetry.rs` | CLI invocation telemetry — appends one redacted `Command` event per invocation. |
+| `telemetry.rs` | CLI invocation telemetry: appends one redacted `Command` journal event per invocation, best-effort. |
 | `account.rs` | Re-export shim over `claude_profile_core::account` (authoritative implementation there). |
 | `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
@@ -16,6 +16,5 @@
 | `usage/` | `.usage` command modules — quota fetch, render, sort, refresh, and live loop. |
 | `owner_dispatch.rs` | Shared owner batch-clear and named-dispatch logic for `.accounts` and `.usage`. |
 | `persist.rs` | PersistPaths — persistent user storage path from $PRO/$HOME. |
-| `telemetry.rs` | CLI invocation telemetry: appends one redacted `Command` journal event per invocation, best-effort. |
 | `bin/` | Separate Cargo compilation units for each binary target. |
 | `bin/clp.rs` | `clp` short-alias binary entry point; delegates to `run_cli()`. |
