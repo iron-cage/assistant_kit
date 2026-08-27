@@ -7,7 +7,9 @@ Core library implementation for `claude_daemon_core`.
 | File | Responsibility |
 |------|----------------|
 | `lib.rs` | Crate root, module wiring, public re-exports |
+| `baseline.rs` | Measuring and caching a conversation's fixed token floor |
 | `client.rs` | Issuing one request to a running daemon |
+| `context.rs` | Rendering a session's context summary from its transcript |
 | `error.rs` | Hand-rolled error type and crate `Result` alias |
 | `ipc.rs` | Size-capped line framing for the socket protocol |
 | `listener.rs` | Socket binding, stale-socket removal, cleanup on drop |

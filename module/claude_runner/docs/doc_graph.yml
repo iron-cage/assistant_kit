@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 23
-  edge_count: 57
-  component_count: 1
+  node_count: 25
+  edge_count: 58
+  component_count: 2
   generated: 2026-05-16
-  last_reviewed: 2026-08-18
+  last_reviewed: 2026-08-27
 
 nodes:
   - id: feature/001
@@ -95,6 +95,16 @@ nodes:
   - id: feature/007
     file: feature/007_yaml_global_config.md
     label: YAML Global Config
+    entity: feature
+
+  - id: feature/008
+    file: feature/008_interactive_handoff.md
+    label: Interactive Handoff
+    entity: feature
+
+  - id: feature/009
+    file: feature/009_topic_forwarding.md
+    label: Topic Forwarding
     entity: feature
 
   - id: api/001
@@ -351,6 +361,10 @@ edges:
     to: invariant/015
     via: invariants
 
+  - from: feature/009
+    to: feature/008
+    via: features
+
 components:
   - id: 1
     label: Main corpus
@@ -380,5 +394,20 @@ components:
       - invariant/013
       - invariant/014
       - invariant/015
+
+  # feature/008 and feature/009 are the two "reach a conversation from elsewhere"
+  # features, and 009 cites 008 as its counterpart — so they are connected to each
+  # other but to nothing else. Every other design doc they cite lives outside this
+  # graph's scope: some in claude_daemon_core, claude_runner_core, and
+  # claude_topic_core, the rest cli/ reference docs. The pair joins the main corpus
+  # when an in-scope instance references either one — not before; a fabricated edge
+  # would misreport the corpus.
+  - id: 2
+    label: Reaching a conversation from elsewhere
+    size: 2
+    isolated: true
+    nodes:
+      - feature/008
+      - feature/009
 
 dangling_refs: []

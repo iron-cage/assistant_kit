@@ -53,7 +53,7 @@ abort the run), unlike the CLI flag's loud parse error.
 
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| enum | `TopicMode` (`src/cli/topic_path.rs`) | &str | Exactly `fork` or `dir`; anything else is a parse error |
+| enum | `TopicMode` (`claude_topic_core::identity`) | &str | Exactly `fork` or `dir`; anything else is a parse error |
 
 ### Referenced Parameter Groups
 

@@ -20,6 +20,7 @@
 //! - [`Request`] / [`Response`] — the wire protocol
 //! - [`Daemon`] / [`serve_once`] — what a request means, and the body of a loop
 //! - [`client::call`] — the other end of that exchange
+//! - [`StaticBaseline`] — what a conversation costs before a word of it is said
 //!
 //! Rendering a session's raw terminal output as readable text is deliberately
 //! *not* here: it needs no daemon and no pty, so it lives one layer down in
@@ -40,7 +41,9 @@
 #![ deny( missing_docs ) ]
 #![ warn( rust_2018_idioms ) ]
 
+pub mod baseline;
 pub mod client;
+pub mod context;
 mod error;
 pub mod ipc;
 pub mod listener;
@@ -52,6 +55,7 @@ pub mod registration;
 pub mod serve;
 pub mod table;
 
+pub use baseline::StaticBaseline;
 pub use error::{ Error, Result };
 pub use ipc::{ read_capped_line, MAX_IPC_LINE_BYTES };
 pub use listener::Listener;

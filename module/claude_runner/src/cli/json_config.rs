@@ -285,7 +285,7 @@ pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Va
           if let Value::String( s ) = v
           {
             // Mirror CLI constraint: silently ignore invalid values (same convention as "topic").
-            parsed.topic_mode = s.parse::< super::topic_path::TopicMode >().ok();
+            parsed.topic_mode = s.parse::< claude_topic_core::TopicMode >().ok();
           }
         }
       }

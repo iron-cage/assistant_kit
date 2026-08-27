@@ -25,6 +25,7 @@ members = [
   "module/claude_profile_core",
   "module/claude_version_core",
   "module/claude_storage_core",
+  "module/claude_topic_core",
   "module/claude_storage",
   "module/claude_profile",
   "module/claude_runner_core",
@@ -185,6 +186,11 @@ default-features = false
 [workspace.dependencies.claude_storage_core]
 path = "module/claude_storage_core"
 version = "=1.5.1"
+default-features = false
+
+[workspace.dependencies.claude_topic_core]
+path = "module/claude_topic_core"
+version = "=0.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile]

@@ -193,7 +193,7 @@ default, or `CLR_TOPIC_HOME` for `--global` — so no case reads or writes the h
 ### TP-16: Resolver and runner agree
 
 - **Command:** `CLR_TOPIC_HOME=<home> clr topics --global --path cross-check`, then `CLR_TOPIC_HOME=<home> clr --dry-run --global --topic cross-check "x"`
-- **Expected behavior:** the dry-run output contains the exact path the resolver printed. This is the guarantee the command rests on — both sides compute it through `topic_path::topic_dir()`, and this case fails the moment either caller stops
+- **Expected behavior:** the dry-run output contains the exact path the resolver printed. This is the guarantee the command rests on — both sides compute it through `claude_topic_core::topic_dir()`, and this case fails the moment either caller stops
 - **Exit:** 0 for both
 - **Source:** [user_story/031_topic_discovery.md](../../../../docs/cli/user_story/031_topic_discovery.md) AC-8
 

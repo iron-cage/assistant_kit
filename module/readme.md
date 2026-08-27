@@ -7,7 +7,7 @@
 | claude_core | Layer 0 shared primitives: ClaudePaths and process utilities |
 | claude_profile_core | Layer 1 domain logic: token status and account management |
 | claude_runner | CLI binary for executing Claude Code |
-| claude_runner_core | Core library for spawning Claude Code process |
+| claude_runner_core | Core library for spawning Claude Code processes, one at a time or as a bounded fan-out |
 | claude_profile | Account credential management, token status, path topology |
 | claude_storage | CLI tool for Claude Code storage exploration |
 | claude_storage_core | Zero-dep core library for Claude storage access |
@@ -21,8 +21,11 @@
 | json_redact | Layer * standalone primitive: sensitive-value redaction for strings and JSON |
 | svg_chart | Layer * standalone primitive: minimal SVG line/bar chart rendering |
 | claude_pty_core | Layer * standalone primitive: pseudo-terminal session mechanics via hand-rolled POSIX FFI (zero deps) |
+| claude_terminal_core | Layer * standalone primitive: interprets a terminal output stream as readable plain text (zero deps) |
 | claude_session_core | Layer 0 primitive: observes live Claude Code sessions via registry scan and turn detection |
+| claude_context_report_core | Docs-only (not a workspace member): planned Layer 0 context report model spec |
 | claude_daemon_core | Layer 1 domain logic: single-instance session daemon, wire protocol, and IPC framing |
+| claude_topic_core | Layer 1 domain logic: topic identity, enumeration, selection, pool naming, and locking |
 | claude_journal_charts | Layer 1 domain logic: journal Command events aggregated into daily-usage SVG chart |
 | claude_journal_viewer | CLI and web viewer for CLR journal events (clj binary) |
 | claude_memory | Skeleton placeholder (not a workspace member): no crate manifest yet |

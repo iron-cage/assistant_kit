@@ -43,6 +43,7 @@
 | 030_topic_creation.md | User story: auto-named or explicitly-named topic workspace via clr topic |
 | 031_topic_discovery.md | User story: list topic sessions and resolve a topic name to its path via clr topics |
 | 032_hosted_session_chat.md | User story: chat with a session that outlives the command via clr chat |
+| 033_topic_forwarding.md | User story: forward one prompt to one topic or to every live topic |
 
 ### Index
 
@@ -80,6 +81,7 @@
 | 030 | Topic Creation | `--topic`, `--from` | `topic` |
 | 031 | Topic Discovery | `--path`, `--global`, `--dir` | `topics` |
 | 032 | Hosted Session Chat | `--dir`, `--session`, `--timeout`, `--raw`, `--json` | `chat`, `sessions`, `daemon` |
+| 033 | Topic Forwarding | `--pick`, `--seed`, `--concurrency`, `--dir`, `--global`, `--dry-run` | `delegate`, `broadcast` |
 
 ### Adding User Stories
 

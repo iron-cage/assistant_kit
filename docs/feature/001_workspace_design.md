@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the purpose, crate inventory, and scope of the assistant workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
-- **In Scope**: Workspace purpose, crate inventory (24 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
+- **In Scope**: Workspace purpose, crate inventory (26 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
 - **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_consumer_integration.md`).
 
 ### Design
@@ -24,6 +24,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | svg_chart | — | primitives | Minimal SVG line/bar chart renderer (wraps `plotters`) |
 | json_redact | — | primitives | Domain-agnostic redaction of sensitive values from strings and JSON |
 | claude_pty_core | — | primitives | Pseudo-terminal session mechanics: allocation, writer thread, resize |
+| claude_terminal_core | — | primitives | Interpret a terminal output stream as readable plain text |
 | claude_core | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
 | claude_session_core | — | 0 | Observe live Claude Code sessions: registry, liveness, turn boundaries |
 | claude_profile_core | — | 1 † | Token status + account domain logic (no CLI deps) |
@@ -32,6 +33,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | claude_assets_core | — | 1 | Symlink-based artifact installer domain logic (no CLI deps) |
 | claude_journal_charts | — | 1 | Aggregates journal events into daily usage counts; renders as SVG via `svg_chart` |
 | claude_daemon_core | — | 1 | Single-instance session daemon and its IPC protocol |
+| claude_topic_core | — | 1 | Topic identity, enumeration, selection, and exclusion |
 | claude_profile | clp / claude_profile | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
 | claude_storage | clg / claude_storage | 2 | CLI for exploring Claude Code filesystem storage |
 | claude_journal_viewer | clj | 2 | CLI and web viewer for CLR journal events |

@@ -19,7 +19,7 @@ The flag is documented in `claude --help` and is a first-class CLI parameter wit
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E2 | B1, B4 | Code | `../../../../module/claude_runner_core/src/command.rs` | line 600 | `if self.continue_conversation { parts.push("-c") }` — `-c` is a builder option wrapping the native flag |
+| E2 | B1, B4 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | `grep -n 'continue_conversation {'` (was `command.rs:600`) | `if self.continue_conversation { tokens.push( ArgToken::Plain( "-c".to_string() ) ) }` — `-c` is a builder option wrapping the native flag |
 | E14 | B4 | Test | `../../tests/behavior/b04_continue_flag.rs` | `b4_continue_flag_documented_in_help` | `claude --help` documents `-c` / `--continue` flag |
 
 ### Cross-References

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 140 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
+- **In Scope**: All 159 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_param/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -21,11 +21,11 @@ parameter in this directory.
 | 003_agent.md | `--agent` — override agent for session |
 | 004_agents.md | `--agents` — define custom agents as JSON |
 | 005_allow_dangerously_skip_permissions.md | `--allow-dangerously-skip-permissions` — enable skip-perms as option |
-| 006_allowed_tools.md | `--allowed-tools` — allowlist of permitted tools |
+| 006_allowed_tools.md | `--allowedTools` / `--allowed-tools` — allowlist of permitted tools |
 | 007_api_key.md | `ANTHROPIC_API_KEY` — Anthropic API key |
 | 008_append_system_prompt.md | `--append-system-prompt` — append to default system prompt |
 | 009_auto_approve_tools.md | `CLAUDE_CODE_AUTO_APPROVE_TOOLS` — auto-approve tool calls |
-| 010_auto_continue.md | `CLAUDE_CODE_AUTO_CONTINUE` — auto-continue without prompts |
+| 010_auto_continue.md | `CLAUDE_CODE_AUTO_CONTINUE` — ❌ refuted; variable does not exist |
 | 011_auto_updates.md | `autoUpdates` config key — auto-update binary |
 | 012_bash_max_timeout.md | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — max bash command timeout |
 | 013_bash_timeout.md | `CLAUDE_CODE_BASH_TIMEOUT` — default bash command timeout |
@@ -37,7 +37,7 @@ parameter in this directory.
 | 019_debug.md | `-d` / `--debug` — debug mode with category filter |
 | 020_debug_file.md | `--debug-file` — write debug logs to file |
 | 021_disable_slash_commands.md | `--disable-slash-commands` — disable slash command skills |
-| 022_disallowed_tools.md | `--disallowed-tools` — denylist of forbidden tools |
+| 022_disallowed_tools.md | `--disallowedTools` / `--disallowed-tools` — denylist of forbidden tools |
 | 023_effort.md | `--effort` — effort level (low/medium/high/max) |
 | 024_enabled_plugins.md | `enabledPlugins` config key — active plugin registry |
 | 025_env_overrides.md | `env` config key — persistent env var overrides |
@@ -54,7 +54,7 @@ parameter in this directory.
 | 037_max_budget_usd.md | `--max-budget-usd` — max API spend cap in USD |
 | 038_max_output_tokens.md | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` — max tokens per response |
 | 039_mcp_config.md | `--mcp-config` — load MCP servers from JSON |
-| 040_mcp_debug.md | `--mcp-debug` — deprecated; use --debug |
+| 040_mcp_debug.md | `--mcp-debug` — ❌ removed from the CLI; use `--debug` |
 | 041_mcp_servers.md | `mcpServers` config key — inline MCP server definitions |
 | 042_model.md | `--model` / `model` config key — model alias or full ID |
 | 043_no_session_persistence.md | `--no-session-persistence` — disable save-to-disk |
@@ -68,7 +68,7 @@ parameter in this directory.
 | 054_replay_user_messages.md | `--replay-user-messages` — re-emit user messages on stdout |
 | 055_resume.md | `-r` / `--resume` — resume session by ID |
 | 056_sandbox_mode.md | `CLAUDE_CODE_SANDBOX_MODE` — enable sandbox mode |
-| 057_session_dir.md | `CLAUDE_CODE_SESSION_DIR` — override session directory |
+| 057_session_dir.md | `CLAUDE_CODE_SESSION_DIR` — ❌ refuted; use `CLAUDE_CONFIG_DIR` (141–159 block) |
 | 058_session_id.md | `--session-id` — specify session UUID |
 | 059_setting_sources.md | `--setting-sources` — filter which config sources load |
 | 060_settings.md | `--settings` — load additional settings from file or JSON |
@@ -156,6 +156,25 @@ parameter in this directory.
 | 138_disable_adopt.md | `CLAUDE_DISABLE_ADOPT` — stop in-flight work carrying over when backgrounding a session |
 | 139_async_agent_stall_timeout_ms.md | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` — stall timeout for background subagents |
 | 140_auto_background_tasks.md | `CLAUDE_AUTO_BACKGROUND_TASKS` — force-enable automatic backgrounding heuristic |
+| 141_ax_screen_reader.md | `--ax-screen-reader` / `CLAUDE_AX_SCREEN_READER` / `axScreenReader` — flat screen-reader output |
+| 142_background.md | `--bg` / `--background` — start session as a background agent |
+| 143_bare.md | `--bare` — minimal mode; skips hooks, LSP, plugins, keychain, CLAUDE.md discovery |
+| 144_exclude_dynamic_system_prompt_sections.md | `--exclude-dynamic-system-prompt-sections` — relocate per-machine context for cache reuse |
+| 145_forward_subagent_text.md | `--forward-subagent-text` — forward subagent text into stream-json |
+| 146_help.md | `-h` / `--help` — display help; basis of subcommand detection |
+| 147_include_hook_events.md | `--include-hook-events` — hook lifecycle events in stream-json |
+| 148_name.md | `-n` / `--name` — display name for this session |
+| 149_plugin_url.md | `--plugin-url` — fetch a plugin `.zip` from a URL, session-scoped |
+| 150_prompt_suggestions.md | `--prompt-suggestions` — emit a predicted next user prompt per turn |
+| 151_remote_control.md | `--remote-control` — start an interactive session with Remote Control |
+| 152_remote_control_session_name_prefix.md | `--remote-control-session-name-prefix` — prefix for auto-generated RC names |
+| 153_version.md | `-v` / `--version` — print version; short-circuits option parsing |
+| 154_config_dir.md | `CLAUDE_CONFIG_DIR` — relocate the entire `~/.claude/` tree |
+| 155_skip_prompt_history.md | `CLAUDE_CODE_SKIP_PROMPT_HISTORY` — suppress prompt-history recording |
+| 156_cleanup_period_days.md | `cleanupPeriodDays` config key — local data retention window |
+| 157_disable_1m_context.md | `CLAUDE_CODE_DISABLE_1M_CONTEXT` — opt out of the 1M-token context window |
+| 158_project_dir_name.md | `CLAUDE_CODE_PROJECT_DIR_NAME` — override encoded project dir name (absent from v2.1.220) |
+| 159_simple.md | `CLAUDE_CODE_SIMPLE` — minimal-mode marker set by `--bare` |
 
 ### Parameter Table
 
@@ -180,11 +199,11 @@ Precedence: CLI arg > env var > settings config.
 | 14 | [fork_session](029_fork_session.md) | `--fork-session` | — | — | bool | off | pre-v1.0 | Create new session ID on resume |
 | 15 | [no_session_persistence](043_no_session_persistence.md) | `--no-session-persistence` | — | — | bool | off | pre-v1.0 | Disable save-to-disk; cannot be resumed |
 | 16 | [from_pr](030_from_pr.md) | `--from-pr [value]` | — | — | string? | — | pre-v1.0 | Resume session linked to PR by number or URL |
-| 17 | [session_dir](057_session_dir.md) | — | `CLAUDE_CODE_SESSION_DIR` | — | path | auto | pre-v1.0 | Override session storage directory |
-| 18 | [auto_continue](010_auto_continue.md) | — | `CLAUDE_CODE_AUTO_CONTINUE` | — | bool | false | pre-v1.0 | Auto-continue without prompts |
+| 17 | [session_dir](057_session_dir.md) | — | ~~`CLAUDE_CODE_SESSION_DIR`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** Use `CLAUDE_CONFIG_DIR` (#154) |
+| 18 | [auto_continue](010_auto_continue.md) | — | ~~`CLAUDE_CODE_AUTO_CONTINUE`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220 |
 | 19 | [add_dir](002_add_dir.md) | `--add-dir <dirs...>` | — | — | path[] | — | pre-v1.0 | Grant tool access to additional directories |
-| 20 | [allowed_tools](006_allowed_tools.md) | `--allowed-tools <tools...>` | — | `allowedTools` | string[] | all | pre-v1.0 | Allowlist of permitted tools |
-| 21 | [disallowed_tools](022_disallowed_tools.md) | `--disallowed-tools <tools...>` | — | `disallowedTools` | string[] | none | pre-v1.0 | Denylist of forbidden tools |
+| 20 | [allowed_tools](006_allowed_tools.md) | `--allowedTools` / `--allowed-tools <tools...>` | — | `allowedTools` | string[] | all | pre-v1.0 | Allowlist of permitted tools; both flag spellings accepted |
+| 21 | [disallowed_tools](022_disallowed_tools.md) | `--disallowedTools` / `--disallowed-tools <tools...>` | — | `disallowedTools` | string[] | none | pre-v1.0 | Denylist of forbidden tools; both flag spellings accepted |
 | 22 | [tools](068_tools.md) | `--tools <tools...>` | — | — | string[] | `default` | pre-v1.0 | Override full tool set; `""` disables all |
 | 23 | [auto_approve_tools](009_auto_approve_tools.md) | — | `CLAUDE_CODE_AUTO_APPROVE_TOOLS` | — | bool | false | pre-v1.0 | Auto-approve all tool calls without prompting |
 | 24 | [action_mode](001_action_mode.md) | — | `CLAUDE_CODE_ACTION_MODE` | — | enum | `Ask` | pre-v1.0 | Tool execution action mode |
@@ -222,7 +241,7 @@ Precedence: CLI arg > env var > settings config.
 | 56 | [brief](015_brief.md) | `--brief` | — | — | bool | off | pre-v1.0 | Enable `SendUserMessage` tool for agents |
 | 57 | [disable_slash_commands](021_disable_slash_commands.md) | `--disable-slash-commands` | — | — | bool | off | pre-v1.0 | Disable all slash command skills |
 | 58 | [file](027_file.md) | `--file <specs...>` | — | — | string[] | — | pre-v1.0 | Download file resources at startup (`file_id:path`) |
-| 59 | [mcp_debug](040_mcp_debug.md) | `--mcp-debug` ⚠️ | — | — | bool | off | pre-v1.0 | **DEPRECATED** — use `--debug` instead |
+| 59 | [mcp_debug](040_mcp_debug.md) | ~~`--mcp-debug`~~ | — | — | — | n/a | removed | ❌ **Removed** — rejected by v2.1.220 with `unknown option`; use `--debug` |
 | 60 | [theme](066_theme.md) | — | — | `theme` | string | `"dark"` | pre-v1.0 | UI color theme |
 | 61 | [auto_updates](011_auto_updates.md) | — | — | `autoUpdates` | bool | true | pre-v1.0 | Auto-update binary on startup |
 | 62 | [preferred_version_spec](050_preferred_version_spec.md) | — | — | `preferredVersionSpec` | string/null | null | pre-v1.0 | Preferred version alias or semver |
@@ -304,12 +323,32 @@ Precedence: CLI arg > env var > settings config.
 | 138 | [disable_adopt](138_disable_adopt.md) | — | `CLAUDE_DISABLE_ADOPT` | — | bool | false | v2.1.195+ (no `_CODE_` infix) | Stop in-flight work from carrying over when a session is backgrounded (`←`/`/background`) |
 | 139 | [async_agent_stall_timeout_ms](139_async_agent_stall_timeout_ms.md) | — | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` | — | integer ms | `600000` | ≤v2.1.197 (documented; no `_CODE_` infix) | Stall/no-progress timeout for background subagents, resets on progress |
 | 140 | [auto_background_tasks](140_auto_background_tasks.md) | — | `CLAUDE_AUTO_BACKGROUND_TASKS` | — | bool | false | ≤v2.1.197 (documented; no `_CODE_` infix) | Force-enable automatic backgrounding of long-running agent tasks |
+| 141 | [ax_screen_reader](141_ax_screen_reader.md) | `--ax-screen-reader` | `CLAUDE_AX_SCREEN_READER` | `axScreenReader` | bool | false | v2.1.208 | Flat text output for screen readers; no borders or animations |
+| 142 | [background](142_background.md) | `--bg` / `--background` | — | — | bool | false | ≤v2.1.144 (help-listed v2.1.187) | Start as a background agent and return immediately; manage via `claude agents` |
+| 143 | [bare](143_bare.md) | `--bare` | — | — | bool | false | v2.1.81 | Minimal mode; auth narrows to `ANTHROPIC_API_KEY`/`apiKeyHelper`, sets `CLAUDE_CODE_SIMPLE=1` |
+| 144 | [exclude_dynamic_system_prompt_sections](144_exclude_dynamic_system_prompt_sections.md) | `--exclude-dynamic-system-prompt-sections` | — | — | bool | false | v2.1.98 | Move cwd/env/memory/git sections into first user message; ignored with `--system-prompt` |
+| 145 | [forward_subagent_text](145_forward_subagent_text.md) | `--forward-subagent-text` | `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` | — | bool | false | v2.1.211 | Forward subagent text/thinking with `parent_tool_use_id`; needs `--print` + stream-json |
+| 146 | [help](146_help.md) | `-h` / `--help` | — | — | bool | false | pre-v1.0 | Display help; short-circuits option parsing, so unusable as a flag probe |
+| 147 | [include_hook_events](147_include_hook_events.md) | `--include-hook-events` | — | — | bool | false | unverified (no changelog entry) | Hook lifecycle events in the output stream; needs stream-json |
+| 148 | [name](148_name.md) | `-n` / `--name <name>` | — | — | string | — | unverified (no changelog entry) | Display name in prompt box, `/resume` picker, terminal title; presentation only |
+| 149 | [plugin_url](149_plugin_url.md) | `--plugin-url <url>` (repeatable) | — | — | string[] | `[]` | v2.1.129 | Fetch a plugin `.zip` from a URL for this session only |
+| 150 | [prompt_suggestions](150_prompt_suggestions.md) | `--prompt-suggestions [value]` | — | — | bool-like enum | off (preset `"true"` if bare) | unverified (no changelog entry) | Emit a `prompt_suggestion` message per turn in print/SDK mode |
+| 151 | [remote_control](151_remote_control.md) | `--remote-control [name]` | — | — | bool + optional string | off | ≤v2.1.76 (help-listed v2.1.133) | Interactive session with Remote Control enabled |
+| 152 | [remote_control_session_name_prefix](152_remote_control_session_name_prefix.md) | `--remote-control-session-name-prefix <prefix>` | — | — | string | hostname | ≤v2.1.92 | Prefix for auto-generated Remote Control session names |
+| 153 | [version](153_version.md) | `-v` / `--version` | — | — | bool | false | pre-v1.0 | Print version; short-circuits option parsing, so unusable as a flag probe |
+| 154 | [config_dir](154_config_dir.md) | — | `CLAUDE_CONFIG_DIR` | — | string (dir) | `~/.claude` | ≤v2.1.111 | Relocate the whole config/state tree; real replacement for the refuted `--session-dir` |
+| 155 | [skip_prompt_history](155_skip_prompt_history.md) | — | `CLAUDE_CODE_SKIP_PROMPT_HISTORY` | — | bool | false | unverified (present in binary, no changelog entry) | Suppress prompt-history recording |
+| 156 | [cleanup_period_days](156_cleanup_period_days.md) | — | — | `cleanupPeriodDays` | integer (days) | 30 | ≤v2.1.83 | Local data retention window; **`0` rejected as invalid since v2.1.89** |
+| 157 | [disable_1m_context](157_disable_1m_context.md) | — | `CLAUDE_CODE_DISABLE_1M_CONTEXT` | — | bool | false | unverified (present in binary, no changelog entry) | Opt out of the 1M-token context window |
+| 158 | [project_dir_name](158_project_dir_name.md) | — | `CLAUDE_CODE_PROJECT_DIR_NAME` | — | string | — | v2.1.234+ (**absent from v2.1.220**) | Override the encoded project dir name; method control for binary string-scans |
+| 159 | [simple](159_simple.md) | — (set by `--bare`) | `CLAUDE_CODE_SIMPLE` | — | bool | unset | ≤v2.1.81 | Minimal-mode marker `--bare` sets; setting it manually is *not* documented to enable `--bare` |
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| doc | [`../behavior/readme.md`](../behavior/readme.md) | Claude Code behavior collection master file |
-| doc | [`../behavior/readme.md`](../behavior/readme.md) | Observed flag behavior in practice |
+| doc | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection master file — observed flag behavior in practice |
+| doc | [`../subcommand/readme.md`](../subcommand/readme.md) | Subcommand collection; `--help` is the detection primitive |
+| doc | [`../version/readme.md`](../version/readme.md) | Release changelog backing every `Since` value in this table |
 | doc | [`../settings/readme.md`](../settings/readme.md) | settings.json write semantics and structure |
 | doc | [`../../../../module/claude_runner_core/docs/claude_params/readme.md`](../../../../module/claude_runner_core/docs/claude_params/readme.md) | Builder-API perspective with Rust `with_*()` methods |

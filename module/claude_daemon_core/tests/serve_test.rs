@@ -37,6 +37,7 @@
 //! | srv11 | `stop_daemon` | Answered first, then the loop ends and sessions go |
 //! | srv12 | `spawn` whose child never registers | The request fails *and* the child is dead |
 //! | srv13 | The return that submits a prompt | Sent well after the text, not in the same burst |
+//! | srv14 | `context_summary`, hosted and absent | Read from the recorded `cwd`; an unhosted id refused |
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 use core::time::Duration;
@@ -588,6 +589,76 @@ fn srv13_the_submitting_return_is_not_sent_with_the_text()
     seen[ text_at.. ].contains( '\r' ),
     "no carriage return after the prompt — nothing submitted it. Saw {seen:?}",
   );
+
+  harness.finish();
+}
+
+/// srv14: a context summary is resolved through the table, not from the request.
+///
+/// The request carries a session id and nothing else. The working directory the
+/// transcript is found under comes from the daemon's own record of that session,
+/// so a client cannot name one session and be served a path of its own choosing.
+///
+/// The transcript is planted at the path that `cwd` implies and nowhere else,
+/// and the hosted half must *succeed*. That is what makes this a test of the
+/// routing rather than of the error: a dispatch that used any other working
+/// directory would not find this file, and would answer `NoTranscript` — which
+/// is exactly what a session with no transcript answers, and so would prove
+/// nothing if it were all this asserted.
+#[ test ]
+fn srv14_context_summary_resolves_through_the_table()
+{
+  // Point the transcript lookup at a directory this test owns, so the answer
+  // does not depend on what the machine running it has in its real home.
+  let home = tempfile::tempdir().expect( "tempdir failed" );
+  std::env::set_var( "CLAUDE_HOME", home.path() );
+
+  let harness = Harness::start();
+  let session_id = spawn_session( &harness );
+
+  // `spawn_session` asks for `/tmp`, so that is what the daemon recorded and
+  // that is the only encoding under which this transcript is reachable.
+  let encoded = claude_storage_core::encode_path( Path::new( "/tmp" ) )
+    .expect( "/tmp should encode" );
+  let project_dir = home.path().join( "projects" ).join( encoded );
+  std::fs::create_dir_all( &project_dir ).expect( "creating the project dir failed" );
+  std::fs::write
+  (
+    project_dir.join( format!( "{session_id}.jsonl" ) ),
+    format!
+    (
+      "{{\"type\":\"attachment\",\"sessionId\":\"{session_id}\",\
+        \"attachment\":{{\"type\":\"deferred_tools_delta\",\"addedNames\":[\"WebFetch\"]}}}}\n"
+    ),
+  ).expect( "writing the transcript failed" );
+
+  let summary = harness.call( &Request::ContextSummary
+  {
+    session_id : session_id.clone(),
+  } );
+  assert_eq!( summary[ "session_id" ], session_id.as_str() );
+  assert_eq!
+  (
+    summary[ "deferred_tools" ],
+    serde_json::json!( [ "WebFetch" ] ),
+    "the summary did not come from the transcript at the recorded cwd: {summary}",
+  );
+
+  // And an id the daemon does not host is refused, rather than sent to the
+  // filesystem to be looked up on a client-supplied path.
+  let absent = harness.request( &Request::ContextSummary
+  {
+    session_id : "conv-nonexistent".into(),
+  } );
+  match absent
+  {
+    Response::Err { error, .. } => assert!
+    (
+      error.contains( "conv-nonexistent" ),
+      "the error does not name the session: {error}",
+    ),
+    Response::Ok { result, .. } => panic!( "an unhosted session summarized: {result}" ),
+  }
 
   harness.finish();
 }

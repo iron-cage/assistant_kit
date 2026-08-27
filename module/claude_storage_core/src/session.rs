@@ -8,10 +8,12 @@ use std::
 
 use crate::
 {
+  ContextFold,
   Entry,
   EntryType,
   Error,
   Result,
+  SessionContextState,
   SessionId,
   stats::SessionStats,
 };
@@ -384,6 +386,35 @@ impl Session
     self.id.as_str().starts_with( "agent-" )
   }
 
+  /// Fold the session's whole event stream into its context state.
+  ///
+  /// Reports what the harness assembled into this session's context: deferred
+  /// tools, agent and skill rosters, the remaining token budget, background
+  /// tasks. See [`crate::ContextFold`] for what each of those means and how the
+  /// deltas accumulate.
+  ///
+  /// This reads the file once, front to back. To follow a session that is still
+  /// being written, keep a [`crate::ContextFold`] and call
+  /// [`ContextFold::read_file`] repeatedly instead — it resumes from a byte
+  /// offset rather than re-reading.
+  ///
+  /// Token *usage* is not reported here; [`Session::stats`] owns that sum. See
+  /// the `context` module's "Token accounting" note.
+  ///
+  /// # Errors
+  ///
+  /// Returns error if the session file cannot be read. Individual malformed
+  /// lines are skipped and counted, not propagated.
+  ///
+  /// [`ContextFold::read_file`]: crate::ContextFold::read_file
+  #[ inline ]
+  pub fn context_state( &self ) -> Result< SessionContextState >
+  {
+    let mut fold = ContextFold::new();
+    fold.read_file( &self.storage_path )?;
+    Ok( fold.into_state() )
+  }
+
   /// Compute session statistics
   ///
   /// Calculates comprehensive statistics including entry counts, token usage,
@@ -549,6 +580,11 @@ impl Session
               {
                 stats.max_context_tokens = call_context;
               }
+
+              // Entries are walked in file order, so the last assignment wins
+              // and this ends up holding the newest call — what the conversation
+              // occupies now, as opposed to the peak above.
+              stats.last_context_tokens = call_context;
             }
           }
         }

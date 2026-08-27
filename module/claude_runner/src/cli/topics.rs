@@ -2,7 +2,7 @@
 //!
 //! Read-only counterpart to `clr topic`: `topic` creates and enters a topic session,
 //! `topics` reports on them without running anything. Both compute paths through the
-//! same `topic_path`/`claude_storage_core` helpers, so a path printed here is exactly
+//! same `claude_topic_core`/`claude_storage_core` helpers, so a path printed here is exactly
 //! what `topic` would use for that name.
 //!
 //! Two topic mechanisms, two resolve flags:
@@ -18,81 +18,12 @@
 //!
 //! The listing merges both mechanisms: directory topics are discovered by scanning
 //! the base for `-<name>` directories; fork topics are read from the topics registry
-//! (`topic_registry`), since their `UUIDv5` identity is one-way and the name cannot be
-//! recovered from the session file alone. The same name can appear once per mode.
+//! (`claude_topic_core::registry`), since their `UUIDv5` identity is one-way and the
+//! name cannot be recovered from the session file alone. The same name can appear once
+//! per mode.
 
 use super::help::print_topics_help;
-use super::topic_path::{ topic_base, topic_dir, topic_name_of };
-
-/// One topic found under the base — a `-<name>` directory (mode `dir`) or a
-/// registry-recorded fork session (mode `fork`) — with its session count.
-struct TopicEntry
-{
-  name     : String,
-  mode     : &'static str,
-  path     : std::path::PathBuf,
-  sessions : usize,
-}
-
-/// Count `*.jsonl` session files in `dir`'s own Claude Code session storage.
-///
-/// Returns 0 for a topic that exists but has never been entered — the session directory
-/// is created by Claude Code on first run, not by `resolve_effective_dir`'s `create_dir_all`.
-fn session_count( dir : &std::path::Path ) -> usize
-{
-  let scope = claude_storage_core::scope_for( dir );
-  let Ok( entries ) = std::fs::read_dir( &scope.claude_session_dir ) else { return 0; };
-  entries
-    .filter_map( Result::ok )
-    .filter( | e | e.path().extension().is_some_and( | x | x == "jsonl" ) )
-    .count()
-}
-
-/// Collect every DIR-mode topic directory directly under `base`, unsorted (the
-/// caller merges and sorts across modes).
-///
-/// A non-existent or unreadable base yields an empty list rather than an error: the
-/// global topic home legitimately does not exist until the first global topic is created.
-fn collect_topics( base : &std::path::Path ) -> Vec< TopicEntry >
-{
-  let Ok( entries ) = std::fs::read_dir( base ) else { return Vec::new(); };
-  entries
-    .filter_map( Result::ok )
-    .filter( | e | e.path().is_dir() )
-    .filter_map( | e |
-    {
-      let file_name = e.file_name();
-      let raw = file_name.to_str()?;
-      let name = topic_name_of( raw )?.to_string();
-      let path = e.path();
-      let sessions = session_count( &path );
-      Some( TopicEntry { name, mode : "dir", path, sessions } )
-    } )
-    .collect()
-}
-
-/// Collect every FORK-mode topic recorded for `base` in the topics registry,
-/// unsorted (the caller merges and sorts across modes).
-///
-/// Path and existence are resolved through the shared `UUIDv5` rule
-/// (`claude_storage_core::topic_session_file`); the registry contributes only the
-/// names. Sessions is 1 when the session file exists non-empty, 0 otherwise — a
-/// registry entry whose file was deleted (topic restarted by hand) stays listed
-/// with 0, since its name is still reserved for auto-naming purposes.
-fn collect_fork_topics( base : &std::path::Path ) -> Vec< TopicEntry >
-{
-  let canonical_base = claude_storage_core::physical_abs( base );
-  super::topic_registry::list( &canonical_base )
-    .into_iter()
-    .filter_map( | name |
-    {
-      let file = claude_storage_core::topic_session_file( &canonical_base, &name )?;
-      let sessions = usize::from(
-        std::fs::metadata( &file ).is_ok_and( | meta | meta.len() > 0 ) );
-      Some( TopicEntry { name, mode : "fork", path : file, sessions } )
-    } )
-    .collect()
-}
+use claude_topic_core::{ topic_base, topic_dir };
 
 /// Parsed `topics` flags: base override, resolver selections, and global switch.
 struct TopicsArgs
@@ -227,9 +158,7 @@ pub( crate ) fn dispatch_topics( tokens : &[ String ] ) -> !
 
   // List form: merge dir-mode (scanned) and fork-mode (registry) topics. The same
   // name can legitimately exist once per mode — both rows are shown.
-  let mut topics = collect_topics( &base );
-  topics.extend( collect_fork_topics( &base ) );
-  topics.sort_by( | a, b | a.name.cmp( &b.name ).then( a.mode.cmp( b.mode ) ) );
+  let topics = claude_topic_core::enumerate( &base );
   if topics.is_empty()
   {
     eprintln!( "no topics in {}", base.display() );
@@ -240,7 +169,11 @@ pub( crate ) fn dispatch_topics( tokens : &[ String ] ) -> !
   println!( "{:<name_width$}  MODE  {:>8}  PATH", "NAME", "SESSIONS" );
   for t in &topics
   {
-    println!( "{:<name_width$}  {:<4}  {:>8}  {}", t.name, t.mode, t.sessions, t.path.display() );
+    println!
+    (
+      "{:<name_width$}  {:<4}  {:>8}  {}",
+      t.name, t.mode.as_str(), t.sessions, t.path.display()
+    );
   }
   std::process::exit( 0 );
 }

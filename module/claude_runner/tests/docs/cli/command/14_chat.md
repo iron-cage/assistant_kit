@@ -16,7 +16,12 @@ strings.
 | File | Cases | Subject |
 |------|-------|---------|
 | `chat_command_test.rs` | CH-1–CH-10 | The argument surface, and the order things happen in |
-| `chat_answer_test.rs` | CA-1–CA-8 | Reading a turn's answer out of the session transcript |
+| `claude_storage_core/tests/transcript_answer_test.rs` | CA-1–CA-8 | Reading a turn's answer out of the session transcript |
+
+The second file is not in this crate. The reading rule is a fact about how Claude Code
+writes storage, so it lives with the parser it uses; `clr chat` consumes it through
+`claude_storage_core::transcript_answer_since`. It is listed here anyway because this
+command is what the cases exist for.
 
 ## What is deliberately not tested here
 
@@ -28,7 +33,9 @@ subscription. That round trip is exercised by hand instead; see `tests/manual/re
 The layers under it are tested where they live, against real implementations rather than
 mocks: the terminal in `claude_pty_core`, the spawn/send/read cycle in
 `claude_daemon_core`'s `serve_test.rs` (real socket, real client, real PTY-attached
-children), and the rendering of what comes back in its `render_test.rs`.
+children), the rendering of what comes back in `claude_terminal_core`'s `render_test.rs`,
+and the answer read out of the transcript in `claude_storage_core`'s
+`transcript_answer_test.rs`.
 
 What remains for these files is everything `chat` decides on its own: the argument
 surface, the order it does things in, and where it gets the words it prints.
@@ -175,23 +182,26 @@ surface, the order it does things in, and where it gets the words it prints.
 
 ---
 
-## Answer reading (`chat_answer_test.rs`)
+## Answer reading (`claude_storage_core/tests/transcript_answer_test.rs`)
+
+These cases live one crate down, with the parser they exercise. They are documented here
+because `clr chat` is the command whose promise they hold up.
 
 Fixtures are hand-built JSONL, to the shape a real transcript has: the required-field
 list comes from `claude_storage_core`'s own parser, the block mix (thinking, tool use,
 tool result, text) from a recorded session. No process, no daemon, no model call — the
 question is only what gets read out of a file that already exists.
 
-Nothing here mutates `HOME` or any other process-global; this crate's tests do not (see
-`gate_unit_test.rs`). CA-7 works with whatever `HOME` the suite runs under, because its
-claim is the *shape* of the path and not where its root is.
+Nothing there mutates `HOME` or any other process-global, so the file stays safe to run
+concurrently with the rest of its crate's suite. CA-7 works with whatever `HOME` the
+suite runs under, because its claim is the *shape* of the path and not where its root is.
 
 ---
 
 ### CA-1: An assistant text block past the mark is the answer
 
 - **Setup:** a transcript with one user entry and one assistant entry whose only block is `text: "pineapple"`
-- **Expected behavior:** `answer_since( path, 0, grace )` is `Some( "pineapple" )` — the user's own prompt is not in it
+- **Expected behavior:** `transcript_answer_since( path, 0, grace )` is `Some( "pineapple" )` — the user's own prompt is not in it
 - **Source:** [command/14_chat.md](../../../../docs/cli/command/14_chat.md) — Algorithm — printing, step 3
 
 ---
@@ -217,7 +227,7 @@ claim is the *shape* of the path and not where its root is.
 ### CA-4: A missing transcript falls back rather than failing
 
 - **Setup:** a path that was never written
-- **Expected behavior:** `transcript_mark` is 0 and `answer_since` is `None`
+- **Expected behavior:** `transcript_mark` is 0 and `transcript_answer_since` is `None`
 - **Rationale:** a file that is not there is the ordinary case for the first chat in a directory, not an error. `None` is what routes `chat` to the terminal rendering and the accompanying stderr note
 - **Source:** [command/14_chat.md](../../../../docs/cli/command/14_chat.md) — Algorithm — printing, step 4
 

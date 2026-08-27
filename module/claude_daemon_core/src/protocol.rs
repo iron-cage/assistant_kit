@@ -58,6 +58,20 @@ pub enum Request
     #[ serde( default ) ]
     cursor : u64,
   },
+  /// Report what a session's context currently holds.
+  ///
+  /// Deferred tools, agent and skill rosters, remaining token budget, background
+  /// tasks — read from the session's own transcript rather than from anything
+  /// the daemon tracks. Most of that arrives in the transcript as *deltas*, so
+  /// the current state is accumulated by replaying them, not by sampling.
+  ///
+  /// Read-only and side-effect free: it neither writes to the session nor
+  /// disturbs a turn in flight, so it is safe to call against a busy session.
+  ContextSummary
+  {
+    /// Target session's conversation id.
+    session_id : String,
+  },
   /// Change a session's terminal dimensions.
   Resize
   {

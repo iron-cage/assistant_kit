@@ -235,7 +235,7 @@ pub fn claude_version() -> Option< String >
       t.contains( '.' )
         && t.chars().next().is_some_and( | c | c.is_ascii_digit() )
     )
-    .map( | s | s.to_owned() )
+    .map( str::to_owned )
 }
 
 /// Returns `true` when `installed` semver is >= `min` semver.
@@ -294,19 +294,48 @@ macro_rules! skip_if_version_before
   };
 }
 
-/// List `.meta.json` files in a subagents directory.
+/// List `.meta.json` files in a subagents directory, walking nested subdirectories.
+///
+/// Fix(A4): recursion is load-bearing, not a convenience. Workflow subagents write
+/// their sidecars to `subagents/workflows/wf_{id}/`, one level below the flat
+/// `subagents/` layout this helper originally assumed.
+/// Root cause: a single non-recursive `read_dir` was written against the flat
+/// layout and never revisited when the nested one appeared.
+/// Pitfall: a traversal gap is invisible in a green run — the skipped files raise
+/// no error, they are simply never asserted on. 329 sidecars (269 of them the
+/// undocumented `workflow-subagent` type) were unreachable by B14 until this
+/// walked the subtree. Measure coverage explicitly, never against a green run —
+/// `cargo nextest run b14_all_meta_json --no-capture` prints both counts, and
+/// `cd ~/.claude/projects && find . -path '*/subagents/*' -name '*.meta.json' | wc -l`
+/// is the independent total they must match. Use a relative `.` root: `find` given
+/// an absolute path under `~/.claude` can exit 0 with no output in a sandboxed
+/// shell, which reads as "no files" rather than as the failure it is.
 #[ must_use ]
 #[ inline ]
 pub fn find_meta_json_files( subagents_dir : &std::path::Path ) -> Vec< std::path::PathBuf >
 {
-  std::fs::read_dir( subagents_dir )
-    .ok()
-    .into_iter()
-    .flatten()
-    .filter_map( Result::ok )
-    .filter( | e | e.file_name().to_string_lossy().ends_with( ".meta.json" ) )
-    .map( | e | e.path() )
-    .collect()
+  let mut found = Vec::new();
+  let mut pending = vec![ subagents_dir.to_path_buf() ];
+
+  while let Some( dir ) = pending.pop()
+  {
+    let Ok( entries ) = std::fs::read_dir( &dir ) else { continue };
+    for entry in entries.filter_map( Result::ok )
+    {
+      // `DirEntry::file_type` does not follow symlinks, so a symlinked directory
+      // reports as a symlink and is skipped — no traversal cycles.
+      if entry.file_type().is_ok_and( | t | t.is_dir() )
+      {
+        pending.push( entry.path() );
+      }
+      else if entry.file_name().to_string_lossy().ends_with( ".meta.json" )
+      {
+        found.push( entry.path() );
+      }
+    }
+  }
+
+  found
 }
 
 /// List `agent-*.jsonl` files in a subagents directory (non-zero-byte).

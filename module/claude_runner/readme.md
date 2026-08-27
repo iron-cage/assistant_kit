@@ -54,6 +54,19 @@ additionally exposes `COMMANDS_YAML` for consumers that register `clr` as a comm
   expected values with configurable retry/fallback strategies.
 - **Fleet visibility** — `clr ps` lists active sessions and queued gate waiters; `clr kill <pid>`
   terminates a session; `clr scope` prints the 6 `CLAUDE_*` path variables for a directory.
+- **Topics — side conversations under one base** — `clr topic` opens a named branch of the current
+  directory's conversation, `clr topics` lists them, and `clr pool <N>` provisions `N` anonymous ones
+  (`t1`, `t2`, …) in a single call, creating only the ones that are missing. See
+  [docs/cli/command/11_topic.md](docs/cli/command/11_topic.md) and
+  [docs/cli/command/18_pool.md](docs/cli/command/18_pool.md).
+- **Forwarding one prompt to many conversations** — `clr delegate` sends a prompt to one topic chosen
+  by policy (`--pick idle` / `--pick random`) rather than by name; `clr broadcast` sends it to every
+  live topic at once, bounded by `--concurrency`. See
+  [docs/feature/009_topic_forwarding.md](docs/feature/009_topic_forwarding.md).
+- **Daemon-hosted interactive sessions** — `clr daemon` runs a single-instance daemon that keeps
+  interactive sessions warm, `clr chat` sends a prompt to one and prints the answer, and
+  `clr sessions` lists what it is hosting. See
+  [docs/cli/command/13_daemon.md](docs/cli/command/13_daemon.md).
 - **Bidirectional control sessions** — `clr query` starts a persistent, PID-addressed session
   (backgrounded immediately, PID printed to stdout) and dispatches any of 25 camelCase SDK control
   methods against it — interrupt, change model or permission mode, inspect context usage, and more.
@@ -78,17 +91,27 @@ The library target (`COMMANDS_YAML`) has zero extra dependencies and builds with
 
 **CLI subcommands:**
 
+Listed in the order `clr help` prints them.
+
 | Subcommand | Purpose |
 |------------|---------|
 | `clr` / `clr run` | Default execution — interactive or print mode (runs when no subcommand matches) |
 | `clr ask` | Semantic alias for `run` (same behavior, `ask`-specific help text) |
+| `clr topic` | Run in a topic — a side conversation under the current base, named from the message |
+| `clr topics` | List the topics under a base, or resolve one topic name to its session path |
+| `clr pool <N>` | Make sure `N` anonymous topics (`t1`, `t2`, …) exist under a base, creating only the missing ones |
+| `clr delegate` | Send one prompt to one topic, chosen by policy instead of by name |
+| `clr broadcast` | Send one prompt to every live topic, bounded by `--concurrency` |
 | `clr isolated` | One-shot task in an isolated temp-HOME sandbox |
 | `clr refresh` | Refresh Claude Code OAuth credentials (isolated one-shot) |
 | `clr ps` | List active Claude Code sessions and queued gate waiters |
 | `clr kill <pid>` | Terminate a running Claude Code session |
-| `clr tools` | List the 40 Claude Code built-in tools |
 | `clr scope` | Print the 6 `CLAUDE_*` path variables for a directory |
 | `clr query` | Start a PID-addressed control session, or dispatch one of 25 SDK control methods against a running one |
+| `clr daemon` | Manage the single-instance session daemon that hosts interactive sessions |
+| `clr chat` | Send a prompt to a daemon-hosted session and print the answer |
+| `clr sessions` | List the sessions the daemon is currently hosting |
+| `clr tools` | List the 40 Claude Code built-in tools |
 | `clr help` | Show help text |
 
 ```sh

@@ -21,7 +21,7 @@ clr --topic . "Fix bug"               # explicit identity — same as default
 ```
 
 **Mode selection (fork vs dir):** decided per invocation by
-`topic_path::effective_topic_mode`, precedence highest first:
+`claude_topic_core::effective_topic_mode`, precedence highest first:
 
 1. Explicit [`--topic-mode`](088_topic_mode.md) / `CLR_TOPIC_MODE` / json `"topic-mode"`.
 2. `--global` → dir — a global topic is shared across callers' working directories, so

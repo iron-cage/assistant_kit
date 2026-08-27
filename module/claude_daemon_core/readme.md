@@ -32,8 +32,17 @@ Clients talk to it over a Unix domain socket, one JSON object per line.
   continuously into a bounded buffer, and reading it consumes nothing — so two
   clients can watch one session, and neither `send` nor the daemon's accept loop
   ever blocks waiting for a turn to finish
+- **Context reported, not guessed**: what a session's context currently holds —
+  deferred tools, agent and skill rosters, remaining budget, tasks — is folded
+  from the session's own transcript, so it is the session's state rather than the
+  daemon's belief about it
+- **Overhead separated from conversation**: the one figure a transcript cannot
+  supply is how much of a context was spent before the first word. A `baseline`
+  measurement, taken once per Claude Code version and model and cached, supplies
+  it — and the summary says `null` rather than guessing until one exists
 - **Composes, does not absorb**: PTY mechanics live in `claude_pty_core`,
-  liveness and turn detection in `claude_session_core`
+  liveness and turn detection in `claude_session_core`, transcript reading in
+  `claude_storage_core`
 
 ## architecture
 

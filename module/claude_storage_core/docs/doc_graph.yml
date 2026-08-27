@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_storage_core
-  node_count: 12
-  edge_count: 25
+  node_count: 14
+  edge_count: 30
   component_count: 1
-  generated: 2026-08-22
+  generated: 2026-08-27
 
 nodes:
   - id: algorithm/001
@@ -13,6 +13,10 @@ nodes:
   - id: algorithm/002
     file: algorithm/002_json_parser.md
     label: JSON Parser
+    entity: algorithm
+  - id: algorithm/003
+    file: algorithm/003_agent_session_tracking.md
+    label: Agent Session Tracking
     entity: algorithm
   - id: api/001
     file: api/001_public_api.md
@@ -45,6 +49,10 @@ nodes:
   - id: feature/005
     file: feature/005_token_usage_rollup.md
     label: Token-Usage Rollup
+    entity: feature
+  - id: feature/006
+    file: feature/006_transcript_answer.md
+    label: Transcript Answer
     entity: feature
   - id: invariant/001
     file: invariant/001_safety_guarantees.md
@@ -131,15 +139,31 @@ edges:
   - from: invariant/001
     to: algorithm/001
     via: cross_references
+  - from: algorithm/003
+    to: feature/004
+    via: cross_references
+  - from: feature/006
+    to: algorithm/001
+    via: cross_references
+  - from: feature/006
+    to: feature/004
+    via: cross_references
+  - from: feature/006
+    to: data_structure/001
+    via: cross_references
+  - from: api/001
+    to: feature/006
+    via: cross_references
 
 components:
   - id: 1
     label: Main corpus
-    size: 12
+    size: 14
     isolated: false
     nodes:
       - algorithm/001
       - algorithm/002
+      - algorithm/003
       - api/001
       - data_structure/001
       - data_structure/002
@@ -148,6 +172,7 @@ components:
       - feature/003
       - feature/004
       - feature/005
+      - feature/006
       - invariant/001
       - invariant/002
 

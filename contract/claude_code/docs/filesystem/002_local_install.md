@@ -11,15 +11,55 @@
 
 | Path | Type | Access | Used By | Purpose |
 |------|------|--------|---------|---------|
-| `~/.local/bin/claude` | file | R/del | `.version.install`, `.version.guard`, `.version.show` | Launcher binary; resolved via `which claude`, fallback `~/.local/bin/claude` |
+| `~/.local/bin/claude` | **symlink** | R/rename/del | `.version.install`, `.version.guard`, `.version.show` | Launcher; a symlink into `versions/`, not a copied binary |
+| `~/.local/bin/claude.preinstall` | symlink | W/del | `.version.install` | Reversible rename-aside sidecar; exists only mid-install |
 | `~/.local/share/claude/versions/` | dir | chmod | `.version.install`, `.version.guard` | Versioned binaries; `chmod 555` (locked) or `755` (unlocked) |
+| `~/.local/share/claude/versions/{ver}` | file | R/W | installer | One executable per installed version, named by bare version |
+
+### The Launcher Is a Symlink
+
+`~/.local/bin/claude` is a **symbolic link** into the versions directory, not a copy of the
+binary. An earlier revision typed it `file`, which obscures two consequences:
+
+1. **The link target names the installed version.** `get_version_from_symlink()` reads it
+   rather than executing anything — that is why version detection is instant and works even
+   when the binary would refuse to run.
+2. **Deleting the launcher does not free disk.** The bytes live in `versions/`.
+
+```bash
+ls -la ~/.local/bin/claude
+# → ~/.local/bin/claude -> ~/.local/share/claude/versions/2.1.220
+readlink ~/.local/bin/claude | xargs basename    # → 2.1.220, the installed version
+```
+
+Observed on a `installMethod: native` install. Whether every install method produces a
+symlink here is ❓ Uncertain — only `native` was surveyed.
+
+### The `.preinstall` Sidecar
+
+Before an install, the launcher is **renamed aside** to `{path}.preinstall` rather than
+deleted, so a failed install can put it back — `Fix(BUG-016)`, because the installer can
+refuse to install *while still exiting 0*, leaving no launcher and nothing to restore.
+It is removed once the outcome is confirmed, so seeing one on disk means an install
+was interrupted:
+
+```bash
+ls -la ~/.local/bin/claude.preinstall   # normally: No such file or directory
+```
+
+Rename preserves the inode, so running sessions are unaffected either way (Unix open-file
+semantics). Only if the rename itself fails does the code fall back to `remove_file`.
 
 ### Resolution
 
 | Path | Resolution Method |
 |------|-------------------|
-| `~/.local/bin/claude` | `which claude` (preferred); falls back to `$HOME/.local/bin/claude` |
-| `~/.local/share/claude/versions/` | Hardcoded: `$HOME/.local/share/claude/versions` |
+| `~/.local/bin/claude` | `binary_symlink_path()` — hardcoded `$HOME/.local/bin/claude`. **Exception:** `hot_swap_binary()` alone prefers `which claude` and falls back to that constant, so a launcher elsewhere on `$PATH` is swapped correctly |
+| `~/.local/share/claude/versions/` | `versions_dir_path()` — hardcoded `$HOME/.local/share/claude/versions` |
+| `~/.claude/.transient/version_history_cache.json` | `version_history_cache_path()` — see [001_claude_home.md](001_claude_home.md) |
+
+Neither constant honours `CLAUDE_CONFIG_DIR`; it relocates `~/.claude/` only, never
+`~/.local/`. See [`../param/154_config_dir.md`](../param/154_config_dir.md).
 
 ### Version Lock chmod Operations
 

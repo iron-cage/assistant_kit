@@ -25,7 +25,7 @@
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | line 290 | `pairs.push( ( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() ) )` — env var exported before spawning `claude`. Proves the workspace *sets* the variable; carries no information about whether the binary *reads* it. Location corrected 2026-08-27: previously cited as `src/command.rs` lines 647–648, a path and line range that no longer exist. |
+| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | `grep -n CLAUDE_CODE_AUTO_CONTINUE` | `pairs.push( ( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() ) )` — env var exported before spawning `claude`. Proves the workspace *sets* the variable; carries no information about whether the binary *reads* it. Location corrected 2026-08-27: previously cited as `src/command.rs` lines 647–648, a path and line range that no longer exist. |
 | E21 | B11 | Test | `../../tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | Binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when env var is set — negative assertion; passes identically for a variable absent from the binary, which is why it did not catch this refutation |
 
 ### Cross-References

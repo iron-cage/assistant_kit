@@ -24,7 +24,7 @@ ast .help                    # all ~40 commands in one place
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Twenty-four workspace crates (see Crates below) |
+| `module/` | Twenty-six workspace crates (see Crates below) |
 | `contract/` | Behavioral contract test suites for external dependencies |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
 | `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
@@ -46,12 +46,14 @@ ast .help                    # all ~40 commands in one place
 | `json_redact` | — | * | Domain-agnostic redaction of sensitive values from strings and JSON |
 | `svg_chart` | — | * | Minimal SVG line/bar chart rendering |
 | `claude_pty_core` | — | * | Pseudo-terminal session mechanics (zero dependencies) |
+| `claude_terminal_core` | — | * | Terminal output → readable plain text (zero dependencies) |
 | `claude_profile_core` | — | 1 † | Token status + account domain logic |
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
-| `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
+| `claude_runner_core` | — | 1 | `ClaudeCommand` builder, single process execution point, and bounded fan-out over many children |
 | `claude_assets_core` | — | 1 | Symlink-based artifact installer domain logic |
 | `claude_journal_charts` | — | 1 | Aggregates journal Command events into a daily-usage SVG bar chart |
 | `claude_daemon_core` | — | 1 | Single-instance session daemon and its IPC protocol |
+| `claude_topic_core` | — | 1 | Topic identity, enumeration, selection, pool naming, and locking |
 | `claude_profile` | `clp` | 2 | Account management, token status, `~/.claude/` paths |
 | `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
@@ -62,7 +64,7 @@ ast .help                    # all ~40 commands in one place
 | `assistant` | `ast` | 3 | Super-app aggregating all Layer 2 CLIs |
 | `assistant_kit` | — | 3 | Agent-agnostic integration layer library |
 
-`*` Seven crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`, `json_redact`, `svg_chart`, `claude_pty_core`) sit outside the layer hierarchy — standalone primitives with no workspace dependencies.
+`*` Eight crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`, `json_redact`, `svg_chart`, `claude_pty_core`, `claude_terminal_core`) sit outside the layer hierarchy — standalone primitives with no workspace dependencies.
 
 `†` `claude_profile_core` → `claude_runner_core` is the one sanctioned same-layer dependency — optional, active only under the `enabled` feature, and registered in `ALLOWED_SAME_LAYER_DEPS`. See [`docs/pattern/001_crate_layering.md`](docs/pattern/001_crate_layering.md).
 
@@ -76,15 +78,17 @@ ast .help                    # all ~40 commands in one place
 *        json_redact              (sensitive-value redaction — standalone primitive)
 *        svg_chart                (SVG line/bar chart rendering — standalone primitive)
 *        claude_pty_core          (pseudo-terminal session mechanics — standalone primitive)
+*        claude_terminal_core     (terminal output → readable plain text — standalone primitive)
 Layer 0: claude_core              (shared primitives — zero workspace deps)
          claude_session_core      (live-session registry, liveness, turn boundaries)
              ↓
 Layer 1: claude_profile_core    † (token status, account domain logic)
          claude_version_core      (version, settings domain helpers)
-         claude_runner_core       (ClaudeCommand builder + execute())
+         claude_runner_core       (ClaudeCommand builder + execute() + bounded fan-out)
          claude_assets_core       (symlink artifact installer domain logic)
          claude_journal_charts    (journal events → daily-usage SVG chart)
          claude_daemon_core       (session daemon + IPC protocol)
+         claude_topic_core        (topic identity, enumeration, selection, pool naming, locking)
              ↓
 Layer 2: dream           (lib)    (library facade — re-exports all core crates: Layer 0, *, 1)
          claude_profile  (clp)    (account management, token status)

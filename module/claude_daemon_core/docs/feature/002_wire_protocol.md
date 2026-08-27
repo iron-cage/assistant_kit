@@ -23,6 +23,7 @@ Internally tagged on `method`, in `snake_case`:
 | `spawn` | `cwd`, `prompt` (optional) | Start an interactive session in `cwd`; deliver `prompt` once ready |
 | `send` | `session_id`, `text` | Deliver `text` to the session's stdin, followed by a carriage return |
 | `read` | `session_id`, `cursor` (optional) | Everything the session produced since `cursor`, as an `OutputSlice` |
+| `context_summary` | `session_id` | What the session's context currently holds, folded from its transcript |
 | `resize` | `session_id`, `rows`, `cols` | Change the session's terminal dimensions |
 | `shutdown` | `session_id` | Stop and reap the session |
 | `stop_daemon` | — | Answer, then shut every session down and stop the daemon |

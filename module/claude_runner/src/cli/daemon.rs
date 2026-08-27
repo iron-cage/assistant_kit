@@ -410,7 +410,10 @@ pub( crate ) fn run_daemon_serve() -> !
   // `Enabled` because `spawn_claude` sets the variable that earns it. The claim
   // and the thing that makes it true are both in this file, on purpose.
   let mut daemon = Daemon::new( paths.sessions_dir(), spawn_claude )
-    .with_background_reporting( BackgroundReporting::Enabled );
+    .with_background_reporting( BackgroundReporting::Enabled )
+    // Read-only, and empty until something has measured a baseline into it — a
+    // context summary reports the overhead split as null until then.
+    .with_baselines( paths.runtime_dir() );
   log_line( &format!( "listening on {} (pid {})", socket.display(), std::process::id() ) );
 
   loop

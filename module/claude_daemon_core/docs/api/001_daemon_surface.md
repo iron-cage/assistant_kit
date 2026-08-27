@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Pin the signature and error contract of every item `claude_daemon_core` exports.
-- **In Scope**: All items re-exported from `lib.rs` — including `BackgroundReporting` and `BG_TASKS_REPORT_RUNNING_ENV`, re-exported from `claude_session_core` because `Daemon::with_background_reporting` takes one — plus the `client`, `ipc`, `listener`, `lock`, `output`, `paths`, `protocol`, `registration`, `render`, `serve`, and `table` modules.
+- **In Scope**: All items re-exported from `lib.rs` — including `BackgroundReporting` and `BG_TASKS_REPORT_RUNNING_ENV`, re-exported from `claude_session_core` because `Daemon::with_background_reporting` takes one — plus the `baseline`, `client`, `context`, `ipc`, `listener`, `lock`, `output`, `paths`, `protocol`, `registration`, `serve`, and `table` modules.
 - **Out of Scope**: The `error` module's internals; construct errors through the operations that return them.
 
 ### Errors
@@ -24,8 +24,11 @@
 | `Error::Remote( String )` | The daemon answered, and its answer was a failure |
 | `Error::Pty( claude_pty_core::Error )` | An operation on the underlying terminal failed |
 | `Error::Registry( claude_session_core::Error )` | Claude Code's session registry could not be read |
+| `Error::Storage( claude_storage_core::Error )` | Claude Code's on-disk conversation storage could not be read |
+| `Error::NoTranscript { session_id }` | The session has no readable transcript — its `cwd` will not encode, or it has not written one yet |
+| `Error::Probe { reason }` | A baseline probe ran and then failed, or answered something unreadable. Distinct from `Io`, which means `claude` could not be run at all — a probe that half-worked must never be recorded as a floor of zero |
 
-`From< io::Error >`, `From< claude_pty_core::Error >`, and `From< claude_session_core::Error >` are implemented, so `?` works across all three boundaries.
+`From< io::Error >`, `From< claude_pty_core::Error >`, `From< claude_session_core::Error >`, and `From< claude_storage_core::Error >` are implemented, so `?` works across all four boundaries.
 
 ### `lock`
 
@@ -67,7 +70,7 @@ A partial line at EOF is returned rather than discarded — a peer that closes w
 
 | Signature | Contract |
 |-----------|----------|
-| `Request` | `#[ non_exhaustive ]`, internally tagged on `method` in `snake_case`. Variants: `Ping`, `ListSessions`, `Spawn { cwd, prompt }`, `Send { session_id, text }`, `Read { session_id, cursor }`, `Resize { session_id, rows, cols }`, `Shutdown { session_id }`, `StopDaemon`. `prompt` and `cursor` are `#[ serde( default ) ]`. |
+| `Request` | `#[ non_exhaustive ]`, internally tagged on `method` in `snake_case`. Variants: `Ping`, `ListSessions`, `Spawn { cwd, prompt }`, `Send { session_id, text }`, `Read { session_id, cursor }`, `ContextSummary { session_id }`, `Resize { session_id, rows, cols }`, `Shutdown { session_id }`, `StopDaemon`. `prompt` and `cursor` are `#[ serde( default ) ]`. |
 | `Response::ok( result : serde_json::Value ) -> Self` | `const`. Serializes as `{ "ok" : true, "result" : … }`. |
 | `Response::err( error : impl Into< String > ) -> Self` | Serializes as `{ "ok" : false, "error" : … }`. |
 | `SessionSummary` | `#[ non_exhaustive ]`. Fields `session_id`, `pid`, `cwd`, `busy`. |
@@ -93,6 +96,59 @@ A partial line at EOF is returned rather than discarded — a peer that closes w
 **Caller obligation:** `OutputPump` holds a clone of the PTY master, which keeps the session alive. Join it only after the child has exited — see [feature/004_session_output.md](../feature/004_session_output.md).
 
 A poisoned buffer mutex is recovered from rather than propagated: a panic in one reader must not make a live session permanently unreadable.
+
+### `context`
+
+| Signature | Contract |
+|-----------|----------|
+| `summary( cwd : &Path, session_id : &str, baselines : Option< &Path > ) -> Result< serde_json::Value >` | Folds the session's transcript into a context summary. `NoTranscript` when `cwd` will not encode or no transcript exists yet; `Storage` when one exists but cannot be read. `baselines` names a directory a `baseline` measurement may be cached in; `None`, or no measurement matching this session's version and model, reports the overhead split as `null` |
+
+Answers `Request::ContextSummary`. The daemon holds none of this state — it comes from the session's own transcript, read through `claude_storage_core`'s `ContextFold` (current context: deferred tools, agent and skill rosters, remaining budget, tasks) and `Session::stats` (token usage).
+
+**Read-only.** The call never writes to, truncates, or re-creates the transcript, so it is safe to issue against a session with a turn in flight.
+
+#### `tokens`
+
+Different questions, different figures. They are not interchangeable, and the sums in particular are not a measure of fullness.
+
+| Field | Source | Answers |
+|-------|--------|---------|
+| `remaining` | Harness reminder, parsed | What the harness says is left. Reported, never computed. `null` if no reminder has appeared |
+| `context` | `Session::stats` — newest call | How full the conversation is **now**: one call's `input + cache_read + cache_creation` |
+| `peak_context` | `Session::stats` — high-water mark | The largest that figure has ever been. Never falls, so after a compaction it describes a conversation that no longer exists |
+| `window` | `remaining + context` | The model's usable window. `null` until a turn has both reported a budget and been billed for a prompt |
+| `static_overhead` | Cached `baseline` measurement | How much of `context` was spent before the first word. `null` until a baseline has been measured for this session's version and model |
+| `conversation` | `context - static_overhead` | The rest of `context` — what the conversation itself occupies. `null` on the same condition |
+| `input` / `output` / `cache_read` / `cache_creation` | `Session::stats` — sums, deduplicated by `message.id` | What the session has **cost**. Every turn re-sends the whole conversation, so in a long session these run to many times the window |
+
+The static system prompt never appears in the transcript as text, but its cost is inside `context` — that figure is what the API billed for the whole prompt, tools and system prompt included. This is why `window` is derivable without measuring anything.
+
+`window` is the only figure here that is not in the transcript in any form: the window belongs to the model and the deployment, not to the conversation. It is reported only when both halves that bracket it are present — a budget alone would put the window at the budget, which is true only of a conversation that costs nothing to send.
+
+The split is the one thing a transcript genuinely cannot supply. The overhead is charged identically on every call and so never varies within a session; separating it takes a conversation with no conversation in it, which is what `baseline` measures. Both halves of the cache key come from the session itself — `version` from its newest line, `model` from its first assistant turn — so a measurement taken against anything else is never applied.
+
+### `baseline`
+
+| Signature | Contract |
+|-----------|----------|
+| `StaticBaseline` | `version`, `model`, `prompt_tokens`, and the three fields it sums. `Serialize`/`Deserialize` |
+| `.conversation_tokens( &self, context : u64 ) -> u64` | Saturating. A `context` below the floor means the floor moved, not a negative conversation |
+| `probe_args( model : Option< &str > ) -> Vec< String >` | `--print --output-format json --no-session-persistence [--model M] "hi"` |
+| `parse_probe( version : &str, stdout : &str ) -> Result< StaticBaseline >` | `Probe` when the output is not JSON, carries no `usage`, or names no model |
+| `measure( claude : &Path, version : &str, model : Option< &str > ) -> Result< StaticBaseline >` | **Spends a real API call.** `Io` when `claude` cannot be run; `Probe` when it runs and fails, carrying its stderr |
+| `cache_path( runtime_dir : &Path ) -> PathBuf` | `runtime_dir/baseline.json` |
+| `load( runtime_dir, version, model ) -> Option< StaticBaseline >` / `load_all( runtime_dir ) -> BTreeMap<..>` | A cache that cannot be read or parsed yields nothing, never an error — it is a memo, and a corrupt one should cost a re-measurement |
+| `store( runtime_dir : &Path, baseline : &StaticBaseline ) -> Result< () >` | Replaces any earlier measurement of the same version and model; creates `runtime_dir` |
+
+`prompt_tokens` sums `input + cache_read + cache_creation` rather than reading `input_tokens` alone. The static prompt is identical on every call and so is precisely what prompt caching captures — `input_tokens` alone would put the floor at a few hundred tokens and swing by an order of magnitude between a cold and a warm cache.
+
+**There is no `measure` request in the wire protocol, deliberately.** The daemon is single-threaded and serves one request at a time, so probing inside it would freeze every hosted session for a full API round trip — the same reason `send` does not wait for a turn. A probe also needs nothing the daemon holds, so whoever knows where `claude` is calls `measure` and `store` directly. The daemon's half is `load`, on a request already reading files, wired by `Daemon::with_baselines`.
+
+See `claude_storage_core`'s [data_structure/004_session_context_state.md](../../../claude_storage_core/docs/data_structure/004_session_context_state.md).
+
+`counters.has_unmodelled` reports whether the transcript held a line or attachment kind this build cannot model — when true, the rosters above may under-report, and a client cannot otherwise distinguish an empty roster from an unparsed one.
+
+The JSON is projected field by field here rather than derived from `Serialize`: `claude_storage_core` has zero runtime dependencies and so does not serialize its own types. Keeping the projection on this side is what preserves that guarantee, and it leaves the wire shape owned by the protocol rather than by a struct layout.
 
 ### `registration`
 
@@ -149,6 +205,7 @@ The socket is removed on drop. `UnixListener` does not do this, and the file out
 | `Daemon::new( sessions_dir : impl Into< PathBuf >, spawner : S ) -> Self` | `S : FnMut( &Path ) -> Result< PtySession >` — the library does not decide what a session runs |
 | `.with_registration_timeout( self, timeout : Duration ) -> Self` | `#[ must_use ]`. Overrides `REGISTRATION_TIMEOUT` |
 | `.with_background_reporting( self, reporting : BackgroundReporting ) -> Self` | `const`, `#[ must_use ]`. Declares whether `spawner` sets `BG_TASKS_REPORT_RUNNING_ENV`. Defaults to `Unknown`; claiming `Enabled` falsely makes `busy` go false with background work outstanding |
+| `.with_baselines( self, dir : impl Into< PathBuf > ) -> Self` | `#[ must_use ]`. Reads cached `baseline` measurements from `dir` when answering `context_summary`. Read-only — the daemon never measures. Absent, the overhead split is reported as `null` |
 | `.sessions( &self ) -> &SessionTable` | `const`. What is currently hosted |
 | `.stop_requested( &self ) -> bool` | `const`. Set by `StopDaemon`; checked by the main loop after the answer is written |
 | `.dispatch( &mut self, request : Request ) -> Response` | Infallible: every failure becomes `Response::err` |
@@ -215,4 +272,3 @@ cd module/claude_daemon_core && cargo doc --no-deps --all-features
 | test | `tests/table_test.rs` | Table operations and teardown |
 | test | `tests/listener_test.rs` | The socket's lifecycle |
 | test | `tests/serve_test.rs` | End-to-end dispatch over a real socket |
-| test | `tests/render_test.rs` | Escape removal, cursor motion, and trimming |

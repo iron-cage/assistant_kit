@@ -69,10 +69,12 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
-//! See [spec.md](../spec.md) for complete documentation.
+//! See `docs/` for complete documentation — `docs/feature/` for behavior,
+//! `docs/api/` for the signature contract, `docs/invariant/` for what must hold.
 
 mod command;
 mod control;
+pub mod fanout;
 mod exit_code;
 mod isolated;
 mod types;
@@ -84,6 +86,7 @@ pub mod session_dir;
 pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW };
 pub use crate::control::ControlSession;
 pub use crate::exit_code::signal_exit_code;
+pub use crate::fanout::{ run_bounded, FanoutOutcome, SPAWN_FAILED_EXIT_CODE };
 pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL };
 pub use crate::types::{
   AccountInfo, ActionMode, ContextUsageResult, EffortLevel, ErrorKind, ExecutionOutput,

@@ -1,6 +1,6 @@
 # Subcommand: doctor
 
-Check the health of your Claude Code auto-updater.
+Check the health of your Claude Code installation.
 
 ### Usage
 
@@ -20,13 +20,32 @@ None.
 
 ### Description
 
-Diagnostic command that checks the health of the Claude Code auto-updater
-mechanism. Reports issues with update infrastructure, permissions, and
-connectivity that might prevent automatic updates from working.
+Diagnostic command that checks the health of the Claude Code **installation** —
+broader than the auto-updater alone, which is how an earlier revision of this
+doc described it. The live help text in v2.1.220 reads:
+
+> Check the health of your Claude Code installation. Reads settings files in the
+> current directory without a trust prompt. For a full checkup that can also fix
+> issues, run `/doctor` in a session.
+
+Two properties worth noting, both stated in that text:
+
+- **No trust prompt.** It reads settings files in the current directory without
+  prompting for directory trust, which makes it safe to run as a first step in
+  an unfamiliar checkout.
+- **Read-only.** The CLI subcommand diagnoses but does not repair. The
+  `/doctor` slash command inside a session is the variant that can also fix
+  what it finds.
 
 ### Since
 
 v2.0.12 (2025-10-09)
+
+### Verification
+
+```bash
+claude doctor --help | head -3    # → the description quoted above
+```
 
 ### Cross-References
 

@@ -81,6 +81,12 @@ pub struct Daemon< S >
   /// call every one of those a transition.
   watchers : HashMap< String, TurnWatcher >,
   reporting : BackgroundReporting,
+  /// Where to look for a cached static baseline, if anywhere.
+  ///
+  /// Read from while answering [`Request::ContextSummary`] and never written to.
+  /// Taking a measurement is deliberately not something this daemon does — see
+  /// [`Daemon::with_baselines`].
+  baselines : Option< PathBuf >,
 }
 
 impl< S > Daemon< S >
@@ -107,6 +113,7 @@ where
       // sessions it starts carry the guarantee, and this crate does not own
       // `spawner`.
       reporting : BackgroundReporting::Unknown,
+      baselines : None,
     }
   }
 
@@ -134,6 +141,33 @@ where
   pub const fn with_background_reporting( mut self, reporting : BackgroundReporting ) -> Self
   {
     self.reporting = reporting;
+    self
+  }
+
+  /// Read cached static baselines from `dir` when summarizing context.
+  ///
+  /// Lets [`Request::ContextSummary`] divide a session's context into fixed
+  /// overhead and actual conversation. Without it — or with no measurement on
+  /// file for the session's version and model — that split is reported as
+  /// `null`, and nothing else in the summary changes.
+  ///
+  /// # Why the daemon reads these but never takes them
+  ///
+  /// A measurement is one `--print` call to the API: seconds of latency, and it
+  /// spends the user's tokens. This daemon is single-threaded and serves one
+  /// request at a time, so measuring here would freeze every other session for
+  /// the length of a network round trip — the same reason [`Daemon::send`] does
+  /// not wait for a turn to finish.
+  ///
+  /// So measuring belongs to whoever knows where `claude` is, using
+  /// [`crate::baseline::measure`] and [`crate::baseline::store`] directly. The
+  /// daemon's half is the cheap half: a local file read on a request that is
+  /// already reading files.
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_baselines( mut self, dir : impl Into< PathBuf > ) -> Self
+  {
+    self.baselines = Some( dir.into() );
     self
   }
 
@@ -210,6 +244,13 @@ where
       Request::Read { session_id, cursor } =>
       {
         Ok( json!( self.sessions.get( &session_id )?.read_from( cursor ) ) )
+      },
+      Request::ContextSummary { session_id } =>
+      {
+        // Resolved through the table so an unknown id is reported as such, and
+        // so the cwd comes from the daemon's own record rather than the client.
+        let cwd = self.sessions.get( &session_id )?.cwd().to_path_buf();
+        crate::context::summary( &cwd, &session_id, self.baselines.as_deref() )
       },
       Request::Resize { session_id, rows, cols } =>
       {

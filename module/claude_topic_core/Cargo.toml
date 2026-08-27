@@ -1,0 +1,43 @@
+[package]
+name = "claude_topic_core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_topic_core"
+description = "Core library for Claude Code topics: identity, enumeration, selection, and exclusion"
+keywords = [ "claude", "topic", "session", "fork", "registry" ]
+categories = [ "development-tools" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Topic identity is a function of the canonical base path and the session storage
+# layout — both owned by claude_storage_core. Nothing here re-derives either.
+claude_storage_core = { workspace = true }
+# Selection needs to know which topics are mid-turn, which is a /proc argv scan.
+# claude_core owns that scan; this crate reads its ProcessInfo::args, never /proc.
+claude_core = { workspace = true }
+# Stale-lock reclaim needs to know whether a recorded pid is really running.
+# `pid_alive` carries four clauses and two production bugs' worth of knowledge
+# about why /proc/{pid} existence is not that answer — never reimplement it here.
+claude_session_core = { workspace = true }
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]
+
+[dev-dependencies]
+tempfile = { workspace = true }
+# An integration test links against this crate plus its dev-dependencies only —
+# never its regular dependencies. Both are re-listed here so tests can build the
+# `ProcessInfo` values selection is judged against, and resolve the storage paths
+# identity computes, without either being re-exported from this crate's own API.
+claude_storage_core = { workspace = true }
+claude_core = { workspace = true }

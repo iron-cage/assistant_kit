@@ -54,7 +54,26 @@ pub struct SessionStats
   /// cache_read_input_tokens + cache_creation_input_tokens` for one
   /// deduplicated assistant message (see `Fix(issue-038)` in `session.rs`).
   /// `0` when the session has no assistant messages.
+  ///
+  /// A high-water mark, *not* the model's context window. It can fall below a
+  /// previous peak's worth of content after a compaction and never decreases.
+  /// For how much the conversation occupies right now, see
+  /// [`Self::last_context_tokens`].
   pub max_context_tokens : u64,
+
+  /// Most recent API call's context size, computed exactly like
+  /// [`Self::max_context_tokens`] but kept rather than maximized. `0` when the
+  /// session has no assistant messages.
+  ///
+  /// This is what the conversation currently occupies. It is not derivable from
+  /// the `total_*` sums: every turn re-sends the whole conversation, so those
+  /// sums grow with the number of turns and exceed the window many times over in
+  /// a long session. Only the latest call describes the present.
+  ///
+  /// The static system prompt is included here even though its *text* never
+  /// appears in the transcript, because the figure is what the API charged for
+  /// the whole prompt.
+  pub last_context_tokens : u64,
 
   /// Model name from the first parsed assistant message carrying one
   /// (first-entry-wins, mirroring `cwd`). `None` when no assistant message
@@ -84,6 +103,7 @@ impl SessionStats
       last_timestamp : None,
       cwd : None,
       max_context_tokens : 0,
+      last_context_tokens : 0,
       model : None,
     }
   }

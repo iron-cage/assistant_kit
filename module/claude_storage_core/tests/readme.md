@@ -5,11 +5,13 @@
 The claude_storage_core test suite covers the core storage library: JSON parsing, path
 encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
 discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, canonical
-path resolution, and the wider session-event schema covering every JSONL line kind. Every test is
+path resolution, the wider session-event schema covering every JSONL line kind, the context
+state folded from that event stream, and reading one turn's assistant answer out of a
+transcript that is still being written. Every test is
 hermetic: storage-facing tests build their own `TempDir` tree — shared builders live in
 `storage_fixture/` — and environment-facing tests override `HOME`/`CLAUDE_HOME` to a temp
 directory, so no test reads the developer's real `~/.claude/`.
-Fourteen of the twenty-eight files are bug reproducers — each documents a parse,
+Fourteen of the thirty files are bug reproducers — each documents a parse,
 encoding, or storage defect found in production data with 5-section root-cause documentation.
 `status_global_stats_fast_bug.rs` covers both issue-015 (performance) and issue-018 (agent
 session discovery for Claude Code v2.x format) with corner case tests for subagents/ traversal.
@@ -26,9 +28,11 @@ tests/
 ├── readme.md                              # This file — test suite organization
 ├── scope_test.rs                          # Unit tests for scope_for(), git_root_for(), ClaudeScope
 ├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
+├── context_test.rs                        # Unit tests for ContextFold — delta accumulation and incremental reads
 ├── session_id_tests.rs                    # Unit tests for SessionId newtype
 ├── cost_report_test.rs                    # Unit tests for cost::cost_report() and aggregate_reports()
 ├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
+├── transcript_answer_test.rs              # Reading one turn's assistant answer out of a live transcript
 ├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── entries_count_stats_line_read_failure_bug.rs # Bug Reproducer (BUG-508): entries()/count_entries()/stats() hard-failed whole file on one non-UTF-8 line
@@ -47,6 +51,7 @@ tests/
 ├── search_export_line_read_failure_bug.rs # Bug Reproducer (BUG-503): search()/export_json() dropped matches on one non-UTF-8 line
 ├── session_stats_dedup_bug.rs             # Bug Reproducer (issue-038): stats() double-counted tokens/turns per JSONL line
 ├── sessions_filtered_corrupted_session_bug.rs # Bug Reproducer (BUG-506): sessions_filtered() discarded project on one corrupted session
+├── stats_context_tokens_test.rs           # Feature tests: SessionStats.last_context_tokens — current size, not the sum
 ├── stats_cwd_field_test.rs                # Feature tests (Task 510): SessionStats.cwd populated first-entry-wins
 ├── stats_malformed_line_bug.rs            # Bug Reproducer (BUG-489): stats() hard-fail on malformed line
 ├── status_global_stats_fast_bug.rs        # Bug Reproducer (issue-015): global_stats() performance
@@ -63,9 +68,11 @@ tests/
 |------|----------------|
 | `scope_test.rs` | Unit tests for `scope_for()`, `git_root_for()`, and `ClaudeScope` path computation |
 | `continuation_tests.rs` | Integration tests for `check_continuation`, `most_recent_session_id`, `most_recent_session_in_dir`, and `to_storage_path_for` |
+| `context_test.rs` | Unit tests for `ContextFold`: delta accumulation, sidechain exclusion, partial-line and truncation handling on incremental reads |
 | `session_id_tests.rs` | Unit tests for `SessionId` newtype: construction, display, clone, and `From` conversions |
 | `cost_report_test.rs` | Unit tests for `cost::cost_report()`/`aggregate_reports()`: per-model attribution, TTL split, compactions, dedup |
 | `topic_session_tests.rs` | Golden-vector tests for the topic→UUIDv5 session rule |
+| `transcript_answer_test.rs` | Unit tests (CA-1–CA-8) for `transcript_path()`/`transcript_mark()`/`transcript_answer_since()`: assistant text blocks past the mark, thinking/tool blocks excluded, non-conversation lines neither counted nor printed, and the grace period for a transcript still being flushed |
 | `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `entries_count_stats_line_read_failure_bug.rs` | Lock in per-line skip for `entries()`/`count_entries()`/`stats()` on a non-UTF-8 line; regression guard for BUG-508 |
@@ -84,6 +91,7 @@ tests/
 | `search_export_line_read_failure_bug.rs` | Lock in per-line skip for `search()`/`export_json()` on a non-UTF-8 line; regression guard for BUG-503 |
 | `session_stats_dedup_bug.rs` | Reproduce and verify fix for `stats()` per-line (not per-`message.id`) double-counting |
 | `sessions_filtered_corrupted_session_bug.rs` | Lock in that one corrupted session must not discard a project's other valid sessions; regression guard for BUG-506 |
+| `stats_context_tokens_test.rs` | `SessionStats.last_context_tokens`: newest turn's size, dedup, compaction, cached tokens |
 | `stats_cwd_field_test.rs` | Task 510: SessionStats.cwd populated first-entry-wins from JSONL cwd field |
 | `stats_malformed_line_bug.rs` | Reproduce and verify fix for stats() hard-fail on malformed JSONL line |
 | `status_global_stats_fast_bug.rs` | Reproduce and verify fix for global_stats() performance bug |

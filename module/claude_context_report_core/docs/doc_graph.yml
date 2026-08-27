@@ -1,0 +1,50 @@
+meta:
+  description: Cross-reference graph for all NNN-identified doc instances in claude_context_report_core
+  node_count: 4
+  edge_count: 8
+  component_count: 1
+  generated: 2026-08-27
+
+nodes:
+  - id: feature/001
+    file: feature/001_context_report.md
+    label: Context Report
+    entity: feature
+  - id: feature/002
+    file: feature/002_cli_contract.md
+    label: CLI Contract
+    entity: feature
+  - id: format/001
+    file: format/001_context_report_tables.md
+    label: Context Report Tables
+    entity: format
+  - id: invariant/001
+    file: invariant/001_no_private_data.md
+    label: No Private Data In Rendered Reports
+    entity: invariant
+
+edges:
+  - from: feature/001
+    to: feature/002
+    via: cross_references
+  - from: feature/001
+    to: format/001
+    via: cross_references
+  - from: feature/001
+    to: invariant/001
+    via: cross_references
+  - from: feature/002
+    to: feature/001
+    via: cross_references
+  - from: feature/002
+    to: format/001
+    via: cross_references
+  - from: feature/002
+    to: invariant/001
+    via: cross_references
+  - from: format/001
+    to: invariant/001
+    via: cross_references
+  - from: invariant/001
+    to: format/001
+    via: cross_references

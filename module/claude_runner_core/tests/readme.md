@@ -23,6 +23,7 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `float_edge_cases_test.rs` | Test float parameter edge cases (NaN, infinity, negative) |
 | `verbose_and_path_edge_cases_test.rs` | Test verbose flag and path parameter edge cases |
 | `describe_test.rs` | Test describe() and describe_env() command inspection methods |
+| `fanout_test.rs` | Test bounded fan-out: concurrency ceiling, input ordering, failure isolation |
 | `execution_output_test.rs` | Test ExecutionOutput struct fields and Display formatting |
 | `skip_permissions_test.rs` | Test skip_permissions flag and --dangerously-skip-permissions arg |
 | `session_dir_tests.rs` | Test SessionManager directory creation and Strategy string parsing |

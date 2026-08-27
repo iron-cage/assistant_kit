@@ -4,12 +4,12 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps) and its known deviations, dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, claude_journal, svg_chart, json_redact, claude_pty_core — outside hierarchy).
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps) and its known deviations, dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, claude_journal, svg_chart, json_redact, claude_pty_core, claude_terminal_core — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
 
-A workspace with 24 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 26 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -22,10 +22,11 @@ Layer 2: dream                                                      (lib — not
          claude_assets · claude_version · claude_runner · claude_profile · claude_storage · claude_journal_viewer  (cli)
              ↓
 Layer 1: claude_assets_core · claude_profile_core † · claude_version_core · claude_runner_core · claude_journal_charts
-         claude_daemon_core
+         claude_daemon_core · claude_topic_core
              ↓
 Layer 0: claude_core                                                  (zero workspace deps — ClaudePaths + process utilities)
          claude_session_core                                            (live-session registry; deps only on Layer * claude_storage_core)
+         claude_context_report_core ‡                                   (context report model; deps only on Layer * claude_storage_core + json_redact)
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
@@ -33,9 +34,12 @@ Layer 0: claude_core                                                  (zero work
 *        svg_chart                                                       (zero workspace deps — SVG line/bar chart renderer)
 *        json_redact                                                     (zero workspace deps — sensitive-value redaction)
 *        claude_pty_core                                                 (zero workspace deps — pseudo-terminal session mechanics)
+*        claude_terminal_core                                            (zero workspace deps — terminal output → readable plain text)
 ```
 
 `†` participates in the one sanctioned same-layer exception — see **Sanctioned Same-Layer Exception** below.
+
+`‡` docs-only planned crate — specified, no manifest, not a workspace member. Its layer is fixed in advance because the placement is load-bearing: see **Layer 0 By Dependency Shape** below.
 
 **Dependencies per crate:**
 
@@ -43,6 +47,7 @@ Layer 0: claude_core                                                  (zero work
 |-------|-------|------|----------|
 | 0 | `claude_core` | lib | — |
 | 0 | `claude_session_core` | lib | — |
+| 0 | `claude_context_report_core` ‡ | lib (planned) | — |
 | * | `claude_storage_core` | lib | — |
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
@@ -50,12 +55,14 @@ Layer 0: claude_core                                                  (zero work
 | * | `svg_chart` | lib | — |
 | * | `json_redact` | lib | — |
 | * | `claude_pty_core` | lib | — |
+| * | `claude_terminal_core` | lib | — |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` † | lib | — |
 | 1 | `claude_version_core` | lib | — |
 | 1 | `claude_runner_core` | lib | — |
 | 1 | `claude_journal_charts` | lib | — |
 | 1 | `claude_daemon_core` | lib | — |
+| 1 | `claude_topic_core` | lib | — |
 | 2 | `dream` | lib | — |
 | 2 | `claude_assets` | cli | `claude_assets`, `cla` |
 | 2 | `claude_profile` | cli | `clp`, `claude_profile` |
@@ -68,7 +75,7 @@ Layer 0: claude_core                                                  (zero work
 
 `*` = outside layer hierarchy.
 
-**Layer `*` position:** Seven crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only external crate deps):
+**Layer `*` position:** Eight crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only external crate deps):
 - `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
@@ -76,6 +83,22 @@ Layer 0: claude_core                                                  (zero work
 - `svg_chart` — SVG line/bar chart renderer wrapping `plotters`; zero workspace deps; wrapped by Layer 1's `claude_journal_charts`
 - `json_redact` — domain-agnostic sensitive-value redaction; zero workspace deps; consumed by Layer 2's `claude_profile`
 - `claude_pty_core` — pseudo-terminal session mechanics; zero workspace deps; consumed by Layer 1's `claude_daemon_core` and Layer 2's `claude_runner`
+- `claude_terminal_core` — interprets a terminal output stream as readable plain text; zero workspace deps; consumed by Layer 2's `claude_runner`. Note it is *not* consumed by `claude_daemon_core`, which hosts the terminals: rendering their bytes needs neither a daemon nor a pty, so the daemon has no reason to depend on it
+
+### Layer 0 By Dependency Shape
+
+A crate whose *only* workspace dependencies are Layer `*` primitives belongs at **Layer 0**, not Layer 1. Layer `*` sits outside the numbered hierarchy, so depending on it consumes no layer budget — such a crate is as close to the root as `claude_core`, which has no workspace deps at all.
+
+Two crates hold this position:
+
+| Crate | Layer `*` deps | Consumed by |
+|-------|----------------|-------------|
+| `claude_session_core` | `claude_storage_core` | `claude_daemon_core` (Layer 1) |
+| `claude_context_report_core` ‡ | `claude_storage_core`, `json_redact` | `claude_daemon_core` (Layer 1), `claude_runner` (Layer 2) |
+
+**The placement is load-bearing, not cosmetic.** Both crates have a Layer 1 consumer. Placing either at Layer 1 — the intuitive spot for "domain logic over a primitive" — would make that edge a same-layer dependency, which the Layer Invariant forbids and `cl1_no_same_layer_deps` fails. The alternative would be a second sanctioned exception, buying with a permanent hole in the invariant what the correct layer assignment gives for free.
+
+The test to apply when adding a crate is therefore mechanical: **list its workspace deps; if every one is Layer `*`, it is Layer 0.** Reaching for Layer 1 because the crate "feels like domain logic" is how a same-layer edge gets proposed.
 
 ### Sanctioned Same-Layer Exception
 

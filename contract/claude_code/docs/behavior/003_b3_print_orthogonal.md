@@ -24,7 +24,7 @@ claude -p -c "message"       # resume session + print output
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E3 | B3 | Code | `../../../../module/claude_runner/src/main.rs` | lines 83, 124 | `-p, --print  Non-interactive mode` and `-p` branch sets print-only; no session flag change |
+| E3 | B3 | Code | `../../../../module/claude_runner/src/cli/help.rs`, `../../../../module/claude_runner/src/cli/parse.rs` | `grep -n '"--print"'` (was `main.rs:83,124`) | `OptionEntry { name : "-p, --print", desc : "Non-interactive mode (capture and print output)" }` in `help.rs`; the `"-p" \| "--print" =>` branch in `parse.rs` sets print-only; no session flag change |
 | E13 | B3 | Test | `../../tests/behavior/b03_print_flag.rs` | `b3_print_flag_documented_as_output_mode` | `claude --help` documents `-p` / `--print` as output mode |
 
 ### Cross-References

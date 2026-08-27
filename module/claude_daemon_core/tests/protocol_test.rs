@@ -28,6 +28,7 @@
 //! | proto13 | `Read` | Names a session id and a cursor |
 //! | proto14 | `Read` with `cursor` absent | Deserializes to `0` |
 //! | proto15 | `OutputSlice` | Field names as documented |
+//! | proto16 | `ContextSummary` | Names a session id and nothing else |
 
 use std::path::PathBuf;
 
@@ -51,6 +52,7 @@ fn every_request() -> Vec< Request >
     Request::Send { session_id : "conv-1".into(), text : "hi".into() },
     Request::Read { session_id : "conv-1".into(), cursor : 0 },
     Request::Read { session_id : "conv-1".into(), cursor : 8_192 },
+    Request::ContextSummary { session_id : "conv-1".into() },
     Request::Resize { session_id : "conv-1".into(), rows : 40, cols : 132 },
     Request::Shutdown { session_id : "conv-1".into() },
     Request::StopDaemon,
@@ -111,6 +113,10 @@ fn proto04_session_requests_are_keyed_by_conversation_id()
   assert_eq!(
     wire( &Request::Shutdown { session_id : "conv-1".into() } ),
     json!( { "method" : "shutdown", "session_id" : "conv-1" } ),
+  );
+  assert_eq!(
+    wire( &Request::ContextSummary { session_id : "conv-1".into() } ),
+    json!( { "method" : "context_summary", "session_id" : "conv-1" } ),
   );
 
   for request in every_request()
@@ -291,4 +297,24 @@ fn proto15_output_slice_shape()
   )
   .expect( "slice failed to parse" );
   assert_eq!( back, slice );
+}
+
+/// proto16: `ContextSummary` names a session id and carries nothing else.
+///
+/// It is a pure read of the session's own transcript. Carrying no cursor, no
+/// text, and no options is what makes it safe to issue against a session with a
+/// turn in flight — there is nothing in the request that could disturb one.
+#[ test ]
+fn proto16_context_summary_names_only_a_session()
+{
+  let request = Request::ContextSummary { session_id : "conv-1".into() };
+  let wire_form = wire( &request );
+
+  assert_eq!( wire_form, json!( { "method" : "context_summary", "session_id" : "conv-1" } ) );
+
+  let object = wire_form.as_object().expect( "request should be a JSON object" );
+  assert_eq!( object.len(), 2, "context_summary carries only method and session_id" );
+
+  let back : Request = serde_json::from_value( wire_form ).expect( "failed to parse" );
+  assert_eq!( back, request );
 }

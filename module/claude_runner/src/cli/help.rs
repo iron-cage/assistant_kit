@@ -17,6 +17,9 @@ pub( crate ) fn print_help()
     "clr tools".to_string(),
     "clr scope [--dir <PATH>]".to_string(),
     "clr topics [--path <NAME> | --file <NAME>] [--global]".to_string(),
+    "clr pool [OPTIONS] <N>".to_string(),
+    "clr delegate [OPTIONS] <MSG>".to_string(),
+    "clr broadcast [OPTIONS] <MSG>".to_string(),
     "clr isolated [OPTIONS]".to_string(),
     "clr refresh [OPTIONS]".to_string(),
     "clr query \"<MSG>\" [--dir <PATH>]".to_string(),
@@ -36,6 +39,9 @@ pub( crate ) fn print_help()
         CommandEntry { name : "ask".to_string(),      desc : "Semantic alias for run (identical behavior)".to_string() },
         CommandEntry { name : "topic".to_string(),    desc : "Auto-named topic session (run/ask + generated --topic)".to_string() },
         CommandEntry { name : "topics".to_string(),   desc : "List topic sessions, or resolve one topic name to its path".to_string() },
+        CommandEntry { name : "pool".to_string(),     desc : "Make sure N anonymous topics (t1, t2, …) exist under a base".to_string() },
+        CommandEntry { name : "delegate".to_string(), desc : "Send one prompt to one topic, chosen by policy instead of by name".to_string() },
+        CommandEntry { name : "broadcast".to_string(), desc : "Send one prompt to every live topic, bounded by --concurrency".to_string() },
         CommandEntry { name : "isolated".to_string(), desc : "Run with credential-isolated temp HOME".to_string() },
         CommandEntry { name : "refresh".to_string(),  desc : "Refresh OAuth credentials without a task".to_string() },
         CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
@@ -520,6 +526,168 @@ pub( crate ) fn print_topics_help() -> !
   println!( "  0  Success — including an empty base (note printed to stderr)" );
   println!( "  1  Error — unknown option, a flag without its value, --path with --file," );
   println!( "     or unresolvable session storage for --file" );
+  std::process::exit( 0 );
+}
+
+pub( crate ) fn print_delegate_help() -> !
+{
+  println!( "clr delegate — Send one prompt to one topic, chosen for you" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr delegate [OPTIONS] <MESSAGE>" );
+  println!();
+  println!( "Picks one live topic under the base and runs the prompt there instead of" );
+  println!( "here, then prints that run's output and exits with its exit code — so a" );
+  println!( "delegated failure looks exactly like a local one." );
+  println!();
+  println!( "Only topics that already hold a session are candidates. A topic with no" );
+  println!( "session has no conversation to continue; sending to it would start one," );
+  println!( "which is not what \"delegate this\" asks for. Run `clr topics` to see the" );
+  println!( "full list including the ones skipped here." );
+  println!();
+  println!( "SELECTION:" );
+  println!( "  --pick idle          Draw from topics with no turn in flight (default)." );
+  println!( "                       When every topic is busy, falls back to the full set" );
+  println!( "                       and says so on stderr — never refuses to pick." );
+  println!( "  --pick random        Draw from every topic, busy or not." );
+  println!( "  --seed <N>           Fix the draw. The same seed over the same topic list" );
+  println!( "                       always picks the same topic — use it to reproduce a run." );
+  println!();
+  println!( "BASE DIRECTORY (highest precedence first):" );
+  println!( "  --dir <PATH>         Explicit base — outranks --global" );
+  println!( "  --global             $CLR_TOPIC_HOME, else <system temp dir>/clr-topic" );
+  println!( "  (neither)            Current working directory" );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  --dir <PATH>, --to <PATH>  Base directory to enumerate topics under" );
+  println!( "  -g, --global               Use the global topic home as the base [env: CLR_GLOBAL]" );
+  println!( "  --pick <idle|random>       Selection policy (default: idle)" );
+  println!( "  --seed <N>                 Fix the draw for reproducibility" );
+  println!( "  --message <TEXT>           The prompt (also accepted as positional text)" );
+  println!( "  -n, --dry-run              Print the chosen topic and the command, run nothing" );
+  println!( "  -h, --help                 Show this help" );
+  println!();
+  println!( "ENVIRONMENT:" );
+  println!( "  CLR_TOPIC_HOME             Global topic home (default: <system temp dir>/clr-topic)" );
+  println!( "  CLR_TOPIC_REGISTRY_DIR     Fork-topic name registry root (default: ~/.clr/topics)" );
+  println!( "  CLR_TOPIC_LOCK             Set to 1 to hold an advisory per-topic lock for the run" );
+  println!();
+  println!( "EXAMPLES:" );
+  println!( "  clr delegate \"summarize what changed today\"" );
+  println!( "  clr delegate --pick random --seed 42 \"run the test suite\"" );
+  println!( "  clr delegate --dry-run -- --this-is-message-text-not-a-flag" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  *  The delegated run's own exit code" );
+  println!( "  1  Error — no live topics, bad option, missing message, or topic held elsewhere" );
+  std::process::exit( 0 );
+}
+
+pub( crate ) fn print_broadcast_help() -> !
+{
+  println!( "clr broadcast — Send one prompt to every live topic" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr broadcast [OPTIONS] <MESSAGE>" );
+  println!();
+  println!( "Runs the same prompt in every live topic under the base, at most" );
+  println!( "--concurrency at a time, and prints one block per topic. Blocks come back" );
+  println!( "in listing order, never completion order, so two runs of the same" );
+  println!( "broadcast are directly comparable." );
+  println!();
+  println!( "The concurrency bound is a token-spend rate, not a scheduling detail:" );
+  println!( "every child is a full Claude Code session, so twenty topics started at" );
+  println!( "once is twenty times the spend in the same instant and a rate-limit wall" );
+  println!( "that fails all twenty. The default of 4 is deliberate." );
+  println!();
+  println!( "Only topics that already hold a session are targets — see `clr topics`" );
+  println!( "for the full list, and `clr delegate --help` for why." );
+  println!();
+  println!( "BASE DIRECTORY (highest precedence first):" );
+  println!( "  --dir <PATH>         Explicit base — outranks --global" );
+  println!( "  --global             $CLR_TOPIC_HOME, else <system temp dir>/clr-topic" );
+  println!( "  (neither)            Current working directory" );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  --dir <PATH>, --to <PATH>  Base directory to enumerate topics under" );
+  println!( "  -g, --global               Use the global topic home as the base [env: CLR_GLOBAL]" );
+  println!( "  -j, --concurrency <N>      Children in flight at once (default: 4)" );
+  println!( "  --message <TEXT>           The prompt (also accepted as positional text)" );
+  println!( "  -n, --dry-run              Print every command that would run, run nothing" );
+  println!( "  -h, --help                 Show this help" );
+  println!();
+  println!( "ENVIRONMENT:" );
+  println!( "  CLR_TOPIC_HOME             Global topic home (default: <system temp dir>/clr-topic)" );
+  println!( "  CLR_TOPIC_REGISTRY_DIR     Fork-topic name registry root (default: ~/.clr/topics)" );
+  println!( "  CLR_TOPIC_LOCK             Set to 1 to hold an advisory per-topic lock for the run" );
+  println!();
+  println!( "EXAMPLES:" );
+  println!( "  clr broadcast \"what are you working on?\"" );
+  println!( "  clr broadcast -j 2 --global \"stop and summarize\"" );
+  println!( "  clr broadcast --dry-run \"check the plan first\"" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  0  Every topic's run exited 0" );
+  println!( "  1  At least one run failed, or no live topics, or a bad option" );
+  std::process::exit( 0 );
+}
+
+pub( crate ) fn print_pool_help() -> !
+{
+  println!( "clr pool — Make sure N anonymous topics exist" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr pool [OPTIONS] <N>" );
+  println!( "  clr pool [OPTIONS] --count <N>" );
+  println!();
+  println!( "Creates topics named t1, t2, t3 … — names that carry no meaning, for when" );
+  println!( "you need somewhere to put work and do not yet know what the work will be." );
+  println!( "Use `clr topic <message>` instead when the topic is about something: that" );
+  println!( "one names itself after the message that opened it." );
+  println!();
+  println!( "--count is a target, not an increment: \"make sure four exist\", never \"add" );
+  println!( "four more\". Running it twice creates nothing the second time, so it is safe" );
+  println!( "in a script that may run twice. Gaps are filled before the range is" );
+  println!( "extended — with t1 and t3 present, a target of 4 creates t2 and t4." );
+  println!();
+  println!( "Only topics that already hold a session count toward the target, so a pool" );
+  println!( "name whose session was deleted is refilled rather than counted. That keeps" );
+  println!( "`clr pool --count 4 && clr broadcast ...` reaching exactly four." );
+  println!();
+  println!( "Creating a topic means running one: each missing name costs one real Claude" );
+  println!( "Code turn. Use --dry-run first — it prints the whole plan for free." );
+  println!();
+  println!( "BASE DIRECTORY (highest precedence first):" );
+  println!( "  --dir <PATH>         Explicit base — outranks --global" );
+  println!( "  --global             $CLR_TOPIC_HOME, else <system temp dir>/clr-topic" );
+  println!( "  (neither)            Current working directory" );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  --count <N>                How many pool topics must exist (also positional)" );
+  println!( "  --prefix <P>               Pool name prefix (default: t; may not end in a digit)" );
+  println!( "  --topic-mode <fork|dir>    Mechanism for the topics created (default: fork)" );
+  println!( "  --dir <PATH>, --to <PATH>  Base directory to create the topics under" );
+  println!( "  -g, --global               Use the global topic home as the base [env: CLR_GLOBAL]" );
+  println!( "  -j, --concurrency <N>      Children in flight at once (default: 4)" );
+  println!( "  --message <TEXT>           Seed prompt for each new topic (default: ready)" );
+  println!( "  -n, --dry-run              Print what would be created, create nothing" );
+  println!( "  -h, --help                 Show this help" );
+  println!();
+  println!( "ENVIRONMENT:" );
+  println!( "  CLR_TOPIC_HOME             Global topic home (default: <system temp dir>/clr-topic)" );
+  println!( "  CLR_TOPIC_REGISTRY_DIR     Fork-topic name registry root (default: ~/.clr/topics)" );
+  println!( "  CLR_TOPIC_LOCK             Set to 1 to hold an advisory per-topic lock for the run" );
+  println!();
+  println!( "EXAMPLES:" );
+  println!( "  clr pool --dry-run 4          See what four topics would cost" );
+  println!( "  clr pool 4                    Create them" );
+  println!( "  clr pool 4                    Again — creates nothing" );
+  println!( "  clr pool --prefix worker 8    worker1 … worker8" );
+  println!( "  clr pool --global --count 3   Three topics in the global topic home" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  0  Every missing topic was created, or none were missing" );
+  println!( "  1  A topic could not be created, or a bad option, prefix, or count" );
   std::process::exit( 0 );
 }
 

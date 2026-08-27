@@ -488,12 +488,12 @@ and dispatch forms, plus the liveness watchdog's socket cleanup).
 ### Env Param 12: `CLR_TOPIC_HOME` — Global Topic Home
 
 Runtime configuration override for the base directory `--global` resolves to
-(`topic_path.rs::topic_home()`). No corresponding CLI flag or `--args-file` JSON key —
+(`claude_topic_core::identity::topic_home()`). No corresponding CLI flag or `--args-file` JSON key —
 env-var-only, matching the `CLR_GATE_DIR` precedent (Env Param 5).
 
 | Variable | Default | Type | Notes |
 |----------|---------|------|-------|
-| `CLR_TOPIC_HOME` | `<temp-dir>/clr-topic` | path | Base for `--global` topic directories; read by `topic_home()` in `topic_path.rs` |
+| `CLR_TOPIC_HOME` | `<temp-dir>/clr-topic` | path | Base for `--global` topic directories; read by `topic_home()` in `claude_topic_core::identity` |
 
 **`CLR_TOPIC_HOME`:** Chooses *where* the global topic home is; [`CLR_GLOBAL`](param/087_global.md)
 (Env Param 1, #65) chooses *whether* it is used at all. Empty or unset falls back to
@@ -509,7 +509,7 @@ CLR_TOPIC_HOME=~/.clr/topic clr topics --global --path notes
 ```
 
 **Commands affected:** `run`, `ask`, `topic`, `topics` — every consumer of
-`topic_path::topic_base()`, and only when `--global` is in effect.
+`claude_topic_core::topic_base()`, and only when `--global` is in effect.
 
 **No precedence rule** — always applied when `--global` is in effect; there is no
 corresponding CLI flag or JSON key. An explicit `--dir` bypasses it entirely by outranking
@@ -520,7 +520,7 @@ corresponding CLI flag or JSON key. An explicit `--dir` bypasses it entirely by 
 ### Env Param 13: `CLR_TOPIC_REGISTRY_DIR` — Fork-Topic Name Registry Root
 
 Runtime configuration override for where fork-mode topic names are recorded
-(`topic_registry.rs::registry_root()`). No corresponding CLI flag or `--args-file` JSON
+(`claude_topic_core::registry`). No corresponding CLI flag or `--args-file` JSON
 key — env-var-only, matching the `CLR_TOPIC_HOME` precedent (Env Param 12).
 
 | Variable | Default | Type | Notes |

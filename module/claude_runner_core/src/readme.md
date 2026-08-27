@@ -10,13 +10,14 @@ This directory contains the core implementation of the `claude_runner_core` crat
 | `command/` | ClaudeCommand builder split into per-tier parameter modules |
 | `control.rs` | Bidirectional control-protocol session over stream-json stdio |
 | `exit_code.rs` | Classify subprocess exit codes/stderr into `ErrorKind` |
+| `fanout.rs` | Run many child commands with a fixed concurrency bound, in input order |
 | `isolated.rs` | One-shot run with isolated temp HOME and injected credentials |
 | `types.rs` | Enum type definitions and conversions |
 | `process.rs` | Scan `/proc` for Claude processes; send SIGTERM/SIGKILL |
 | `ps_table.rs` | Render a `ProcessInfo` slice as a table (feature `ps_table`) |
 | `session_dir.rs` | Directory-based session isolation for invocations |
 
-## Organization (9 entries)
+## Organization (10 entries)
 
 Files organized by responsibility following Rust module conventions.
 
@@ -32,6 +33,7 @@ src/
 │   └── params_extended.rs  # Tier 3+ optional parameters
 ├── control.rs          # Bidirectional control-protocol session (stream-json)
 ├── exit_code.rs        # Exit-code/stderr → ErrorKind classification
+├── fanout.rs           # run_bounded(): N children at once, results in input order
 ├── isolated.rs         # run_isolated(): temp-HOME one-shot execution
 ├── types.rs            # ActionMode, LogLevel enums
 ├── process.rs          # /proc scanner, signal sending

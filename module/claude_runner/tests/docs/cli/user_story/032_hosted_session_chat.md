@@ -51,7 +51,7 @@ automated, and the round trip itself is the part a shim cannot stand in for.
 - **Then:** stdout is exactly `pineapple$` — no box rules, no `❯` input line, no status bar, no spinner frames. The `Starting a session in <dir> …` note is on stderr, so the pipe carries the answer alone
 - **Exit:** 0
 - **Verifies:** AC-1
-- **Implemented by:** `tests/manual/readme.md::MD-1` end to end; `chat_answer_test.rs::ca1_an_assistant_text_block_is_the_answer` and `ca2_thinking_and_tool_blocks_are_not_the_answer` for the reading rule underneath it
+- **Implemented by:** `tests/manual/readme.md::MD-1` end to end; `claude_storage_core/tests/transcript_answer_test.rs::ca1_an_assistant_text_block_is_the_answer` and `ca2_thinking_and_tool_blocks_are_not_the_answer` for the reading rule underneath it
 
 ---
 

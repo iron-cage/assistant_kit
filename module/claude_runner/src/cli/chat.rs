@@ -39,9 +39,11 @@
 //! frames, box rules, and the answer somewhere among them.
 //!
 //! So the answer is read from the session's own transcript instead, as
-//! structured data, keyed by the conversation id the daemon already holds. See
-//! [`super::chat_answer`]. The terminal stays the fallback, and `--raw` still
-//! prints it verbatim for anyone who wants the bytes.
+//! structured data, keyed by the conversation id the daemon already holds. That
+//! reading is not this crate's job — it is a fact about how Claude Code writes
+//! storage, so it lives in [`claude_storage_core::transcript_answer_since`]. The
+//! terminal stays the fallback, and `--raw` still prints it verbatim for anyone
+//! who wants the bytes.
 //!
 //! # Why not just wait for the session to be idle
 //!
@@ -57,9 +59,9 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use claude_daemon_core::{ client, OutputSlice, Request, SessionSummary };
+use claude_storage_core::{ transcript_answer_since, transcript_mark, transcript_path };
 use claude_terminal_core::to_plain_text;
 
-use super::chat_answer;
 use super::daemon::{ daemon_paths, ensure_running };
 
 /// How long to wait for an answer before giving up on it.
@@ -124,8 +126,8 @@ pub( crate ) fn dispatch_chat( tokens : &[ String ] ) -> !
 
   // Both marks are taken before the write, and for the same reason: everything
   // past them is this turn. One marks the terminal, the other the transcript.
-  let transcript = chat_answer::transcript_path( &cwd, &session_id );
-  let entries_before = transcript.as_deref().map_or( 0, chat_answer::mark );
+  let transcript = transcript_path( &cwd, &session_id );
+  let entries_before = transcript.as_deref().map_or( 0, transcript_mark );
 
   let cursor = match client::call( &socket, &Request::Send
   {
@@ -156,7 +158,7 @@ pub( crate ) fn dispatch_chat( tokens : &[ String ] ) -> !
   {
     transcript
       .as_deref()
-      .and_then( | path | chat_answer::answer_since( path, entries_before, TRANSCRIPT_GRACE ) )
+      .and_then( | path | transcript_answer_since( path, entries_before, TRANSCRIPT_GRACE ) )
   };
 
   print_answer( &answer, written.as_deref(), args.raw );
@@ -440,7 +442,7 @@ fn is_busy( socket : &std::path::Path, session_id : &str ) -> bool
 ///
 /// `written` is the answer as the transcript recorded it, when there was one.
 /// It is preferred over the terminal because it is the message rather than a
-/// picture of one — see [`super::chat_answer`].
+/// picture of one — see [`claude_storage_core::transcript_answer_since`].
 fn print_answer( answer : &Answer, written : Option< &str >, raw : bool )
 {
   match ( raw, written )

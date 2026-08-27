@@ -19,6 +19,7 @@ workspace = true
 [dependencies]
 claude_pty_core = { workspace = true }
 claude_session_core = { workspace = true }
+claude_storage_core = { workspace = true }
 claude_core = { workspace = true }
 serde = { workspace = true, features = [ "std", "derive" ] }
 serde_json = { workspace = true }

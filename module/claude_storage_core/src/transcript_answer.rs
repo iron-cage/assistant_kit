@@ -5,7 +5,8 @@
 //! A **transcript** is the on-disk JSONL file at `<claude home>/projects/<encoded
 //! cwd>/<session id>.jsonl`. [`Session`] is the parsed view of one. The two words
 //! are not synonyms here: the transcript is the file being appended to *while*
-//! this module reads it, which is the whole reason [`answer_since`] waits.
+//! this module reads it, which is the whole reason [`transcript_answer_since`]
+//! waits.
 //!
 //! # Why read the file at all
 //!

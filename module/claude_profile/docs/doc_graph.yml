@@ -1,6 +1,6 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 65
+  node_count: 66
   edge_count: 295
   component_count: 1
   generated: 2026-08-18

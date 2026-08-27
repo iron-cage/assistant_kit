@@ -15,7 +15,7 @@
 use super::dispatch_run;
 use super::help::print_topic_help;
 use super::parse::parse_args;
-use super::topic_path::{ topic_base, topic_dir };
+use claude_topic_core::{ topic_base, topic_dir };
 
 /// Longest slug `slug_from_message` will produce before cutting back to a whole-word
 /// boundary. Chosen as a reasonable directory-name length — recorded here as the
@@ -65,7 +65,7 @@ fn slug_from_message( msg : &str ) -> Option< String >
 /// True when `name` is not safe to auto-assign: its working directory already exists
 /// on disk, OR its session storage already holds a qualifying session.
 ///
-/// Uses `topic_path::topic_dir` for the join, so the check is by construction the
+/// Uses `claude_topic_core::topic_dir` for the join, so the check is by construction the
 /// same path `resolve_effective_dir()` will later compute — previously the only site
 /// spelled the `<base>/-<sub>` formula out separately and was kept in sync by hand.
 ///

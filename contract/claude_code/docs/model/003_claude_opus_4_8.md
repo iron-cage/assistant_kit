@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Profile for `claude-opus-4-8` — Anthropic's most capable Opus-tier model, used as the workspace isolated-execution default.
+- **Purpose**: Profile for `claude-opus-4-8` — the previous default Opus, superseded by `claude-opus-5` in v2.1.219.
 - **Responsibility**: Documents this model's API ID, context window, max output, thinking support, availability, and workspace role.
 - **In Scope**: Model ID, alias, capabilities, workspace constant assignment, availability status.
 - **Out of Scope**: Pricing (→ Anthropic docs); cloud platform IDs for Bedrock/Vertex (→ Anthropic docs); model training details.
@@ -22,19 +22,24 @@
 | **Latency** | Moderate |
 | **Knowledge Cutoff** | Jan 2026 (reliable) |
 | **Training Cutoff** | Jan 2026 |
-| **Status** | Active — current Opus |
+| **Status** | Active — **superseded as default Opus by `claude-opus-5` in v2.1.219**; still fast-mode eligible |
 
 ### Workspace Usage
 
-**`ISOLATED_DEFAULT_MODEL`** — the `"opus"` CLI alias resolves to this model at runtime in `module/claude_runner_core/src/isolated.rs`.
-
-Rationale: isolated subprocess runs handle high-complexity user tasks (reasoning, code generation, analysis). Opus 4.8 is the current highest-capability general-availability Opus. Latency is secondary; quality is primary.
+**No longer what `ISOLATED_DEFAULT_MODEL` resolves to.** The constant is the CLI alias `"opus"`, and since v2.1.219 that alias resolves to `claude-opus-5` — see [`013_claude_opus_5.md`](013_claude_opus_5.md).
 
 ```
-ISOLATED_DEFAULT_MODEL = "opus"   // CLI alias; resolves to "claude-opus-4-8" currently
+ISOLATED_DEFAULT_MODEL = "opus"   // CLI alias; resolves to "claude-opus-5" since v2.1.219
 ```
 
-The `"opus"` alias auto-tracks the latest Opus — no code change needed when a new Opus is released. The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` is updated whenever Anthropic promotes a new model to the `opus` alias. See `012_workspace_defaults.md` for update policy.
+Rationale for using an alias rather than a pinned ID: isolated subprocess runs handle high-complexity user tasks (reasoning, code generation, analysis) where capability is primary and latency secondary, and the alias auto-tracks the latest Opus with no code change. This supersession is that design working — the constant did not change; what it points at did.
+
+The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` must be updated whenever Anthropic promotes a new model to the `opus` alias. That column had gone stale against v2.1.219 until this revision, which is the concrete cost of the alias indirection: nothing in the source breaks, so nothing prompts the doc update.
+
+### Still current for
+
+- **Fast mode.** v2.1.219 kept Opus 4.8 in `/fast` while removing Opus 4.7 from it.
+- **Explicit pinning.** `--model claude-opus-4-8` still selects this model; only the unpinned `opus` alias moved.
 
 ### Cross-References
 
@@ -44,5 +49,7 @@ The `"opus"` alias auto-tracks the latest Opus — no code change needed when a 
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment and update policy |
 | source | `module/claude_runner_core/src/isolated.rs` | `ISOLATED_DEFAULT_MODEL` constant |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live model capabilities |
+| doc | [013_claude_opus_5.md](013_claude_opus_5.md) | Current default Opus; what the `opus` alias resolves to now |
 | doc | [001_claude_fable_5.md](001_claude_fable_5.md) | Next-tier model above Opus 4.8 |
-| doc | [006_claude_opus_4_7.md](006_claude_opus_4_7.md) | Previous Opus generation |
+| doc | [006_claude_opus_4_7.md](006_claude_opus_4_7.md) | Previous Opus generation; removed from fast mode in v2.1.219 |
+| doc | [../version/115_v2_1_219.md](../version/115_v2_1_219.md) | Release that superseded this model as the Opus default |

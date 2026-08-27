@@ -44,7 +44,7 @@ use crate::{ Attachment, Error, EventKind, InvokedSkill, Result, SessionEvent };
 /// session never reported it, which is not the same as reporting it empty — a
 /// session with no `skill_listing` line has no skills field to report, and one
 /// with an empty listing has an empty set.
-#[ derive( Debug, Clone, Default, PartialEq, Eq ) ]
+#[ derive( Debug, Clone, Default, PartialEq ) ]
 #[ non_exhaustive ]
 pub struct SessionContextState
 {
@@ -123,7 +123,7 @@ pub struct SessionContextState
 }
 
 /// A background task's most recently reported state.
-#[ derive( Debug, Clone, Default, PartialEq, Eq ) ]
+#[ derive( Debug, Clone, Default, PartialEq ) ]
 #[ non_exhaustive ]
 pub struct TaskState
 {
@@ -142,7 +142,7 @@ pub struct TaskState
 /// The `unmodelled_*` maps are the point of this struct: a newer Claude Code's
 /// added line kind is counted under its own name rather than vanishing, so a
 /// reader can see that its schema is behind instead of silently under-reporting.
-#[ derive( Debug, Clone, Default, PartialEq, Eq ) ]
+#[ derive( Debug, Clone, Default, PartialEq ) ]
 #[ non_exhaustive ]
 pub struct EventCounters
 {
@@ -257,7 +257,6 @@ impl ContextFold
       EventKind::AiTitle { title } => self.state.title = Some( title.clone() ),
       EventKind::QueueOperation { .. } => self.state.counters.queued_commands += 1,
       EventKind::Other { kind } => bump( &mut self.state.counters.unmodelled_kinds, kind ),
-      _ => bump( &mut self.state.counters.unmodelled_kinds, "" ),
     }
   }
 
@@ -372,7 +371,6 @@ impl ContextFold
       },
       Attachment::DateChange { new_date } => state.date = Some( new_date.clone() ),
       Attachment::Other { kind } => bump( &mut state.counters.unmodelled_attachments, kind ),
-      _ => bump( &mut state.counters.unmodelled_attachments, "" ),
     }
   }
 
@@ -401,8 +399,8 @@ impl ContextFold
   #[ inline ]
   pub fn read_file( &mut self, path : &Path ) -> Result< usize >
   {
-    let file = File::open( path ).map_err( Error::Io )?;
-    let length = file.metadata().map_err( Error::Io )?.len();
+    let file = File::open( path ).map_err( | e | Error::io( e, "open session file for context fold" ) )?;
+    let length = file.metadata().map_err( | e | Error::io( e, "measure session file" ) )?.len();
 
     if length < self.offset
     {
@@ -411,7 +409,8 @@ impl ContextFold
     }
 
     let mut reader = BufReader::new( file );
-    reader.seek( SeekFrom::Start( self.offset ) ).map_err( Error::Io )?;
+    reader.seek( SeekFrom::Start( self.offset ) )
+      .map_err( | e | Error::io( e, "seek to context fold offset" ) )?;
 
     let mut applied = 0;
     let mut buffer = Vec::new();
@@ -420,7 +419,8 @@ impl ContextFold
     {
       buffer.clear();
 
-      let read = reader.read_until( b'\n', &mut buffer ).map_err( Error::Io )?;
+      let read = reader.read_until( b'\n', &mut buffer )
+        .map_err( | e | Error::io( e, "read session line" ) )?;
 
       if read == 0 || !buffer.ends_with( b"\n" )
       {
@@ -428,7 +428,10 @@ impl ContextFold
         break;
       }
 
-      self.offset += read as u64;
+      // A line's byte count always fits u64 — usize is never wider than 64 bits
+      // on any target this crate supports.
+      #[ allow( clippy::cast_possible_truncation ) ]
+      { self.offset += read as u64; }
       self.state.counters.lines_read += 1;
 
       let Ok( line ) = core::str::from_utf8( &buffer ) else
@@ -517,9 +520,12 @@ mod tests
   #[ test ]
   fn skills_truncated_only_when_count_exceeds_names()
   {
-    let mut state = SessionContextState::default();
-    state.skills_available = vec![ "a".to_string() ];
-    state.skills_reported_count = 1;
+    let mut state = SessionContextState
+    {
+      skills_available : vec![ "a".to_string() ],
+      skills_reported_count : 1,
+      ..SessionContextState::default()
+    };
     assert!( !state.skills_truncated() );
 
     state.skills_reported_count = 9;

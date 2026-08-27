@@ -18,7 +18,7 @@ clr topics --global                          # list global topics
 clr topics --global --path notes             # resolve one global topic's path
 ```
 
-**Base precedence** (highest first), implemented once in `src/cli/topic_path.rs::topic_base()`
+**Base precedence** (highest first), implemented once in `claude_topic_core::identity::topic_base()`
 and shared by every consumer:
 
 | # | Condition | Base |

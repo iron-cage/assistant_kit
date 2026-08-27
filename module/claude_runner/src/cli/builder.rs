@@ -54,11 +54,11 @@ fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
   {
     Some( sub ) if sub != "." && !sub.is_empty() =>
     {
-      // Base and join both come from `topic_path` so this function, `topic.rs`'s
-      // free-name probe, and `topics.rs`'s listing/resolution can never disagree
-      // about where a given topic name lives.
-      let base = super::topic_path::topic_base( cli.dir.as_deref(), cli.global );
-      let effective = super::topic_path::topic_dir( &base, sub );
+      // Base and join both come from `claude_topic_core::identity` so this function,
+      // `topic.rs`'s free-name probe, and `topics.rs`'s listing/resolution can never
+      // disagree about where a given topic name lives.
+      let base = claude_topic_core::topic_base( cli.dir.as_deref(), cli.global );
+      let effective = claude_topic_core::topic_dir( &base, sub );
       if !cli.dry_run
       {
         let _ = std::fs::create_dir_all( &effective );
@@ -150,7 +150,7 @@ pub( crate ) struct TopicFork
 fn plan_topic_fork( cli : &CliArgs ) -> Option< TopicFork >
 {
   let topic = cli.topic.as_deref().filter( | t | *t != "." && !t.is_empty() )?;
-  let mode = super::topic_path::effective_topic_mode
+  let mode = claude_topic_core::effective_topic_mode
   (
     cli.topic_mode,
     cli.global,
@@ -158,7 +158,7 @@ fn plan_topic_fork( cli : &CliArgs ) -> Option< TopicFork >
     cli.dir.as_deref(),
     topic,
   );
-  if mode == super::topic_path::TopicMode::Dir
+  if mode == claude_topic_core::TopicMode::Dir
   {
     return None;
   }
@@ -184,7 +184,7 @@ fn plan_topic_fork( cli : &CliArgs ) -> Option< TopicFork >
     std::process::exit( 1 );
   }
 
-  let base = super::topic_path::topic_base( cli.dir.as_deref(), false );
+  let base = claude_topic_core::topic_base( cli.dir.as_deref(), false );
   let canonical_base = physical_abs( &base );
   let session_id = match claude_storage_core::topic_session_id( &canonical_base, topic )
   {

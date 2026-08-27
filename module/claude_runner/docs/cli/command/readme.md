@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the fifteen clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the eighteen clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics, daemon, chat, sessions commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope, query, topic, topics, daemon, chat, sessions, pool, delegate, broadcast commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -26,8 +26,11 @@
 | 13_daemon.md | Command spec: start, stop, and inspect the single session daemon |
 | 14_chat.md | Command spec: send one prompt to a hosted session and print the answer |
 | 15_sessions.md | Command spec: list the sessions the daemon is hosting |
+| 16_delegate.md | Command spec: send one prompt to one live topic, chosen by policy |
+| 17_broadcast.md | Command spec: send one prompt to every live topic, bounded concurrency |
+| 18_pool.md | Command spec: make sure N anonymous topics exist under a base |
 
-### All Commands (15 total)
+### All Commands (18 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -46,7 +49,10 @@
 | 13 | `daemon` | Start, stop, and inspect the single session daemon | 1 | `clr daemon status` |
 | 14 | `chat` | Send one prompt to a hosted session and print the answer | 5 | `clr chat "what does this do?"` |
 | 15 | `sessions` | List the sessions the daemon is hosting | 1 | `clr sessions` |
+| 16 | `delegate` | Send one prompt to one live topic, chosen by policy | 6 | `clr delegate "summarize today"` |
+| 17 | `broadcast` | Send one prompt to every live topic, at most `-j` at a time | 5 | `clr broadcast "status?"` |
+| 18 | `pool` | Make sure N anonymous topics (`t1`, `t2`, …) exist under a base | 8 | `clr pool 4` |
 
-**Total:** 15 commands
+**Total:** 18 commands
 
 **Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/003_env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

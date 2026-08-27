@@ -73,7 +73,7 @@ pub( crate ) struct CliArgs
   pub( crate ) keep_claudecode      : bool,
   pub( crate ) keep_clone           : bool,
   pub( crate ) topic               : Option< String >,
-  pub( crate ) topic_mode           : Option< super::topic_path::TopicMode >,
+  pub( crate ) topic_mode           : Option< claude_topic_core::TopicMode >,
   pub( crate ) global               : bool,
   pub( crate ) output_file          : Option< String >,
   pub( crate ) expect               : Option< String >,
@@ -303,7 +303,7 @@ fn parse_value_flag(
     "--topic-mode" =>
     {
       let val = next_value( tokens, next, "--topic-mode" )?;
-      parsed.topic_mode = Some( val.parse::< super::topic_path::TopicMode >().map_err( Error::msg )? );
+      parsed.topic_mode = Some( val.parse::< claude_topic_core::TopicMode >().map_err( Error::msg )? );
     }
     "--output-format" =>
     {
@@ -697,7 +697,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       }
       // Resolves --topic's base to the global topic home instead of the current directory.
       // Inert without --topic: with no topic directory to place, there is no base to redirect.
-      // An explicit --dir outranks it (see topic_path::topic_base).
+      // An explicit --dir outranks it (see claude_topic_core::topic_base).
       // Belongs in this bool-flag match, NOT parse_value_flag — that parser's Result<bool>
       // return signals "a value was consumed", so a valueless flag placed there would make
       // the caller skip the following token.

@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_runner_core
-  node_count: 15
-  edge_count: 39
+  node_count: 16
+  edge_count: 40
   component_count: 1
   generated: 2026-06-07
 
@@ -49,6 +49,11 @@ nodes:
   - id: feature/006
     file: feature/006_unset_claudecode.md
     label: Unset CLAUDECODE
+    entity: feature
+
+  - id: feature/007
+    file: feature/007_bounded_fanout.md
+    label: Bounded Fan-Out
     entity: feature
 
   - id: invariant/001
@@ -206,28 +211,6 @@ edges:
     to: data_structure/001
     via: cross_references
 
-components:
-  - id: 1
-    label: Main corpus
-    size: 15
-    isolated: false
-    nodes:
-      - pattern/001
-      - api/001
-      - data_structure/001
-      - feature/001
-      - feature/002
-      - feature/003
-      - feature/004
-      - feature/005
-      - feature/006
-      - invariant/001
-      - invariant/002
-      - failure_mode/001
-      - failure_mode/002
-      - failure_mode/003
-      - failure_mode/004
-
   - from: failure_mode/001
     to: failure_mode/002
     via: cross_references
@@ -259,5 +242,32 @@ components:
   - from: failure_mode/004
     to: failure_mode/002
     via: cross_references
+
+  - from: feature/007
+    to: feature/001
+    via: cross_references
+
+components:
+  - id: 1
+    label: Main corpus
+    size: 16
+    isolated: false
+    nodes:
+      - pattern/001
+      - api/001
+      - data_structure/001
+      - feature/001
+      - feature/002
+      - feature/003
+      - feature/004
+      - feature/005
+      - feature/006
+      - feature/007
+      - invariant/001
+      - invariant/002
+      - failure_mode/001
+      - failure_mode/002
+      - failure_mode/003
+      - failure_mode/004
 
 dangling_refs: []

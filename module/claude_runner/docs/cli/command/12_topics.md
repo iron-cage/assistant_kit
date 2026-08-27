@@ -27,7 +27,7 @@ clr topics --file <NAME> [--dir <PATH>] [--global]
 
 `--path` and `--file` are mutually exclusive — one name, two disjoint resolution rules (dir-mode directory vs fork-mode session file); asking for both at once is a contradiction and exits 1.
 
-**Base resolution** is identical to `--topic`'s, computed by the same `src/cli/topic_path.rs::topic_base()`: `--dir` if given, else the global topic home if `--global`, else CWD. An explicit `--dir` outranks `--global`.
+**Base resolution** is identical to `--topic`'s, computed by the same `claude_topic_core::identity::topic_base()`: `--dir` if given, else the global topic home if `--global`, else CWD. An explicit `--dir` outranks `--global`.
 
 **Algorithm — list form (4 steps):**
 1. Resolve the base directory.
@@ -107,7 +107,7 @@ clr topics --global | tail -n +2 | awk '{ print $1 }'
 
 ### Notes
 
-**Deterministic by construction.** `topics --path NAME` and the directory `topic`/`--topic NAME` actually runs in are computed by the same `topic_path::topic_dir()` call; `topics --file NAME` and the session id a fork-mode run uses are computed by the same `claude_storage_core::topic_session_file()`/`topic_session_id()` rule — so neither resolve form can ever disagree with a real run. That is what makes a global topic addressable from its name alone, and a fork topic's session file scriptable, in any later shell.
+**Deterministic by construction.** `topics --path NAME` and the directory `topic`/`--topic NAME` actually runs in are computed by the same `claude_topic_core::topic_dir()` call; `topics --file NAME` and the session id a fork-mode run uses are computed by the same `claude_storage_core::topic_session_file()`/`topic_session_id()` rule — so neither resolve form can ever disagree with a real run. That is what makes a global topic addressable from its name alone, and a fork topic's session file scriptable, in any later shell.
 
 **`--file` is byte-identical to `claude_storage .session.path`.** Both delegate to `claude_storage_core::topic_session_file` keyed on the canonical physical base: `clr topics --file NAME` ≡ `claude_storage .session.path path::<base> topic::NAME`. Verify: run both against the same base and `diff` the outputs.
 
@@ -121,13 +121,13 @@ clr topics --global | tail -n +2 | awk '{ print $1 }'
 
 ### Referenced Command Group
 
-Evaluated against every existing command under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify; `topics` opens Singleton Group 10. `dispatch_topics()` (`src/cli/topics.rs:66`) has zero cross-calls with any other dispatch function: it never calls `dispatch_run()`, and `dispatch_topic()` never calls it. Against the nearest candidate, [`topic`](11_topic.md): `topic` executes a Claude subprocess and accepts `run`'s full ~40-parameter surface, while `topics` executes nothing and accepts 4 parameters — no default value of any `topic` parameter yields a directory listing, so the Representation Absorption Test fails on both the handler and the parameter set. The shared `topic_path` helpers are an internal path-computation module, not a shared dispatch function — the same distinction that keeps [`scope`](09_scope.md) out of `run`'s group over `scope_for()`.
+Evaluated against every existing command under the strict [command_group](../command_group/readme.md) identity test (same dispatch function, same parameter set) — does not qualify; `topics` opens Singleton Group 10. `dispatch_topics()` (`src/cli/topics.rs:66`) has zero cross-calls with any other dispatch function: it never calls `dispatch_run()`, and `dispatch_topic()` never calls it. Against the nearest candidate, [`topic`](11_topic.md): `topic` executes a Claude subprocess and accepts `run`'s full ~40-parameter surface, while `topics` executes nothing and accepts 4 parameters — no default value of any `topic` parameter yields a directory listing, so the Representation Absorption Test fails on both the handler and the parameter set. The shared `claude_topic_core` helpers are an internal path-computation module, not a shared dispatch function — the same distinction that keeps [`scope`](09_scope.md) out of `run`'s group over `scope_for()`.
 
 ### Related Commands
 
 | # | Command | Relationship |
 |---|---------|--------------|
-| 11 | [`topic`](11_topic.md) | Write counterpart — creates/enters what `topics` reports on; both resolve paths through `topic_path` |
+| 11 | [`topic`](11_topic.md) | Write counterpart — creates/enters what `topics` reports on; both resolve paths through `claude_topic_core` |
 | 9 | [`scope`](09_scope.md) | Same shape — read-only, `--dir`-based path inspection that runs no subprocess |
 | 6 | [`ps`](06_ps.md) | Also an aligned-column listing of session state, keyed by running process rather than by topic directory |
 

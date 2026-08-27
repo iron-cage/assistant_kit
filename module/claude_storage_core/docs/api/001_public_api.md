@@ -44,6 +44,11 @@ The public API exposes the storage hierarchy (Storage, Project, Session, Entry),
 - `most_recent_session_in_dir(storage_path: &Path) -> Option<SessionId>` — lower-level variant: operates directly on an already-resolved storage directory without path encoding. Used when the caller has a custom session directory.
 - `to_storage_path_for(session_dir: &Path) -> Option<PathBuf>` — compute the Claude storage directory for a CWD without scanning it.
 
+**Transcript answer reading:**
+- `transcript_path(cwd: &Path, session_id: &str) -> Option<PathBuf>` — name the transcript for a conversation id without checking that it exists yet.
+- `transcript_mark(path: &Path) -> usize` — how many conversation entries the transcript holds right now; a missing file is 0, not an error. Taken before a prompt is sent, so everything past it is that turn.
+- `transcript_answer_since(path: &Path, mark: usize, grace: Duration) -> Option<String>` — the assistant's text written past `mark`, blocking up to `grace` for a transcript still being flushed. Text blocks only — thinking blocks, tool calls, and tool results are excluded. `None` means "nothing to show from here", not "the session said nothing".
+
 **Session identifier:**
 - `SessionId` — opaque newtype wrapping the UUID string from a `.jsonl` filename stem. Implements `Display`, `AsRef<str>`, `From<String>`, `From<&str>`, `Clone`, `PartialEq`, `Eq`, and `Hash`. Use `as_str()` for raw string access.
 
@@ -69,7 +74,9 @@ Major version bumps are used for breaking changes. A changelog entry is required
 | source | `../../src/lib.rs` | Public API re-exports |
 | source | `../../src/error.rs` | Error type definition |
 | source | `../../src/rollup.rs` | GroupKey, SortKey, SortOrder, RollupInput, RollupRow, RollupParams, build_rollup() |
+| source | `../../src/transcript_answer.rs` | transcript_path(), transcript_mark(), transcript_answer_since() |
 | doc | `../feature/005_token_usage_rollup.md` | Rollup engine design rationale |
+| doc | `../feature/006_transcript_answer.md` | Transcript answer reading design and algorithm |
 | doc | `../data_structure/001_storage_hierarchy.md` | Storage, Project, Session, Entry types |
 | doc | `../data_structure/002_filter_types.md` | Filter types |
 | doc | `../feature/004_continuation_detection.md` | Continuation detection API design and algorithm |

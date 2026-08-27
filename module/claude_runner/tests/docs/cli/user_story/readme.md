@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specs for user story doc instances in `docs/cli/user_story/`.
 - **Responsibility**: Per-user-story test spec files covering end-to-end user workflows.
-- **In Scope**: All 32 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Topic Directory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection, Topic Creation, Topic Discovery, Hosted Session Chat.
+- **In Scope**: All 33 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Topic Directory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination, Session Cross-Loading, Scope Inspection, Topic Creation, Topic Discovery, Hosted Session Chat, Topic Forwarding.
 - **Out of Scope**: Parameter-level edge cases (-> `param/`), command-level integration (-> `command/`), type validation (-> `type/`).
 
 ### Responsibility Table
@@ -44,3 +44,4 @@
 | [030_topic_creation.md](030_topic_creation.md) | `user_story` spec for Topic Creation | ✅ |
 | [031_topic_discovery.md](031_topic_discovery.md) | `user_story` spec for Topic Discovery | ✅ |
 | [032_hosted_session_chat.md](032_hosted_session_chat.md) | `user_story` spec for Hosted Session Chat | ✅ |
+| [033_topic_forwarding.md](033_topic_forwarding.md) | `user_story` spec for Topic Forwarding | ✅ |

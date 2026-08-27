@@ -6,7 +6,7 @@ All built-in tools available in Claude Code sessions. One file per tool in this 
 
 - **Purpose**: Authoritative reference for every built-in tool Claude Code exposes to the model.
 - **Responsibility**: Master table and per-tool detail files.
-- **In Scope**: All 40 built-in tools — file operations, shell, search, agents, tasks, scheduling, web, mode, interaction, MCP resources, publishing, notification, and extensibility tools.
+- **In Scope**: All 43 built-in tools — file operations, shell, search, agents, tasks, scheduling, web, mode, interaction, MCP resources, publishing, notification, and extensibility tools.
 - **Out of Scope**: MCP tools (user-installed extensions), custom agent tools, IDE-specific tools.
 
 ### Responsibility Table
@@ -54,6 +54,9 @@ All built-in tools available in Claude Code sessions. One file per tool in this 
 | 038_tool_search.md | Search/load deferred MCP tools |
 | 039_wait_for_mcp_servers.md | Wait for MCP server connections |
 | 040_workflow.md | Dynamic multi-subagent workflows |
+| 041_design_sync.md | Design asset/design-system sync (deferred; schema unverified) |
+| 042_end_conversation.md | End the conversation from the assistant side (deferred) |
+| 043_report_findings.md | Report code-review findings as a typed list |
 
 ### Tool Table
 
@@ -99,6 +102,9 @@ All built-in tools available in Claude Code sessions. One file per tool in this 
 | 38 | [ToolSearch](038_tool_search.md) | Extensibility | Search/load deferred MCP tool schemas |
 | 39 | [WaitForMcpServers](039_wait_for_mcp_servers.md) | Extensibility | Wait for background MCP server connections |
 | 40 | [Workflow](040_workflow.md) | Agents | Run dynamic multi-subagent workflow |
+| 41 | [DesignSync](041_design_sync.md) | Extensibility | Sync design assets/design-system state (schema unverified) |
+| 42 | [EndConversation](042_end_conversation.md) | Interaction | End the conversation from the assistant side |
+| 43 | [ReportFindings](043_report_findings.md) | Interaction | Report code-review findings as a typed, rankable list |
 
 ### Availability Notes
 
@@ -120,9 +126,27 @@ Not all tools are available in all versions or configurations:
   on Bedrock/Vertex/Foundry.
 - **Monitor (29)**: Not available on Bedrock/Vertex/Foundry or with telemetry
   disabled.
+- **DesignSync (41)**, **EndConversation (42)**: Deferred — only the name is
+  listed until `ToolSearch` loads the schema on demand. Neither has a documented
+  parameter contract in this collection; call `ToolSearch query="select:<Name>"`
+  in a live session to retrieve it.
+- **EndConversation (42)**: Live sessions attach a narrow use mandate to this
+  tool (sustained abuse toward the assistant, or an explicit user request to
+  demonstrate it). That constraint comes from the session's own tool
+  description, not from this collection.
+- **ReportFindings (43)**: Conditional — invoked only when the active code-review
+  instructions direct findings through it; called once per review with all
+  findings, never alongside a prose listing of the same findings.
 
-The tool set exposed to the model depends on `--tools`, `--allowed-tools`, and
-`--disallowed-tools` parameters.
+The tool set exposed to the model depends on `--tools`, `--allowedTools`, and
+`--disallowedTools` parameters.
+
+**How 41–43 were found, and what it implies.** These three were absent from
+every tool list in this collection until a live v2.1.220 session exposed them
+directly. A tool list assembled from documentation alone will under-report:
+deferred tools ship only a name, and no release note in the 2.1.74–2.1.220
+changelog announces any of the three. Re-run the audit against a live session's
+own tool listing rather than against `--help` or the changelog.
 
 ### Categories
 
@@ -132,10 +156,10 @@ The tool set exposed to the model depends on `--tools`, `--allowed-tools`, and
 | Shell | Bash, PowerShell | 2 |
 | Search | Glob, Grep | 2 |
 | Agents | Agent, SendMessage, Workflow | 3 |
-| Interaction | AskUserQuestion, TodoWrite, ShareOnboardingGuide | 3 |
+| Interaction | AskUserQuestion, TodoWrite, ShareOnboardingGuide, EndConversation, ReportFindings | 5 |
 | Web | WebFetch, WebSearch | 2 |
 | Code Intelligence | LSP | 1 |
-| Extensibility | Skill, ToolSearch, WaitForMcpServers | 3 |
+| Extensibility | Skill, ToolSearch, WaitForMcpServers, DesignSync | 4 |
 | Background Tasks | TaskCreate, TaskGet, TaskList, TaskOutput, TaskStop, TaskUpdate, Monitor | 7 |
 | Scheduling | CronCreate, CronDelete, CronList, RemoteTrigger, ScheduleWakeup | 5 |
 | Mode | EnterPlanMode, ExitPlanMode, EnterWorktree, ExitWorktree | 4 |
@@ -148,5 +172,5 @@ The tool set exposed to the model depends on `--tools`, `--allowed-tools`, and
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [../param/068_tools.md](../param/068_tools.md) | `--tools` parameter for overriding available tool set |
-| doc | [../param/006_allowed_tools.md](../param/006_allowed_tools.md) | `--allowed-tools` for tool allowlisting |
-| doc | [../param/022_disallowed_tools.md](../param/022_disallowed_tools.md) | `--disallowed-tools` for tool denylisting |
+| doc | [../param/006_allowed_tools.md](../param/006_allowed_tools.md) | `--allowedTools` / `--allowed-tools` for tool allowlisting |
+| doc | [../param/022_disallowed_tools.md](../param/022_disallowed_tools.md) | `--disallowedTools` / `--disallowed-tools` for tool denylisting |

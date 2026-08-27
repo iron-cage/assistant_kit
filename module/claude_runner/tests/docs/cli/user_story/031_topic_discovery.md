@@ -100,7 +100,7 @@ Test case spec for [031_topic_discovery.md](../../../../docs/cli/user_story/031_
 
 - **Given:** `CLR_TOPIC_HOME` points at a fixture home
 - **When:** `clr topics --global --path cross-check`, then `clr --dry-run --global --topic cross-check "x"`
-- **Then:** the dry-run output contains the exact path the resolver printed — both sides compute it through `topic_path::topic_dir()`
+- **Then:** the dry-run output contains the exact path the resolver printed — both sides compute it through `claude_topic_core::topic_dir()`
 - **Exit:** 0 for both
 - **Verifies:** AC-8
 - **Implemented by:** `topics_command_test.rs::tp16_path_matches_dry_run_effective_dir`

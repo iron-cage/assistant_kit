@@ -7,7 +7,7 @@ Pure library for Claude Code's filesystem-based storage access (zero dependencie
 | File | Responsibility |
 |------|----------------|
 | `Cargo.toml` | Crate manifest and dependency configuration |
-| `src/` | Core library implementation (20 modules) |
+| `src/` | Core library implementation (22 modules) |
 | `tests/` | Test suite for storage access logic |
 | `docs/` | Behavioral requirements: features, invariants, API, algorithms, data structures |
 | `examples/` | Usage examples for the storage API |
@@ -86,8 +86,8 @@ fn main() -> claude_storage_core::Result< () >
 
 ## testing
 
-**277 tests** — 75 unit tests inline in `src/` (covering the private parsing and encoding
-internals that integration tests cannot reach through the public API) plus 202 integration
+**302 tests** — 77 unit tests inline in `src/` (covering the private parsing and encoding
+internals that integration tests cannot reach through the public API) plus 225 integration
 tests in `tests/`, 14 of whose files are bug reproducers. Doc examples add ~26 more.
 
 ```bash

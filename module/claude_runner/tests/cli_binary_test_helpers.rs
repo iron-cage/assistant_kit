@@ -7,7 +7,8 @@
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `quiet_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `user_story_ps_test`, `user_story_kill_test`, `ps_command_test`, `kill_command_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `ps_flags_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test` |
 //! | `run_cli_with_env` | `cli_args_test`, `dry_run_test`, `user_story_test`, `execution_mode_ext_test`, `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test`, `ps_command_test`, `user_story_ps_test`, `output_style_test`, `summary_fields_test`, `no_compact_window_test`, `json_config_test`, `config_file_test` |
 //! | `run_cli_in_dir` | `config_file_test` |
-//! | `run_cli_in_dir_isolated` | `topic_fork_test` |
+//! | `run_cli_in_dir_isolated` | `topic_fork_test`, `forward_command_test`, `pool_command_test` |
+//! | `TopicBase` | `forward_command_test`, `pool_command_test` |
 //! | `df` | `session_from_test`, `session_path_resolution_test`, `session_source_isolation_test`, `scope_command_test`, `bug_reproducers_490_492_test`, `topic_command_test` |
 //! | `make_session_for` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `session_from_test`, `execution_mode_test`, `execution_mode_ext_test`, `session_path_resolution_test`, `session_source_isolation_test`, `session_verification_test`, `user_story_test` |
 //! | `make_zero_turn_session_for` | `execution_mode_ext_test` |
@@ -212,6 +213,149 @@ pub fn run_cli_in_dir_isolated
     .envs( env.iter().copied() )
     .output()
     .expect( "failed to execute clr binary" )
+}
+
+/// A canonicalized base directory with isolated session storage and topic registry,
+/// plus helpers to seed topics of either mechanism into it.
+///
+/// Canonicalization is not cosmetic: the fork rule hashes the CANONICAL physical
+/// base, so on a host where `/tmp` is a symlink an uncanonicalized fixture path
+/// silently produces a different `UUIDv5` than the binary under test computes, and
+/// every seeded fork session lands somewhere the runner never looks.
+///
+/// The two seeding helpers deliberately separate "the topic is known" from "the
+/// topic holds a session", because that is the distinction `enumerate_live` turns
+/// on and the one `clr delegate`/`broadcast`/`pool` all depend on.
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct TopicBase
+{
+  _claude_home : tempfile::TempDir,
+  _registry : tempfile::TempDir,
+  _project : tempfile::TempDir,
+  /// The canonicalized base directory itself — cwd for every invocation.
+  pub canon : std::path::PathBuf,
+  /// Isolated `CLAUDE_HOME` holding this base's session storage.
+  pub claude_home : std::path::PathBuf,
+  /// Isolated `CLR_TOPIC_REGISTRY_DIR` holding this base's fork-topic names.
+  pub registry : std::path::PathBuf,
+}
+
+impl Default for TopicBase
+{
+  #[inline]
+  fn default() -> Self
+  {
+    Self::new()
+  }
+}
+
+#[allow(dead_code)]
+impl TopicBase
+{
+  /// A canonicalized empty base with nothing in it yet.
+  ///
+  /// # Panics
+  ///
+  /// Panics if a temp directory cannot be created or canonicalized.
+  #[must_use]
+  #[inline]
+  pub fn new() -> Self
+  {
+    let claude_home = tempfile::TempDir::new().unwrap();
+    let registry = tempfile::TempDir::new().unwrap();
+    let project = tempfile::TempDir::new().unwrap();
+    let canon = project.path().canonicalize().unwrap();
+    let claude_home_path = claude_home.path().to_path_buf();
+    let registry_path = registry.path().to_path_buf();
+    Self
+    {
+      _claude_home : claude_home,
+      _registry : registry,
+      _project : project,
+      canon,
+      claude_home : claude_home_path,
+      registry : registry_path,
+    }
+  }
+
+  /// The env pairs every invocation against this base needs.
+  ///
+  /// # Panics
+  ///
+  /// Panics if either isolated path is not valid UTF-8.
+  #[must_use]
+  #[inline]
+  pub fn env( &self ) -> [ ( &str, &str ); 2 ]
+  {
+    [
+      ( "CLAUDE_HOME", self.claude_home.to_str().unwrap() ),
+      ( "CLR_TOPIC_REGISTRY_DIR", self.registry.to_str().unwrap() ),
+    ]
+  }
+
+  /// Record `name` in the registry, and seed its session file when `live`.
+  ///
+  /// The registry entry alone is what `clr topics` lists; the session file is what
+  /// makes it a forwarding target.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the registry file or the seeded session cannot be written.
+  #[inline]
+  pub fn fork_topic( &self, name : &str, live : bool )
+  {
+    let file = self.registry.join( df( self.canon.to_str().unwrap() ) );
+    let mut existing = std::fs::read_to_string( &file ).unwrap_or_default();
+    existing.push_str( name );
+    existing.push( '\n' );
+    std::fs::write( &file, existing ).expect( "write registry" );
+
+    if live
+    {
+      let uuid = claude_storage_core::topic_session_id( &self.canon, name )
+        .unwrap()
+        .as_str()
+        .to_owned();
+      let dir = self.claude_home.join( "projects" ).join( df( self.canon.to_str().unwrap() ) );
+      std::fs::create_dir_all( &dir ).expect( "create fork storage" );
+      std::fs::write( dir.join( format!( "{uuid}.jsonl" ) ), b"{}" ).expect( "write fork session" );
+    }
+  }
+
+  /// Create `<base>/-<name>`, and seed a session in ITS storage when `live`.
+  ///
+  /// A dir topic's sessions live under the topic directory's own encoded path, not
+  /// the base's — seeding the base's storage would leave the topic at 0 sessions.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the topic directory or the seeded session cannot be created.
+  #[inline]
+  pub fn dir_topic( &self, name : &str, live : bool )
+  {
+    let dir = self.canon.join( format!( "-{name}" ) );
+    std::fs::create_dir_all( &dir ).expect( "create topic dir" );
+    if live
+    {
+      let storage = self.claude_home.join( "projects" ).join( df( dir.to_str().unwrap() ) );
+      std::fs::create_dir_all( &storage ).expect( "create dir-topic storage" );
+      std::fs::write( storage.join( "aaaaaaaa-0000-0000-0000-000000000000.jsonl" ), b"{}" )
+        .expect( "write dir session" );
+    }
+  }
+
+  /// Run `clr` against this base with topic isolation in force.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the `clr` binary cannot be launched.
+  #[must_use]
+  #[inline]
+  pub fn run( &self, args : &[ &str ] ) -> std::process::Output
+  {
+    run_cli_in_dir_isolated( args, &self.canon, &self.env() )
+  }
 }
 
 /// Encode a path using the `Df()` algorithm from `algorithm/001_path_encoding.md`.

@@ -89,6 +89,11 @@
 | 087_global.md | `--global` flag spec (resolve `--topic`'s base to the global topic home) |
 | 088_topic_mode.md | `--topic-mode` parameter spec (force fork or dir topic mechanism) |
 | 089_keep_clone.md | `--keep-clone` flag spec (preserve existing destination copy on `--from` re-clone) |
+| 090_pick.md | `--pick` parameter spec (`delegate`'s selection policy) |
+| 091_seed.md | `--seed` parameter spec (`delegate`'s reproducible draw) |
+| 092_concurrency.md | `--concurrency` / `-j` parameter spec (the fan-out commands' bound) |
+| 093_count.md | `--count` parameter spec (`pool`'s target topic count) |
+| 094_prefix.md | `--prefix` parameter spec (which pool `pool` fills) |
 
 ### Retired Parameter IDs
 
@@ -122,7 +127,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 `query <PID> <METHOD> [ARGS...]`, `daemon [SUBCOMMAND]`, `chat <MESSAGE>`.
 `[MESSAGE]` ([001](001_message.md)) predates that line.
 
-### All Parameters (85 total; 2 deprecated)
+### All Parameters (90 total; 2 deprecated)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -211,8 +216,13 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 | 87 | `--global` | bool | false | present/absent | Resolve `--topic`'s base to the global topic home instead of cwd (alias: `-g`); inert without a topic; `--dir` outranks it | 4 cmds |
 | 88 | `--topic-mode` | enum | absent (auto) | `fork`, `dir` | Force `--topic`'s mechanism: `fork` (same-dir session fork) or `dir` (legacy `-NAME` directory); overrides automatic selection | 3 cmds |
 | 89 | `--keep-clone` | bool | false | present/absent | Preserve an existing non-empty destination copy on an explicit `--from` re-clone instead of overwriting it; only its mtime is refreshed, so `-c` continuation still selects it | 3 cmds |
+| 90 | `--pick` | enum | `idle` | `idle`, `random` | Which candidate set `delegate` draws from: topics with no turn in flight, or every live topic; `idle` falls back to the full set when all are busy | 1 cmd |
+| 91 | `--seed` | u64 | clock+pid | Non-negative integer | Fix `delegate`'s draw (`seed % candidate count`) so the same seed over the same topic list reaches the same topic | 1 cmd |
+| 92 | `--concurrency` | usize | 4 | Non-negative integer | Most fan-out children in flight at once (alias: `-j`); clamped to `1..=` the number of children | 2 cmds |
+| 93 | `--count` | usize | required | Non-negative integer | How many pool topics must exist after `pool` runs; a target, never an increment; also accepted positionally | 1 cmd |
+| 94 | `--prefix` | string | `t` | Non-empty; no `/` or newline; not `-`-leading or digit-trailing | Which pool `pool` fills, and therefore which existing topics count toward `--count` | 1 cmd |
 
-**Total:** 85 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base; param 88 added for the fork/dir topic mechanism override; param 89 added for the `--from` re-clone opt-out)
+**Total:** 90 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign; params 81–85 added for `--input-format` and gate tuning knobs; param 86 added for the stdin opt-out; param 87 added for the global topic base; param 88 added for the fork/dir topic mechanism override; param 89 added for the `--from` re-clone opt-out; params 90–92 added for the `delegate`/`broadcast` forwarding commands; params 93–94 added for the `pool` provisioning command)
 
 **Groups:** Parameters 2–4, 17, 23, 24, 61–67, and 81 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76, 82–86 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
@@ -303,6 +313,11 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 - [`--global`](087_global.md)
 - [`--topic-mode`](088_topic_mode.md)
 - [`--keep-clone`](089_keep_clone.md)
+- [`--pick`](090_pick.md)
+- [`--seed`](091_seed.md)
+- [`--concurrency`](092_concurrency.md)
+- [`--count`](093_count.md)
+- [`--prefix`](094_prefix.md)
 
 ### Quick Reference
 

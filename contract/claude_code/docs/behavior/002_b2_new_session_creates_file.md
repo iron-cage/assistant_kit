@@ -19,7 +19,7 @@ Each `claude` invocation without `--continue` creates a separate new `.jsonl` se
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E1 | B1, B2 | Code | `../../../../module/claude_runner/src/main.rs` | line 85 | `--new-session  Start a new session (default: continues previous)` — `clr` wrapper help text |
+| E1 | B1, B2 | Code | `../../../../module/claude_runner/src/cli/help.rs` | `grep -n '"--new-session"'` (was `main.rs:85`) | `OptionEntry { name : "--new-session", desc : "Start a new session (default: continues previous)" }` — `clr` wrapper help text |
 | E12 | B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_multiple_session_files_exist_in_real_project` | At least one project in real `~/.claude/` storage has 2+ non-empty non-agent `.jsonl` files |
 | E47 | B1, B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_continue_flag_proves_separate_sessions` | `--continue` flag exists in `claude --help` — binary-level proof that new-session is the default; `--new-session` is absent from binary help (wrapper-only flag confirmed by E1) |
 

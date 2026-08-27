@@ -2,7 +2,8 @@
 
 > **Workspace:** assistant — `claude_runner_core`
 
-Claude Code process execution with builder pattern and single execution point.
+Claude Code process execution with builder pattern and single execution point, plus a bounded
+fan-out primitive for running many child commands at once.
 
 ## Files
 
@@ -10,7 +11,7 @@ Claude Code process execution with builder pattern and single execution point.
 |------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, metadata |
 | `src/` | Builder pattern implementation: `ClaudeCommand`, types, process scanner |
-| `tests/` | Builder API, migration validation, verification framework (43 test files) |
+| `tests/` | Builder API, migration validation, verification framework (44 test files) |
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
 | `../../../../agent_kit/task/claude_runner_core/` | Crate task registry — External Layout (see `agent_kit/task/`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
@@ -36,6 +37,7 @@ Claude Code process execution with builder pattern and single execution point.
 - execute() terminal method with process spawning
 - stdout/stderr capture and parsing
 - Exit code handling and error mapping
+- run_bounded() fan-out over many pre-built child commands, with a concurrency ceiling
 
 **Out of Scope:**
 - ❌ Session storage path resolution → delegated to `claude_profile` crate
@@ -51,6 +53,9 @@ Claude Code process execution with builder pattern and single execution point.
 - **Single Execution Point**: Consolidates duplicate Command::new("claude") calls
 - **Type Safety**: Builder pattern enforces correct configuration
 - **Lean Dependencies**: claude_core + tempfile, plus optional error_tools/serde/serde_json/data_fmt behind features
+- **Bounded Fan-Out**: `run_bounded()` runs many child commands with a fixed ceiling on how many are
+  alive at once and returns one outcome per command in input order — a failing or unspawnable child
+  never cancels its siblings. See [docs/feature/007_bounded_fanout.md](docs/feature/007_bounded_fanout.md).
 
 ## Usage
 

@@ -810,7 +810,7 @@ P=$(cd "$BASE" && "$BIN" topics --global --path cross); echo "resolved: $P"
 (cd "$BASE" && "$BIN" --dry-run --global --topic cross "x") | grep -c -- "$P"
 ```
 
-**Expected:** `resolved:` prints `$CLR_TOPIC_HOME/-cross`, and `grep -c` reports at least `1` — the dry-run's effective working directory is byte-identical to the path the resolver computed. Both sides go through `topic_path::topic_dir()`; this case fails the moment either caller stops.
+**Expected:** `resolved:` prints `$CLR_TOPIC_HOME/-cross`, and `grep -c` reports at least `1` — the dry-run's effective working directory is byte-identical to the path the resolver computed. Both sides go through `claude_topic_core::topic_dir()`; this case fails the moment either caller stops.
 
 ### TC-97: Topics — Argument Errors
 
@@ -1475,9 +1475,10 @@ none of that. A shim that echoed its input would pass every case here while prov
 nothing, which is worse than not running them.
 
 What *is* automated is everything under it, against real implementations rather than
-mocks: the terminal in `claude_pty_core`, the spawn/send/read cycle and the socket in
-`claude_daemon_core`'s `serve_test.rs`, the transcript reading in `claude_runner`'s
-`chat_answer_test.rs`, the argument surface in `chat_command_test.rs`.
+mocks: the terminal in `claude_pty_core`, the escape-sequence rendering in
+`claude_terminal_core`'s `render_test.rs`, the spawn/send/read cycle and the socket in
+`claude_daemon_core`'s `serve_test.rs`, the transcript reading in `claude_storage_core`'s
+`transcript_answer_test.rs`, the argument surface in `chat_command_test.rs`.
 
 ### Prerequisites
 

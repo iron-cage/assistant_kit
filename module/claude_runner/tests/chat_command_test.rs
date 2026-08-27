@@ -12,7 +12,9 @@
 //! on `PATH`, answering on a real terminal, over a real model call — that is an
 //! end-to-end concern, and the layers under it are tested where they live: the
 //! terminal in `claude_pty_core`, the send/read cycle in `claude_daemon_core`'s
-//! `serve_test.rs`, and the rendering of what comes back in its `render_test.rs`.
+//! `serve_test.rs`, the rendering of what comes back in `claude_terminal_core`'s
+//! `render_test.rs`, and the answer read out of the transcript in
+//! `claude_storage_core`'s `transcript_answer_test.rs`.
 //!
 //! The ordering guarantee (CH-6, CH-7) is the one worth stating out loud: a
 //! command that auto-starts a daemon must not start one on the way to reporting

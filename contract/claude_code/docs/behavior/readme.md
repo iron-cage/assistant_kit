@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary spanning session lifecycle, storage, runtime process model, subagent context, and tool availability.
-- **Responsibility**: Master file for the `behavior` collection — lists all 38 behavior instances (B1–B37 + B16h), provides the shared evidence table (E1–E70), and links to invalidation test files.
+- **Responsibility**: Master file for the `behavior` collection — lists all 38 behavior instances (B1–B37 + B16h), provides the shared evidence table (E1–E77), and links to invalidation test files. Refuted hypotheses are retained with their disconfirming evidence rather than deleted, so the record shows what was believed and why it was wrong.
 - **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes); background task lifecycle (classifier model selection, idle-state reporting, exit-handoff survival, memory-pressure reaping, print-mode wait ceiling); subagent cache economics (per-subagent isolated cache prefix, 5-minute vs 1-hour cache TTL tier asymmetry).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../format/`](../format/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
@@ -15,6 +15,8 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 - ✅ Confirmed — source code or reproducible test confirms
 - 🎯 Observed — seen in practice, mechanism inferred
 - ❓ Uncertain — reasonable inference, unconfirmed
+- ⚠️ Exception noted — holds in general, but with a documented and quantified exception class
+- ❌ Refuted — disconfirming evidence found; the instance is retained to record the error, not deleted
 
 **Test Tier legend:**
 - `VALIDATED` — test asserts on real `~/.claude/` storage structure (hard `assert!` on fields/counts)
@@ -24,35 +26,37 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 - `MEASURE` — live API measurement; no pass/fail; runs by default in container where `~/.claude` is mounted (`lim_it_` prefix)
 - `VALIDATED†` — test proves feasibility of mechanism but not that the binary uses it
 
+**⚠️ NEG-ONLY reliability caveat.** A NEG-ONLY test asserts that the binary does not explicitly reject an env var. An env var the binary has **never heard of** is also not rejected, so the assertion passes byte-identically for a variable that is honored, one that is silently ignored, **and one that does not exist in the binary at all**. The tier therefore carries no evidence that the variable exists. B11 and B23 were both carried at 80–85% certainty on this basis and both turned out to be nonexistent (E72). Treat every remaining NEG-ONLY entry as unverified-existence until confirmed by a binary string scan or official documentation. Confirming existence is cheap: `grep -ac <VAR> ~/.local/share/claude/versions/<version>` with a known-present positive control and a fabricated negative control, as recorded in E72.
+
 | ID | Behavior | Category | Status | Certainty | Tier | Since | Evidence |
 |----|----------|----------|--------|-----------|------|-------|----------|
 | [B1](001_b1_default_new_session.md) | `claude` binary defaults to NEW session; resuming requires explicit `--continue`/`-c`. `clr` wrapper inverts this default | Continuation | ✅ | 90% | VALIDATED | pre-v1.0 | E1, E2, E11, E47 |
 | [B2](002_b2_new_session_creates_file.md) | Each invocation without `--continue` creates a new `.jsonl`; `--new-session` is a `clr` wrapper flag | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E1, E12, E47 |
 | [B3](003_b3_print_orthogonal.md) | `-p`/`--print` controls output mode only; does not affect session selection | Flags | ✅ | 95% | FLAG-VFY | pre-v1.0 | E3, E13 |
 | [B4](004_b4_continue_flag.md) | `-c`/`--continue` is explicit opt-in for resuming most recently modified session | Flags | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E2, E14 |
-| [B5](005_b5_mtime_selection.md) | "Current" session resumed by `--continue` is the most recently modified `.jsonl` (mtime) | Selection | 🎯 | 60% | VALIDATED† | pre-v1.0 | E4, E15 |
+| [B5](005_b5_mtime_selection.md) | `--continue` resumes the most recent session from a filtered candidate set (background, `-p`/SDK, and `/loop`-first sessions excluded; `-p --continue` excludes background only). Ordering key within that set is unconfirmed | Selection | ✅ filter / ❓ key | 95% / 55% | VALIDATED† | pre-v1.0 | E4, E15, E71 |
 | [B6](006_b6_session_accumulation.md) | Sessions accumulate one file per independent invocation; never compacted or rotated | Storage | ✅ | 90% | VALIDATED | pre-v1.0 | E5, E16 |
 | [B7](007_b7_agent_sessions_sibling.md) | Agent sessions are `agent-*.jsonl` siblings with `isSidechain: true` (flat layout) | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E6, E17 |
 | [B8](008_b8_zero_byte_placeholder.md) | Claude Code creates zero-byte `.jsonl` placeholders on startup; remain if process crashes | Storage | 🎯 | 85% | UNVERIFIED | pre-v1.0 | E7, E18 |
-| [B9](009_b9_storage_path_encoding.md) | Project sessions stored at `~/.claude/projects/{path-encoded}/`; `/` → `-` | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E8, E19 |
+| [B9](009_b9_storage_path_encoding.md) | Project sessions stored at `~/.claude/projects/{path-encoded}/`; **every non-alphanumeric** char → `-` (not `/` alone); names over 200 chars truncated + hashed. Encoding is lossy, not reversible | Storage | ✅ | 95% | UNVERIFIED | pre-v1.0; rule changed after 2026-07-16 | E8, E19, E74, E75 |
 | [B10](010_b10_entry_threading.md) | Entries linked by `parentUuid`; root entry has `parentUuid: null` | Entries | ✅ | 95% | VALIDATED | pre-v1.0 | E9, E20 |
-| [B11](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var enables automated continuation mode | Flags | 🎯 | 85% | NEG-ONLY | pre-v1.0 | E10, E21 |
+| [B11](011_b11_auto_continue_env.md) | ~~`CLAUDE_CODE_AUTO_CONTINUE` env var enables automated continuation mode~~ — **REFUTED**: 0 occurrences in the v2.1.220 binary; absent from official docs. Still exported by this workspace as a no-op | Flags | ❌ | 95% refuted | NEG-ONLY (insufficient) | refuted at v2.1.220 | E10, E21, E72 |
 | [B12](012_b12_agent_session_id.md) | Agent JSONL entries carry `sessionId` equal to the parent session UUID | Families | ✅ | 95% | VALIDATED | pre-v1.0 | E22, E26 |
 | [B13](013_b13_subagent_directory.md) | New-format agents stored at `{parent-uuid}/subagents/agent-{agentId}.jsonl` | Families | ✅ | 95% | VALIDATED | pre-v1.0 | E23, E27 |
-| [B14](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars contain `agentType` and optional `description` | Families | ✅ | 90% | VALIDATED | pre-v1.0 | E24, E28 |
+| [B14](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars record spawn arguments: `agentType` always (7 known values) plus 9 optional fields (`spawnDepth`, `description`, `toolUseId`, `isFork`, `model`, `parentAgentId`, `stoppedByUser`, `worktreePath`, `worktreeBranch`); written flat in `subagents/` or nested in `subagents/workflows/wf_*/` | Families | ✅ | 95% | VALIDATED | pre-v1.0 | E24, E28, E77 |
 | [B15](015_b15_agent_slug.md) | Agent entries carry a `slug` field shared by all agents of one parent | Families | 🎯 | 85% | VALIDATED | pre-v1.0 | E25, E29 |
 | [B16](016_b16_tools_flag.md) | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools | Flags | ✅ | 90% | FLAG-VFY | pre-v1.0 | E30, E31 |
 | [B16h](016h_b16h_tools_system_prompt.md) | Tool definitions (~12k tokens) remain in assembled system prompt even with `--tools ""` | Flags | ❓ | 60% | MEASURE | pre-v1.0 | E32 |
-| [B17](017_b17_parentuuid_self_contained.md) | `parentUuid` chain is self-contained within one session file (< 0.2% compaction exceptions) | Entries | 🎯 | 85% | VALIDATED | pre-v1.0 | E33 |
+| [B17](017_b17_parentuuid_self_contained.md) | `parentUuid` chain is self-contained within one session file (< 0.2% compaction exceptions) | Entries | ⚠️ | 85% | VALIDATED | pre-v1.0 | E33 |
 | [B18](018_b18_no_cross_session_links.md) | No cross-session continuation metadata; first entry of new session has `parentUuid: null` | Continuation | 🎯 | 80% | VALIDATED | pre-v1.0 | E34 |
 | [B19](019_b19_resume_flag.md) | `--resume`/`-r` resumes a specific prior session by UUID | Continuation | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E35, E36 |
 | [B20](020_b20_session_id_flag.md) | `--session-id <uuid>` assigns a deterministic UUID to the current session | Session | 🎯 | 80% | FLAG-VFY | pre-v1.0 | E37, E38 |
 | [B21](021_b21_fork_session.md) | `--fork-session` creates a new session UUID when resuming; original unchanged | Continuation | 🎯 | 80% | FLAG-VFY | pre-v1.0 | E39, E40 |
 | [B22](022_b22_no_session_persistence.md) | `--no-session-persistence` disables session disk writes; only works with `--print` mode | Storage | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E41, E42 |
-| [B23](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var overrides session storage directory | Storage | 🎯 | 80% | NEG-ONLY | pre-v1.0 | E43, E44 |
+| [B23](023_b23_session_dir_override.md) | ~~`CLAUDE_CODE_SESSION_DIR` env var overrides session storage directory~~ — **REFUTED**: 0 occurrences in the v2.1.220 binary; absent from official docs. Real mechanism is `CLAUDE_CONFIG_DIR` | Storage | ❌ | 95% refuted | NEG-ONLY (insufficient) | refuted at v2.1.220 | E43, E44, E72, E73 |
 | [B24](024_b24_from_pr.md) | `--from-pr [value]` resumes a session previously linked to a GitHub pull request | Continuation | 🎯 | 75% | FLAG-VFY | pre-v1.0 | E45, E46 |
-| [B25](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets the effective token window for auto-compaction calculations | Flags | 🎯 | 85% | NEG-ONLY | v2.1.75 | E48, E49 |
-| [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window | Flags | 🎯 | 80% | NEG-ONLY | v2.1.75 | E50, E51 |
+| [B25](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets the effective token window for auto-compaction calculations; takes precedence over `/autocompact`, `--autocompact`, and the `autoCompactWindow` setting | Flags | 🎯 | 90% | NEG-ONLY (existence confirmed) | v2.1.75 | E48, E49, E76 |
+| [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window; can only lower the threshold, never raise it; applies to subagents as well as main conversations | Flags | 🎯 | 85% | NEG-ONLY (existence confirmed) | v2.1.75 | E50, E51, E76 |
 | [B27](027_b27_agent_no_os_process.md) | Agent tool subagents are not OS processes; run as API inference threads within the existing claude process — `pgrep` count unchanged before/during/after | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E52 |
 | [B28](028_b28_bash_rtk_subprocess.md) | Each Bash tool call spawns a transient `rtk` proxy process (~5 MB, 4 FDs) that exits immediately; parent PID is gone before the next call | Process Model | ✅ | 95% | UNVERIFIED | v2.1.74 | E53 |
 | [B29](029_b29_bash_claude_env.md) | All bash subprocesses inherit the full parent OS environment (107 vars, identical between parent and subagent) — including all `CLAUDE_*` vars, project vars, API keys, and desktop session vars | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E54, E56 |
@@ -71,18 +75,42 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 
 Evidence items are shared across behaviors (M:N relationship). Each item may support multiple behaviors.
 
+**Location anchors are `grep` patterns, not line numbers.** A line number is a citation that
+rots silently: the file keeps compiling, the doc keeps rendering, and the row keeps *looking*
+cited while pointing at unrelated code. All four repo-source rows carried stale anchors when
+this was audited — E1 and E3 cited `claude_runner/src/main.rs` lines 83/85/124, but `main.rs`
+had shrunk to a 10-line shim delegating to `run_cli()`, and the referenced help text had moved
+to `cli/help.rs`; E2 cited `command.rs:600`, but the file became the `command/` directory
+module and the code itself changed from `parts.push("-c")` to
+`tokens.push( ArgToken::Plain( … ) )`. Only E10 was still accurate, and only by luck.
+
+A pattern anchor fails loudly instead — `grep` returns nothing, and the row is visibly
+unverifiable rather than quietly wrong. Where an old line reference was replaced, the row
+keeps it in parentheses so the history is not lost. Re-check every repo-source row at once:
+
+```bash
+cd contract/claude_code/docs/behavior
+grep -oE '`\.\./[^`]+\.rs`' readme.md | tr -d '`' | sort -u | while read -r f; do
+  [ -e "$f" ] || echo "MISSING: $f"
+done
+```
+
+Binary-analysis rows (E58–E66) are a separate case: their `strings`-output line numbers are
+valid only for the exact binary version named in the row, and are not expected to survive an
+upgrade. Each such row names its version for that reason.
+
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E1 | B1, B2 | Code | `../../../../module/claude_runner/src/main.rs` | line 85 | `--new-session  Start a new session (default: continues previous)` — `clr` wrapper help text; confirms wrapper default is continuation (not the `claude` binary native default) |
-| E2 | B1, B4 | Code | `../../../../module/claude_runner_core/src/command.rs` | line 600 | `if self.continue_conversation { parts.push("-c") }` — `-c` is a builder option wrapping the native flag |
-| E3 | B3 | Code | `../../../../module/claude_runner/src/main.rs` | lines 83, 124 | `-p, --print  Non-interactive mode` and `-p` branch sets print-only; no session flag change |
+| E1 | B1, B2 | Code | `../../../../module/claude_runner/src/cli/help.rs` | `grep -n '"--new-session"'` (was `main.rs:85`) | `OptionEntry { name : "--new-session", desc : "Start a new session (default: continues previous)" }` — `clr` wrapper help text; confirms wrapper default is continuation (not the `claude` binary native default) |
+| E2 | B1, B4 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | `grep -n 'continue_conversation {'` (was `command.rs:600`) | `if self.continue_conversation { tokens.push( ArgToken::Plain( "-c".to_string() ) ) }` — `-c` is a builder option wrapping the native flag |
+| E3 | B3 | Code | `../../../../module/claude_runner/src/cli/help.rs`, `../../../../module/claude_runner/src/cli/parse.rs` | `grep -n '"--print"'` (was `main.rs:83,124`) | `OptionEntry { name : "-p, --print", desc : "Non-interactive mode (capture and print output)" }` in `help.rs`; the `"-p" \| "--print" =>` branch in `parse.rs` sets print-only; no session flag change |
 | E4 | B5 | Inference | Storage observation | `~/.claude/projects/*/` | Multiple `.jsonl` files in one project; `--continue` must pick one; mtime is the only per-file ordering signal available without metadata |
 | E5 | B6 | Observation | Live storage | `~/.claude/projects/…/-commit/` | 25 `.jsonl` files observed in one project directory from repeated sessions |
 | E6 | B7 | Observation | Live storage | `~/.claude/projects/*/agent-*.jsonl` | Agent session files observed as siblings of main sessions; entries contain `"isSidechain":true` |
 | E7 | B8 | Observation | Live storage | `~/.claude/projects/*/` | Zero-byte `.jsonl` files observed in project directories alongside non-empty sessions |
-| E8 | B9 | Observation | Live storage | `~/.claude/projects/` | Project directory names match `/`→`-` encoding of working directory paths |
+| E8 | B9 | Observation | Live storage | `~/.claude/projects/` | Project directory names are the working directory path with separators replaced by `-`. Originally read as a `/`→`-` rule; superseded by E74/E75, which show the current rule converts *every* non-alphanumeric character. The observation was consistent with both rules because the sampled paths happened to contain no underscores, dots, or spaces. |
 | E9 | B10 | Doc | `../jsonl/009_threading_model.md` | Threading model | `parentUuid` links each entry to its parent; null on first entry of a thread |
-| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command.rs` | line 647-648 | `cmd.env("CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string())` — env var set before spawning `claude` |
+| E10 | B11 | Code | `../../../../module/claude_runner_core/src/command/mod.rs` | `grep -n CLAUDE_CODE_AUTO_CONTINUE` | `pairs.push( ( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() ) )` — env var exported before spawning `claude`. Proves the workspace *sets* the variable; carries no information about whether the binary *reads* it. Location corrected 2026-08-27: previously cited as `src/command.rs` lines 647–648, a path and line range that no longer exist. |
 | E11 | B1 | Test | `../../tests/behavior/b01_default_continues.rs` | `b1_resumable_session_exists_in_real_storage` | At least one non-empty non-agent session exists in real `~/.claude/` storage — prerequisite for default continuation |
 | E12 | B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_multiple_session_files_exist_in_real_project` | At least one project in real `~/.claude/` storage has 2+ non-empty non-agent `.jsonl` files — evidence of per-session file creation |
 | E13 | B3 | Test | `../../tests/behavior/b03_print_flag.rs` | `b3_print_flag_documented_as_output_mode` | `claude --help` documents `-p` / `--print` as output mode |
@@ -91,9 +119,9 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E16 | B6 | Test | `../../tests/behavior/b06_session_accumulation.rs` | `b6_sessions_accumulate_in_real_project` | Real project directory contains 5+ `.jsonl` files — higher threshold than B2 to confirm long-term accumulation without rotation |
 | E17 | B7 | Test | `../../tests/behavior/b07_agent_sessions.rs` | `b7_real_agent_session_has_issidechain_true` | Real `agent-*.jsonl` file contains `"isSidechain":true` in first entry |
 | E18 | B8 | Observation | `../../tests/behavior/b08_zero_byte_init.rs` | `b8_zero_byte_jsonl_exists_in_real_storage` | Zero-byte `.jsonl` files observed in real `~/.claude/` storage (test logs observation, does not assert) |
-| E19 | B9 | Test | `../../tests/behavior/b09_storage_path.rs` | `b9_project_dir_names_follow_encoding_convention` | Real project directory names start with `-` (encoded leading `/`) and decode to existing paths |
+| E19 | B9 | Test | `../../tests/behavior/b09_storage_path.rs` | `b9_project_dir_names_follow_encoding_convention` | Asserts only that at least one project directory name starts with `-`; the `-`→`/` round-trip is best-effort and the test passes even when every decode fails. Does not assert the character class, so it cannot detect an encoding-rule change. |
 | E20 | B10 | Test | `../../tests/behavior/b10_entry_threading.rs` | `b10_first_entry_has_null_parent_uuid`, `b10_subsequent_entries_have_non_null_parent_uuid` | First conversation entry has `parentUuid:null`; second has non-null `parentUuid` referencing first |
-| E21 | B11 | Test | `../../tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | Binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when env var is set — negative assertion |
+| E21 | B11 | Test | `../../tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | Binary does not print `CLAUDE_CODE_AUTO_CONTINUE` in stderr when env var is set — negative assertion; passes identically for a variable absent from the binary, which is why it did not catch this refutation |
 | E22 | B12 | Observation | Live storage | `~/.claude/projects/*/subagents/agent-*.jsonl` | Agent entry `sessionId` field equals the parent directory UUID, not the agent filename ID |
 | E23 | B13 | Observation | Live storage | `~/.claude/projects/*/` | `{uuid}/subagents/agent-*.jsonl` directories observed; parent UUID in directory name matches root `{uuid}.jsonl` |
 | E24 | B14 | Observation | Live storage | `~/.claude/projects/*/subagents/*.meta.json` | `meta.json` files contain `{"agentType":"Explore"}` or `{"agentType":"general-purpose"}` or `{"agentType":"Plan"}`; some include `description` |
@@ -115,8 +143,8 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E40 | B21 | Test | `../../tests/behavior/b21_fork_session_flag.rs` | `b21_fork_session_flag_documented_in_help` | `claude --help` output contains `--fork-session` flag |
 | E41 | B22 | Observation | `claude --help` live output | `--no-session-persistence` flag entry | Help text documents `--no-session-persistence` flag; notes it disables `.jsonl` creation and works only with `--print` mode |
 | E42 | B22 | Test | `../../tests/behavior/b22_no_session_persistence_flag.rs` | `b22_no_session_persistence_flag_documented_in_help` | `claude --help` output contains `--no-session-persistence` flag |
-| E43 | B23 | Doc | `../param/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory |
-| E44 | B23 | Test | `../../tests/behavior/b23_session_dir_override.rs` | `b23_session_dir_env_var_not_rejected` | Binary does not explicitly reject `CLAUDE_CODE_SESSION_DIR` env var at startup |
+| E43 | B23 | Doc | `../param/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory. This is a *self-citation within this collection*, not external corroboration — the param doc and B23 were written from the same unverified assumption, so it never constituted independent evidence. Superseded by E72/E73. |
+| E44 | B23 | Test | `../../tests/behavior/b23_session_dir_override.rs` | `b23_session_dir_env_var_not_rejected` | Binary does not explicitly reject `CLAUDE_CODE_SESSION_DIR` env var at startup — passes identically for a nonexistent variable, which is why it did not catch this refutation |
 | E45 | B24 | Observation | `claude --help` live output | `--from-pr` flag entry | Help text documents `--from-pr [value]` flag for resuming sessions linked to GitHub pull requests |
 | E46 | B24 | Test | `../../tests/behavior/b24_from_pr_flag.rs` | `b24_from_pr_flag_documented_in_help` | `claude --help` output contains `--from-pr` flag |
 | E47 | B1, B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_continue_flag_proves_separate_sessions` | `--continue` flag exists in `claude --help` — binary-level proof that new-session is the default; presence of a dedicated resume flag implies sessions are separate by default |
@@ -143,6 +171,15 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E68 | B37 | Observation | Live session JSONL — session `feed0011` (2026-07-25, v2.1.197) | Main session file vs `subagents/agent-*.jsonl` siblings | Main-conversation assistant entries: `"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":4908}` — 1-hour tier only. All 13 subagent transcripts from the same session (`isSidechain: true`): 5-minute tier only (`ephemeral_1h` = 0), per-agent first-call prefix writes of 42,884–72,407 tokens (769,900 cache-write tokens total for prefixes the parent already held cached). |
 | E69 | B37 | Doc | Anthropic platform documentation (docs.anthropic.com — prompt caching pricing) + code.claude.com/docs/en/costs | Pricing multipliers; TTL policy | Cache writes bill 1.25x base input (5-minute TTL) / 2x (1-hour TTL); cache reads bill 0.1x. Costs doc: the 1-hour TTL applies to the main conversation on subscription and drops to 5 minutes when drawing on extra usage credits; `/usage` attributes a distinct "subagents" category and flags "cache misses" when ≥10% of recent usage. |
 | E70 | B37 | Test | `../../tests/behavior/b37_subagent_cache_ttl.rs` | `b37_plain_agent_transcripts_never_write_1h_tier`, `b37_main_sessions_write_1h_tier_on_subscription` | Full-storage scan (2026-07-26): 12,861 plain-hex non-fork agent transcripts, 742,911 `cache_creation` entries, 740,976 five-minute writes, zero 1-hour writes — hard assert. Excluded 20 fork agents and 1,016 typed-prefix system sidechains, which inherit the parent conversation's tier (18 forks and 1,014 sidechains carry 1-hour writes). Main-session 1-hour write confirmed on the same machine. |
+| E71 | B5 | Doc | Official Claude Code documentation (code.claude.com/docs/en/sessions § Resume a session) | `--continue` row and following paragraph | "`claude --continue` — Resumes the most recent interactive session in the current directory." And: "Claude Code leaves sessions created with `claude -p` or the Agent SDK out of the session picker and out of `claude --continue`… With `claude --continue`, Claude Code also skips background sessions and sessions whose first prompt was `/loop`. When you run `claude -p --continue`, Claude Code includes `-p`, SDK, and `/loop` sessions and still skips background sessions." No sort key is stated. |
+| E72 | B23, B11 | Experiment | Binary string scan — `grep -ac <VAR> ~/.local/share/claude/versions/2.1.220` (2026-08-27) | v2.1.220 native binary, 271,825,824 bytes | Occurrence counts: `CLAUDE_CODE_SESSION_DIR` = 0, `CLAUDE_CODE_AUTO_CONTINUE` = 0. Positive controls in the same scan: `CLAUDE_CONFIG_DIR` = 28, `CLAUDE_CODE_SKIP_PROMPT_HISTORY` = 9, `CLAUDE_CODE_ENTRYPOINT` = 41, `CLAUDECODE` = 20, `cleanupPeriodDays` = 12. Negative control `TOTALLY_FAKE_VAR_XYZ` = 0. Method control: `CLAUDE_CODE_PROJECT_DIR_NAME` = 0, which is the expected result since official docs state it requires v2.1.234 — confirming the scan reports absence correctly rather than under-matching. |
+| E73 | B23 | Doc | Official Claude Code documentation (code.claude.com/docs/en/sessions § Where transcripts are stored) | Configuration table | Lists the supported controls for transcript location and retention: `CLAUDE_CONFIG_DIR` to "Move storage off `~/.claude`", `CLAUDE_CODE_PROJECT_DIR_NAME` to name the project directory (v2.1.234+), `cleanupPeriodDays` for the 30-day retention, `CLAUDE_CODE_SKIP_PROMPT_HISTORY` to suppress transcript writes in all modes, and `--no-session-persistence` for one non-interactive run. `CLAUDE_CODE_SESSION_DIR` appears nowhere in official documentation. |
+| E74 | B9 | Doc | Official Claude Code documentation (code.claude.com/docs/en/sessions § Where transcripts are stored) | Storage path paragraph | "By default, Claude Code stores transcripts as JSONL at `~/.claude/projects/<project>/<session-id>.jsonl`, where `<project>` is your working directory path with non-alphanumeric characters replaced by `-`. For a working directory whose converted name exceeds 200 characters, Claude Code truncates the name to 200 characters and appends a hash of the full path, so the directory name stays within filesystem limits." |
+| E75 | B9 | Experiment | Live storage survey — `~/.claude/projects/` (2026-08-27, v2.1.220) | 978 project directories | Character census: 0 directory names contain a space, 0 contain a dot, 8 contain an underscore. The 8 underscore-preserving names were last written 2026-06-29 → 2026-07-16 (legacy rule); every current-era name converts underscores. Direct current-version confirmation: this session's cwd `/home/user1/pro/lib/yrd_core/family_ai/claude_runner/module/claude_runner/docs` writes its transcript to `-home-user1-pro-lib-yrd-core-family-ai-claude-runner-module-claude-runner-docs`, converting `yrd_core`→`yrd-core`, `family_ai`→`family-ai`, `claude_runner`→`claude-runner`. Forward-encoding `sed 's/[^a-zA-Z0-9]/-/g'` over real source directories reproduces existing project directory names exactly. Longest name observed: 168 chars, so the 200-char truncation rule is unexercised on this machine. |
+| E76 | B25, B26 | Experiment | Binary string scan — `grep -ac <VAR> ~/.local/share/claude/versions/2.1.220` (2026-08-27) | v2.1.220 native binary | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` = 14, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = 6 — both present. Same scan, same controls as E72, which returned 0 for the two refuted variables: positive control `CLAUDE_CONFIG_DIR` = 28, negative control `TOTALLY_FAKE_VAR_XYZ` = 0. Establishes that these two NEG-ONLY behaviors describe variables the binary actually contains, which the NEG-ONLY test itself cannot show. |
+| E77 | B14 | Experiment | Live storage census (2026-08-27, v2.1.220) | `~/.claude/projects/**/subagents/**/*.meta.json` | 16713 sidecars carrying `agentType`: general-purpose 11088, Explore 5217, workflow-subagent 269, fork 119, Plan 10, claude-code-guide 6, claude 4. Layout split: 16384 flat in `subagents/`, 329 nested in `subagents/workflows/wf_*/` (269 workflow-subagent + 60 Explore). Full key census finds ten fields, not two: `agentType` 16713, `spawnDepth` 16095 (values 1-4), `description` 15769, `toolUseId` 15766, `isFork` 119, `model` 76, `parentAgentId` 11, `stoppedByUser` 8, `worktreePath` 3, `worktreeBranch` 3 |
+
+**Provenance caveat — E58 through E61.** These four rows cite `strings /home/alice/.local/share/claude/versions/2.1.74`. Neither the path nor the version is reachable from this repository's environment: `/home/alice` does not exist, and the only installed version is 2.1.220. They are therefore **not reproducible as written** — re-running them requires substituting the current `$HOME` and an installed version, and the offsets, `strings`-output line numbers, and minified identifiers (`iy4`, `C9`, `Kf_`, `K2q`, `VfT`, …) are specific to the 2.1.74 build and will not survive a version change. The findings are retained because the recovered function bodies are quoted verbatim and remain the best available record, but any claim that depends on them should be re-derived against the installed binary before being relied on. The same caveat applies to E62–E66, which cite v2.1.197 — also no longer installed, though at least under a `$HOME` that does exist.
 
 ---
 
@@ -151,31 +188,37 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | Status | Count | IDs |
 |--------|-------|-----|
 | ✅ Confirmed | 22 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36, B37 |
-| 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
+| ✅ / ❓ Split | 1 | B5 (candidate filter confirmed at 95%; ordering key uncertain at 55%) |
+| 🎯 Observed | 11 | B4, B8, B15, B18, B19, B20, B21, B22, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
+| ❌ Refuted | 2 | B11, B23 (both `CLAUDE_CODE_*` env vars absent from the v2.1.220 binary; both were NEG-ONLY) |
 
-**Total behaviors:** 38 (B1–B37 + B16h sub-hypothesis; B16h shares B16's row index)
+**Total behaviors:** 38 (B1–B37 + B16h sub-hypothesis; B16h shares B16's row index) — 22 + 1 + 11 + 1 + 1 + 2 = 38.
 **Confirmed (≥90% certainty):** 21 (B36 is Confirmed status at 85% certainty — below the 90% threshold, included in the Confirmed row above by evidence type but excluded from this ≥90% count)
-**Lowest certainty:** B5 (60% — current session selection mechanism)
-**Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
+**Lowest certainty:** B5 ordering key (55% — which field orders the filtered candidate set)
+**Investigation priority:** the 4 remaining NEG-ONLY entries. Two of the six original NEG-ONLY behaviors (B11, B23) were refuted outright once scanned against the binary; B25 and B26 survived the same scan (`CLAUDE_CODE_AUTO_COMPACT_WINDOW` = 14, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = 6) and are additionally documented officially. That is a 33% refutation rate for the tier — every future NEG-ONLY entry should be scanned before it is assigned a certainty above 50%.
 
 | Test Tier | Count | IDs |
 |-----------|-------|-----|
-| VALIDATED | 13 | B1, B2, B6, B7, B9, B10, B12, B13, B14, B15, B17, B18, B37 |
+| VALIDATED | 12 | B1, B2, B6, B7, B10, B12, B13, B14, B15, B17, B18, B37 |
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
-| NEG-ONLY | 4 | B11, B23, B25, B26 |
-| UNVERIFIED | 11 | B8, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
+| NEG-ONLY | 4 | B11, B23 (both refuted — the tier could not detect it), B25, B26 |
+| UNVERIFIED | 12 | B8, B9, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 13 of 38 behaviors are fully validated with behavioral assertions.
+Total: 12 + 1 + 8 + 4 + 12 + 1 = 38.
+
+**Validation gap:** 12 of 38 behaviors are fully validated with behavioral assertions. B9 moved from VALIDATED to UNVERIFIED in this revision: its test asserts a leading-character convention, not the encoding rule the behavior claims, so it could not detect the rule change that E74/E75 document. A test tiered VALIDATED must assert the behavior statement itself — asserting some weaker property of the same data is what let B9 carry a false tier.
 
 ---
 
 ### Invalidation Tests
 
-Each behavior instance has a corresponding invalidation test in `contract/claude_code/tests/behavior/`. Tests inspect real `~/.claude/` storage. If Claude Code changes behavior, the tests go RED.
+Behavior instances B1–B26, B16h, and B37 have an invalidation test in `contract/claude_code/tests/behavior/`. Tests inspect real `~/.claude/` storage. If Claude Code changes behavior, the tests go RED — subject to the tier's own strength: only `VALIDATED` tests assert the behavior statement itself.
+
+**B27–B36 have no test file.** 28 test files exist (`ls contract/claude_code/tests/behavior/*.rs`); before this revision this table listed ten additional filenames — `b27_agent_no_os_process.rs` through `b36_background_task_lifecycle.rs` — none of which exist on disk. They are listed below as *absent* rather than deleted, since each names a real coverage gap worth filling. All ten behaviors rest on one-off experiments and binary analysis recorded in E52–E66, with nothing that goes RED on regression.
 
 | File | Behavior | Tier |
 |------|----------|------|
@@ -187,9 +230,9 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b06_session_accumulation.rs` | B6 | VALIDATED |
 | `b07_agent_sessions.rs` | B7 | VALIDATED |
 | `b08_zero_byte_init.rs` | B8 | UNVERIFIED |
-| `b09_storage_path.rs` | B9 | VALIDATED |
+| `b09_storage_path.rs` | B9 | UNVERIFIED (asserts a leading-`-` convention, not the encoding rule — see B9) |
 | `b10_entry_threading.rs` | B10 | VALIDATED |
-| `b11_auto_continue.rs` | B11 | NEG-ONLY |
+| `b11_auto_continue.rs` | B11 | NEG-ONLY (behavior refuted; the test still passes — see the NEG-ONLY caveat) |
 | `b12_agent_session_id_is_parent.rs` | B12 | VALIDATED |
 | `b13_subagent_directory_structure.rs` | B13 | VALIDATED |
 | `b14_agent_meta_json.rs` | B14 | VALIDATED |
@@ -201,22 +244,24 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b20_session_id_flag.rs` | B20 | FLAG-VFY |
 | `b21_fork_session_flag.rs` | B21 | FLAG-VFY |
 | `b22_no_session_persistence_flag.rs` | B22 | FLAG-VFY |
-| `b23_session_dir_override.rs` | B23 | NEG-ONLY |
+| `b23_session_dir_override.rs` | B23 | NEG-ONLY (behavior refuted; the test still passes — see the NEG-ONLY caveat) |
 | `b24_from_pr_flag.rs` | B24 | FLAG-VFY |
 | `b25_auto_compact_window.rs` | B25 | NEG-ONLY |
 | `b26_autocompact_pct_override.rs` | B26 | NEG-ONLY |
 | `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; runs by default in container) |
-| `b27_agent_no_os_process.rs` | B27 | UNVERIFIED (no automated test yet) |
-| `b28_bash_rtk_subprocess.rs` | B28 | UNVERIFIED (no automated test yet) |
-| `b29_bash_claude_env.rs` | B29 | UNVERIFIED (no automated test yet) |
-| `b30_subagent_context_inheritance.rs` | B30 | UNVERIFIED (no automated test yet) |
-| `b31_subagent_tool_sets.rs` | B31 | UNVERIFIED (no automated test yet) |
-| `b32_claudemd_at_ref_path_filter.rs` | B32 | UNVERIFIED (no automated test yet) |
-| `b33_claudemd_loading_limits.rs` | B33 | UNVERIFIED (no automated test yet) |
-| `b34_claudemd_content_pipeline.rs` | B34 | UNVERIFIED (no automated test yet) |
-| `b35_automemory_search_context_flag.rs` | B35 | UNVERIFIED (no automated test yet) |
-| `b36_background_task_lifecycle.rs` | B36 | UNVERIFIED (no automated test yet) |
 | `b37_subagent_cache_ttl.rs` | B37 | VALIDATED |
+| *(absent)* `b27_agent_no_os_process.rs` | B27 | **No test file** — would assert `pgrep -a claude` count is unchanged across an Agent dispatch |
+| *(absent)* `b28_bash_rtk_subprocess.rs` | B28 | **No test file** — would assert `/proc/self/status` reports `Name: rtk` inside a Bash tool call |
+| *(absent)* `b29_bash_claude_env.rs` | B29 | **No test file** — would diff `/proc/self/environ` between parent and subagent |
+| *(absent)* `b30_subagent_context_inheritance.rs` | B30 | **No test file** — requires live subagent dispatch; not reachable from a test harness |
+| *(absent)* `b31_subagent_tool_sets.rs` | B31 | **No test file** — requires live subagent dispatch; not reachable from a test harness |
+| *(absent)* `b32_claudemd_at_ref_path_filter.rs` | B32 | **No test file** — would re-derive the `iy4()` path filter against the installed binary |
+| *(absent)* `b33_claudemd_loading_limits.rs` | B33 | **No test file** — would assert the `$P`/`ny4`/`Xm` constants against the installed binary |
+| *(absent)* `b34_claudemd_content_pipeline.rs` | B34 | **No test file** — would assert the pipeline transformations against the installed binary |
+| *(absent)* `b35_automemory_search_context_flag.rs` | B35 | **No test file** — would assert the `tengu_coral_fern` default against the installed binary |
+| *(absent)* `b36_background_task_lifecycle.rs` | B36 | **No test file** — would assert the five background-task env vars are present in the installed binary |
+
+The six binary-analysis rows (B32–B36, and the existence half of every NEG-ONLY behavior) are all testable by the same cheap mechanism that refuted B11 and B23: scan the installed binary for the identifier and assert a non-zero count, with a fabricated negative control to prove the scan discriminates. That does not confirm semantics, but it does convert "documented from a build we no longer have" into something that goes RED when the identifier disappears.
 
 To run:
 ```bash

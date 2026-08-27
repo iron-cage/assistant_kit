@@ -70,6 +70,7 @@ mod path;
 mod error;
 mod entry;
 mod event;
+mod context;
 mod session;
 mod project;
 mod storage;
@@ -86,6 +87,7 @@ mod session_id;
 pub mod scope;
 mod canonical;
 mod topic_session;
+mod transcript_answer;
 
 pub use path::{ encode_path, decode_path, encode_component_piece };
 pub use continuation::{ check_continuation, to_storage_path_for, most_recent_session_id, most_recent_session_in_dir };
@@ -111,6 +113,13 @@ pub use event::
   Attachment,
   InvokedSkill,
 };
+pub use context::
+{
+  SessionContextState,
+  ContextFold,
+  TaskState,
+  EventCounters,
+};
 pub use session::Session;
 pub use project::{ Project, ProjectId };
 pub use storage::Storage;
@@ -122,3 +131,4 @@ pub use family::{ SessionFamily, find_family };
 pub use filter::{ StringMatcher, SessionFilter, ProjectFilter };
 pub use search::{ SearchFilter, SearchMatch };
 pub use export::{ ExportFormat, export_session, export_session_to_file };
+pub use transcript_answer::{ transcript_path, transcript_mark, transcript_answer_since };

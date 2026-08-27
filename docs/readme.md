@@ -42,6 +42,7 @@ duplicated here, where they would silently drift:
 | `module/claude_assets/` | `feature/`, `invariant/` |
 | `module/claude_assets_core/` | `feature/`, `invariant/` |
 | `module/claude_auth/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_context_report_core/` | `feature/`, `format/`, `invariant/` (docs-only planned crate) |
 | `module/claude_core/` | `api/` |
 | `module/claude_daemon_core/` | `api/`, `feature/`, `invariant/` |
 | `module/claude_journal/` | `api/`, `entity/`, `feature/`, `invariant/` |
@@ -59,6 +60,8 @@ duplicated here, where they would silently drift:
 | `module/claude_session_core/` | `api/`, `feature/`, `invariant/` |
 | `module/claude_storage/` | `algorithm/`, `cli/`, `feature/`, `invariant/`, `operation/` |
 | `module/claude_storage_core/` | `algorithm/`, `api/`, `data_structure/`, `feature/`, `invariant/` |
+| `module/claude_terminal_core/` | `api/`, `feature/`, `invariant/` |
+| `module/claude_topic_core/` | `api/`, `feature/`, `invariant/` |
 | `module/claude_version/` | `algorithm/`, `cli/`, `feature/`, `pattern/`, `pitfall/`, `runtime_file/` |
 | `module/claude_version_core/` | `algorithm/`, `api/`, `invariant/`, `pattern/` |
 | `module/dream/` | `feature/`, `invariant/` |

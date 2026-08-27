@@ -20,7 +20,7 @@
 //!
 //! TP-16 is the cross-check that gives the whole command its point: the path
 //! `topics --path NAME` prints must be the same directory `--topic NAME` actually
-//! runs in. Both come from `topic_path::topic_dir()`, and this test is what keeps
+//! runs in. Both come from `claude_topic_core::topic_dir()`, and this test is what keeps
 //! that true if either caller is ever changed independently.
 //!
 //! ## Corner Cases Covered (mirrors `tests/docs/cli/command/12_topics.md` TP-1..TP-16)
@@ -358,7 +358,7 @@ fn tp15_session_count_reflects_real_storage()
 ///
 /// This is the guarantee the whole command rests on: `topics --path NAME` is only
 /// useful if it names the directory `--topic NAME` actually runs in. Both go through
-/// `topic_path::topic_dir()`, and this test fails the moment either caller stops.
+/// `claude_topic_core::topic_dir()`, and this test fails the moment either caller stops.
 #[ test ]
 fn tp16_path_matches_dry_run_effective_dir()
 {

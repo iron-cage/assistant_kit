@@ -20,7 +20,7 @@ Each fact below was verified against the cited source before this guide was writ
 | 5 | With no `--session`, the session is chosen by **canonicalised** working directory | `src/cli/chat.rs:267` — `args.dir.canonicalize()`, compared against each session's own canonicalised `cwd` |
 | 6 | No directory match → a session is spawned there, then given 3s to draw before the prompt is sent | `src/cli/chat.rs` — `spawn_session()`, then `BANNER_SETTLE : Duration = Duration::from_secs( 3 )` |
 | 7 | The turn ends only when the session is **both** idle and quiet for 8 polls (~0.8s) | `src/cli/chat.rs` — `QUIET_POLLS : usize = 8`, `POLL = 100ms`, combined with the daemon's busy flag |
-| 8 | The printed answer comes from the session transcript, not the terminal; `--raw` prints the terminal | `src/cli/chat_answer.rs`; `src/cli/chat.rs` module docs — "Knowing *when* is not knowing *what*" |
+| 8 | The printed answer comes from the session transcript, not the terminal; `--raw` prints the terminal | `claude_storage_core/src/transcript_answer.rs`; `src/cli/chat.rs` module docs — "Knowing *when* is not knowing *what*" |
 | 9 | At most one daemon, enforced by an exclusive `flock` on `instance.lock` | `claude_daemon_core/docs/feature/001_single_instance.md` |
 | 10 | The daemon survives the shell: own process group, no controlling terminal, reparented to init | `src/cli/daemon.rs:317` — `command.process_group( 0 )`; `SERVE_TOKEN = "__daemon_serve"` |
 | 11 | Sessions are started with background-task reporting on, which is what makes `idle` trustworthy | `src/cli/daemon.rs:462` — `.env( BG_TASKS_REPORT_RUNNING_ENV, "1" )` |

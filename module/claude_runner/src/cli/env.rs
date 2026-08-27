@@ -172,7 +172,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   {
     if let Some( v ) = env_str( "CLR_TOPIC_MODE" )
     {
-      parsed.topic_mode = v.parse::< super::topic_path::TopicMode >().ok();
+      parsed.topic_mode = v.parse::< claude_topic_core::TopicMode >().ok();
     }
   }
   if !parsed.global                { parsed.global       = env_bool( "CLR_GLOBAL" ); }

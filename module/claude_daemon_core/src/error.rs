@@ -68,6 +68,32 @@ pub enum Error
   Pty( claude_pty_core::Error ),
   /// Reading Claude Code's session registry failed.
   Registry( claude_session_core::Error ),
+  /// Reading Claude Code's on-disk conversation storage failed.
+  Storage( claude_storage_core::Error ),
+  /// The session has no transcript to read.
+  ///
+  /// Either its working directory will not encode to a storage path, or the
+  /// session has not written a transcript yet — Claude Code creates one on the
+  /// first turn, so a session spawned moments ago legitimately has none.
+  /// Reported rather than answered with an empty summary, which would read as
+  /// "this session's context is empty" when the truth is "not known yet".
+  NoTranscript
+  {
+    /// Conversation id whose transcript could not be read.
+    session_id : String,
+  },
+  /// A baseline probe ran but did not produce a usable measurement.
+  ///
+  /// Distinct from [`Self::Io`], which means `claude` could not be run at all.
+  /// This one means it ran and then failed, or answered something that could not
+  /// be read as a measurement — a probe that half-worked must not be recorded as
+  /// a floor of zero, which would report a session's entire context as
+  /// conversation.
+  Probe
+  {
+    /// What went wrong, including `claude`'s own stderr on a non-zero exit.
+    reason : String,
+  },
 }
 
 impl fmt::Display for Error
@@ -98,6 +124,10 @@ impl fmt::Display for Error
       Self::Remote( message ) => write!( f, "daemon reported: {message}" ),
       Self::Pty( source ) => write!( f, "pty error: {source}" ),
       Self::Registry( source ) => write!( f, "session registry error: {source}" ),
+      Self::Storage( source ) => write!( f, "conversation storage error: {source}" ),
+      Self::NoTranscript { session_id } =>
+        write!( f, "session {session_id} has no readable transcript" ),
+      Self::Probe { reason } => write!( f, "baseline probe failed: {reason}" ),
     }
   }
 }
@@ -112,6 +142,7 @@ impl std::error::Error for Error
       Self::Io( source ) => Some( source ),
       Self::Pty( source ) => Some( source ),
       Self::Registry( source ) => Some( source ),
+      Self::Storage( source ) => Some( source ),
       Self::AlreadyRunning { .. }
       | Self::LockMismatch { .. }
       | Self::LineTooLong
@@ -120,6 +151,8 @@ impl std::error::Error for Error
       | Self::UnknownSession( _ )
       | Self::ReaderTaken
       | Self::NoRegistration { .. }
+      | Self::NoTranscript { .. }
+      | Self::Probe { .. }
       | Self::Remote( _ ) => None,
     }
   }
@@ -149,5 +182,14 @@ impl From< claude_session_core::Error > for Error
   fn from( source : claude_session_core::Error ) -> Self
   {
     Self::Registry( source )
+  }
+}
+
+impl From< claude_storage_core::Error > for Error
+{
+  #[ inline ]
+  fn from( source : claude_storage_core::Error ) -> Self
+  {
+    Self::Storage( source )
   }
 }

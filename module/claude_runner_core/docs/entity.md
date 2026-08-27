@@ -8,11 +8,11 @@
 | `claude_params/` | Claude CLI parameter specifications | [claude_params/readme.md](claude_params/readme.md) | 62 |
 | `data_structure/` | Domain type documentation for command builder | [data_structure/readme.md](data_structure/readme.md) | 1 |
 | `failure_mode/` | Documented failure modes and silent error conditions | [failure_mode/readme.md](failure_mode/readme.md) | 4 |
-| `feature/` | Behavioral requirements for execution control | [feature/readme.md](feature/readme.md) | 6 |
+| `feature/` | Behavioral requirements for execution control | [feature/readme.md](feature/readme.md) | 7 |
 | `invariant/` | Measurable constraints for execution behavior | [invariant/readme.md](invariant/readme.md) | 2 |
 | `pattern/` | Reusable design patterns in the runner core | [pattern/readme.md](pattern/readme.md) | 1 |
 | `tests/docs/error/` | Per-error condition test case specifications | [../tests/docs/error/readme.md](../tests/docs/error/readme.md) | 1 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 3 |
+| `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 4 |
 
 ## Master Doc Instances Table
 
@@ -30,8 +30,9 @@
 | feature | 004 | Run Isolated | [feature/004_run_isolated.md](feature/004_run_isolated.md) |
 | feature | 005 | Stdin File | [feature/005_stdin_file.md](feature/005_stdin_file.md) |
 | feature | 006 | Unset CLAUDE_CODE | [feature/006_unset_claudecode.md](feature/006_unset_claudecode.md) |
+| feature | 007 | Bounded Fan-Out | [feature/007_bounded_fanout.md](feature/007_bounded_fanout.md) |
 | invariant | 001 | Single Execution Point | [invariant/001_single_execution_point.md](invariant/001_single_execution_point.md) |
 | invariant | 002 | NFR Conformance | [invariant/002_nfr_conformance.md](invariant/002_nfr_conformance.md) |
 | pattern | 001 | Command Builder | [pattern/001_command_builder.md](pattern/001_command_builder.md) |
 
-> `claude_params` instances (60 files) use numbered naming and are enumerated in their master file: [claude_params/readme.md](claude_params/readme.md).
+> `claude_params` instances (62 files) use numbered naming and are enumerated in their master file: [claude_params/readme.md](claude_params/readme.md).

@@ -12,6 +12,8 @@ PTY-attached children — no mocks.
 | `lock_test.rs` | Single-instance contention, release on drop, parent creation, content preservation |
 | `ipc_test.rs` | Line framing, EOF, CRLF, non-UTF-8, and the size cap that bounds the buffer |
 | `protocol_test.rs` | Wire shape of every request and both response forms, and round-trips |
+| `context_test.rs` | Context summary folded from a transcript: every section, the token split, missing transcripts, unmodelled kinds, and that the read stays pure |
+| `baseline_test.rs` | Probe flags, reading a probe response, and the version-and-model-keyed cache |
 | `output_test.rs` | Output cursors, bounded retention, and character boundaries |
 | `registration_test.rs` | Finding a spawned process's conversation id, and giving up when it never appears |
 | `table_test.rs` | Conversation-id keying, replacement, removal, summary ordering, and teardown |
