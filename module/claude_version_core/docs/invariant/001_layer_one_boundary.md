@@ -64,17 +64,23 @@ grep -n 'warn( missing_docs )\|warn( missing_debug_implementations )' module/cla
 
 ### Known Documentation Split
 
-Doc comments in `src/` cite four `docs/…` paths that do **not** resolve within this crate. All
-four live in the Layer 2 sibling. This is a genuine leaf-proximity deviation — the behavior is
-owned here, the specification lives one layer up — recorded so a reader following a reference
-is not left searching:
+Doc comments in `src/` cite four bare `docs/…` paths. Two now resolve inside this crate; two
+still resolve only in the Layer 2 sibling. The remaining two are a genuine leaf-proximity
+deviation — the behavior is owned here, the specification lives one layer up — recorded so a
+reader following a reference is not left searching:
 
-| Cited from `src/` | Actually resolves at |
-|-------------------|----------------------|
-| `docs/algorithm/002_config_resolution.md` | `../../../claude_version/docs/algorithm/002_config_resolution.md` |
-| `docs/feature/001_version_management.md` | `../../../claude_version/docs/feature/001_version_management.md` |
-| `docs/feature/007_params_command.md` | `../../../claude_version/docs/feature/007_params_command.md` |
-| `docs/pattern/002_parameter_trace.md` | `../../../claude_version/docs/pattern/002_parameter_trace.md` |
+| Cited from `src/` | Resolves | At |
+|-------------------|----------|----|
+| `docs/algorithm/002_config_resolution.md` | in-crate | `../algorithm/002_config_resolution.md` |
+| `docs/pattern/002_parameter_trace.md` | in-crate | `../pattern/002_parameter_trace.md` |
+| `docs/feature/001_version_management.md` | Layer 2 only | `../../../claude_version/docs/feature/001_version_management.md` |
+| `docs/feature/007_params_command.md` | Layer 2 only | `../../../claude_version/docs/feature/007_params_command.md` |
+
+The two in-crate rows are listed rather than dropped because a same-named instance also exists
+at Layer 2 — `claude_version/docs/algorithm/002_config_resolution.md` and
+`.../pattern/002_parameter_trace.md`. That is a deliberate two-layer split, not a duplicate:
+the instance here documents what this crate implements, the Layer 2 instance documents how the
+CLI command consumes and renders it. A bare citation in `src/` means the local one.
 
 Enumerate the citing sites with:
 

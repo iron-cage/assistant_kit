@@ -21,7 +21,7 @@ Note that two of `src/`'s bare `docs/…` citations resolve locally now that
 directory; `feature/001_version_management.md` and `feature/007_params_command.md` still
 resolve only at Layer 2 — see
 [invariant/001_layer_one_boundary.md](invariant/001_layer_one_boundary.md) § Known Documentation
-Split, which needs a matching update.
+Split for the full mapping.
 
 ### Responsibility Table
 

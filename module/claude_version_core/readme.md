@@ -8,7 +8,6 @@ Layer 1 domain helpers for Claude Code version management and settings. Depends 
 |------|---------------|
 | `Cargo.toml` | Crate manifest: depends on `claude_core` only |
 | `src/` | Version detection, settings I/O domain logic |
-| `docs/` | Config-resolution algorithm, parameter-trace pattern |
+| `docs/` | Library API contracts, structural invariants, config-resolution algorithm, parameter-trace pattern |
 | `tests/` | Unit tests for domain helpers |
-| `docs/` | Library API contracts and structural invariants |
 | `verb/` | Shell scripts for each `do` protocol verb. |
