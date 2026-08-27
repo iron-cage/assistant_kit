@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in the assistant workspace
-  node_count: 14
+  node_count: 15
   edge_count: 32
-  component_count: 2
-  last_updated: '2026-06-23'
+  component_count: 3
+  last_updated: '2026-08-27'
 nodes:
 - id: feature/001
   file: feature/001_workspace_design.md
@@ -28,6 +28,10 @@ nodes:
 - id: invariant/005
   file: invariant/005_dependency_management.md
   label: Dependency Management
+  entity: invariant
+- id: invariant/006
+  file: invariant/006_doc_entity_index_consistency.md
+  label: Doc Entity Index Consistency
   entity: invariant
 - id: pattern/001
   file: pattern/001_crate_layering.md
@@ -184,4 +188,14 @@ components:
   - error/004
   - error/005
   - error/006
+- id: 3
+  label: Doc registry invariant
+  size: 1
+  isolated: true
+  gap: invariant/006 neither cites nor is cited by any other doc instance; it governs
+    registry consistency rather than workspace design, so feature/001's Invariants
+    table lists only invariant/001-005. Whether it should be linked there is an open
+    question, not an established omission.
+  nodes:
+  - invariant/006
 dangling_refs: []

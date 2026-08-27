@@ -24,7 +24,7 @@ ast .help                    # all ~40 commands in one place
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Twenty-one workspace crates (see Crates below) |
+| `module/` | Twenty-four workspace crates (see Crates below) |
 | `contract/` | Behavioral contract test suites for external dependencies |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
 | `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
@@ -44,11 +44,14 @@ ast .help                    # all ~40 commands in one place
 | `claude_journal` | — | * | Append-only event journal library (zero workspace deps) |
 | `json_redact` | — | * | Domain-agnostic redaction of sensitive values from strings and JSON |
 | `svg_chart` | — | * | Minimal SVG line/bar chart rendering |
+| `claude_pty_core` | — | * | Pseudo-terminal session mechanics (zero dependencies) |
 | `claude_profile_core` | — | 1 | Token status + account domain logic |
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
 | `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
 | `claude_assets_core` | — | 1 | Symlink-based artifact installer domain logic |
 | `claude_journal_charts` | — | 1 | Aggregates journal Command events into a daily-usage SVG bar chart |
+| `claude_session_core` | — | 1 | Live-session observation: registry, liveness, turn boundaries |
+| `claude_daemon_core` | — | 1 † | Single-instance session daemon and its IPC protocol |
 | `claude_profile` | `clp` | 2 | Account management, token status, `~/.claude/` paths |
 | `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
@@ -59,7 +62,9 @@ ast .help                    # all ~40 commands in one place
 | `assistant` | `ast` | 3 | Super-app aggregating all Layer 2 CLIs |
 | `assistant_kit` | — | 3 | Agent-agnostic integration layer library |
 
-`*` Six crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`, `json_redact`, `svg_chart`) sit outside the layer hierarchy — standalone primitives with no workspace dependencies.
+`*` Seven crates (`claude_storage_core`, `claude_auth`, `claude_quota`, `claude_journal`, `json_redact`, `svg_chart`, `claude_pty_core`) sit outside the layer hierarchy — standalone primitives with no workspace dependencies.
+
+`†` `claude_daemon_core` depends on `claude_session_core`, which is also Layer 1 — a deviation from the Layer Invariant. See [`docs/pattern/001_crate_layering.md`](docs/pattern/001_crate_layering.md) for both known deviations and their status.
 
 ## Architecture
 
@@ -70,6 +75,7 @@ ast .help                    # all ~40 commands in one place
 *        claude_journal           (append-only event journal library — standalone primitive)
 *        json_redact              (sensitive-value redaction — standalone primitive)
 *        svg_chart                (SVG line/bar chart rendering — standalone primitive)
+*        claude_pty_core          (pseudo-terminal session mechanics — standalone primitive)
 Layer 0: claude_core              (shared primitives — zero workspace deps)
              ↓
 Layer 1: claude_profile_core      (token status, account domain logic)
@@ -77,6 +83,8 @@ Layer 1: claude_profile_core      (token status, account domain logic)
          claude_runner_core       (ClaudeCommand builder + execute())
          claude_assets_core       (symlink artifact installer domain logic)
          claude_journal_charts    (journal events → daily-usage SVG chart)
+         claude_session_core      (live-session registry, liveness, turn boundaries)
+         claude_daemon_core     † (session daemon + IPC protocol — depends on claude_session_core)
              ↓
 Layer 2: dream           (lib)    (library facade — re-exports all core crates: Layer 0, *, 1)
          claude_profile  (clp)    (account management, token status)
