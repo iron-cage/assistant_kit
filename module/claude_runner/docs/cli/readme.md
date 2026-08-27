@@ -28,7 +28,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `param_group/` | Logical parameter groupings (7 groups) |
 | `command_group/` | Every command partitioned into exactly one group (Total Partition); shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
-| `param/` | Individual parameter reference docs (83 active; 1 deprecated) |
+| `param/` | Individual parameter reference docs (83 active; 2 deprecated) |
 | `user_story/` | User goal and usage pattern docs (32 user stories) |
 
 ### Completion Matrix
@@ -37,7 +37,7 @@ clr <command> [OPTIONS] [MESSAGE]
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (15 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (85 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (85 instances; 2 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -65,7 +65,7 @@ clr <command> [OPTIONS] [MESSAGE]
 ### Navigation
 
 - [Commands](command/readme.md) — command reference (15 commands)
-- [Parameters](param/readme.md) — flag and argument reference (83 active; 1 deprecated)
+- [Parameters](param/readme.md) — flag and argument reference (83 active; 2 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (7 groups)
 - [Command Groups](command_group/readme.md) — every command in exactly one group; shared handler + parameter set when multi-member (10 groups: 1 triple + 9 singletons)
