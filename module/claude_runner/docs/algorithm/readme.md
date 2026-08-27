@@ -13,9 +13,9 @@ Path computation algorithm specifications for the `claude_runner` crate.
 
 | File | Responsibility |
 |------|----------------|
-| `001_path_encoding.md` | Df() path encoding — claude_runner's consumption points; canonical spec in claude_storage_core |
-| `002_git_root_detection.md` | Git root upward-walk algorithm — resolves the memory key from a working directory |
-| `003_session_file_selection.md` | mtime-based session file selection — replicates `claude -c` active-session choice |
+| [001_path_encoding.md](001_path_encoding.md) | Df() path encoding — claude_runner's consumption points; canonical spec in claude_storage_core |
+| [002_git_root_detection.md](002_git_root_detection.md) | Git root upward-walk algorithm — resolves the memory key from a working directory |
+| [003_session_file_selection.md](003_session_file_selection.md) | mtime-based session file selection — replicates `claude -c` active-session choice |
 
 ### Overview Table
 

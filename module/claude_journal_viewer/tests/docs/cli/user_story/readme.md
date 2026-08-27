@@ -13,9 +13,9 @@ Per-user-story test case indices for `claude_journal_viewer`. See [user_story/re
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_cost_tracking.md` | US- acceptance tests for cost tracking by model/day/command | ✅ |
-| `002_failure_diagnosis.md` | US- acceptance tests for exit-code filtering and error search | ✅ |
-| `003_automation_audit.md` | US- acceptance tests for pipeline audit and forensic export | ✅ |
-| `004_capacity_planning.md` | US- acceptance tests for journal health and retention | ✅ |
-| `005_team_reporting.md` | US- acceptance tests for team-wide reporting and shared journals | ✅ |
+| [001_cost_tracking.md](001_cost_tracking.md) | US- acceptance tests for cost tracking by model/day/command | ✅ |
+| [002_failure_diagnosis.md](002_failure_diagnosis.md) | US- acceptance tests for exit-code filtering and error search | ✅ |
+| [003_automation_audit.md](003_automation_audit.md) | US- acceptance tests for pipeline audit and forensic export | ✅ |
+| [004_capacity_planning.md](004_capacity_planning.md) | US- acceptance tests for journal health and retention | ✅ |
+| [005_team_reporting.md](005_team_reporting.md) | US- acceptance tests for team-wide reporting and shared journals | ✅ |
 | `procedure.md` | Workflow for creating and updating user story test specs | ✅ |

@@ -12,4 +12,5 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining feature instances | ✅ |
 | 001 | [CLI Tool](001_cli_tool.md) | CLI tool scope, design principles, and limitations | ✅ |

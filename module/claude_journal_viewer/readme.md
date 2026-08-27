@@ -10,6 +10,7 @@ Provides `.list`, `.tail`, `.stats`, `.search`, `.serve`, `.prune`, `.status`, `
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | Public module re-exports and crate docs |
 | `src/cli_main.rs` | `clj` binary — arg parsing, command dispatch, `.tail`/`.serve` loops, embedded web page, help text |
 | `src/output.rs` | Shared command output logic — filters, formatting, all `.list`/`.stats`/`.search`/`.status`/`.prune`/`.export`/`.chart` bodies |

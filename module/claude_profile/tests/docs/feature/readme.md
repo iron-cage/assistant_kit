@@ -13,6 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing feature test specs |
 | 000_doc_structure.md | DT cases for Rule 9a structural compliance — all 47 feature docs |
 | 001_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 002_account_save.md | FT cases for Feature 002 — Save Account |

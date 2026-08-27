@@ -12,7 +12,7 @@ Governed by `$GENAI/dev/doc/guide_des.rulebook.md`.
 
 | File | Responsibility |
 |------|----------------|
-| `001_topic_sessions.md` | Forking the current session into isolated, resumable topic sessions |
+| [001_topic_sessions.md](001_topic_sessions.md) | Forking the current session into isolated, resumable topic sessions |
 
 ### Guides
 

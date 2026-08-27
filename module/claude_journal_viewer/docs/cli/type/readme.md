@@ -9,17 +9,17 @@
 
 | File | Responsibility |
 |------|----------------|
-| `01_duration.md` | Human-friendly duration parsing (30s, 1h, 7d, 4w) |
-| `02_event_type.md` | 8-variant event type enum |
-| `03_string.md` | UTF-8 string fundamental type |
-| `04_integer.md` | Non-negative integer fundamental type |
-| `05_path.md` | Filesystem path semantic type |
-| `06_output_format.md` | 4-variant output format enum |
-| `07_sort_field.md` | 6-variant sort field enum |
-| `08_boolean.md` | 0/1 boolean fundamental type |
-| `09_group_by.md` | 7-variant stats grouping enum |
-| `10_port.md` | TCP port semantic type |
-| `11_retention_spec.md` | Age-based retention duration, floored to days |
+| [01_duration.md](01_duration.md) | Human-friendly duration parsing (30s, 1h, 7d, 4w) |
+| [02_event_type.md](02_event_type.md) | 8-variant event type enum |
+| [03_string.md](03_string.md) | UTF-8 string fundamental type |
+| [04_integer.md](04_integer.md) | Non-negative integer fundamental type |
+| [05_path.md](05_path.md) | Filesystem path semantic type |
+| [06_output_format.md](06_output_format.md) | 4-variant output format enum |
+| [07_sort_field.md](07_sort_field.md) | 6-variant sort field enum |
+| [08_boolean.md](08_boolean.md) | 0/1 boolean fundamental type |
+| [09_group_by.md](09_group_by.md) | 7-variant stats grouping enum |
+| [10_port.md](10_port.md) | TCP port semantic type |
+| [11_retention_spec.md](11_retention_spec.md) | Age-based retention duration, floored to days |
 
 ### All Types (11 total)
 

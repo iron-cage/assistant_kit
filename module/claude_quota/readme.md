@@ -70,6 +70,7 @@ indefinitely regardless of which phase stalls.
 
 | File | Responsibility |
 |------|---------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | Types, constants, all parse functions, all network functions (`enabled`) |
 | `tests/readme.md` | Test directory organization guide |
 | `tests/rate_limit_test.rs` | Unit tests T01–T16, ET-01: `parse_headers`, `QuotaError`, `RateLimitData`, constants |

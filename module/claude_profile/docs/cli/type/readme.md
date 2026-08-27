@@ -4,6 +4,7 @@ Domain types used by `clp` CLI parameters and commands.
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing type instances |
 | [001_account_name.md](001_account_name.md) | `AccountName` newtype: email-keyed credential identifier |
 | [002_output_format.md](002_output_format.md) | `OutputFormat` enum: text/json/table serialization selector |
 | [003_warning_threshold.md](003_warning_threshold.md) | `WarningThreshold` newtype: token expiry classification boundary |

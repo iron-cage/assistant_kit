@@ -29,9 +29,9 @@ Mirror of [format/](../../../../docs/cli/format/readme.md).
 
 | File | Tests |
 |------|-------|
-| `01_markdown.md` | 5 |
-| `02_json.md` | 5 |
-| `03_text.md` | 5 |
+| [01_markdown.md](01_markdown.md) | 5 |
+| [02_json.md](02_json.md) | 5 |
+| [03_text.md](03_text.md) | 5 |
 | **Total** | **15** |
 
 ### Related Documentation

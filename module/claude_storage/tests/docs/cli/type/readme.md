@@ -41,21 +41,21 @@ Mirror of [type/](../../../../docs/cli/type/readme.md).
 
 | File | Tests |
 |------|-------|
-| `01_entry_count.md` | 5 |
-| `02_entry_type.md` | 5 |
-| `03_export_format.md` | 5 |
-| `04_path_substring.md` | 4 |
-| `05_project_id.md` | 6 |
-| `06_project_type.md` | 5 |
-| `07_scope_value.md` | 6 |
-| `08_session_filter.md` | 4 |
-| `09_session_id.md` | 5 |
-| `10_storage_path.md` | 4 |
-| `11_target_type.md` | 5 |
-| `12_topic_name.md` | 5 |
-| `13_strategy_type.md` | 5 |
-| `14_detail_level.md` | 4 |
-| `15_field_selector.md` | 9 |
+| [01_entry_count.md](01_entry_count.md) | 5 |
+| [02_entry_type.md](02_entry_type.md) | 5 |
+| [03_export_format.md](03_export_format.md) | 5 |
+| [04_path_substring.md](04_path_substring.md) | 4 |
+| [05_project_id.md](05_project_id.md) | 6 |
+| [06_project_type.md](06_project_type.md) | 5 |
+| [07_scope_value.md](07_scope_value.md) | 6 |
+| [08_session_filter.md](08_session_filter.md) | 4 |
+| [09_session_id.md](09_session_id.md) | 5 |
+| [10_storage_path.md](10_storage_path.md) | 4 |
+| [11_target_type.md](11_target_type.md) | 5 |
+| [12_topic_name.md](12_topic_name.md) | 5 |
+| [13_strategy_type.md](13_strategy_type.md) | 5 |
+| [14_detail_level.md](14_detail_level.md) | 4 |
+| [15_field_selector.md](15_field_selector.md) | 9 |
 | **Total** | **77** |
 
 ### Related Documentation

@@ -10,6 +10,7 @@ Records structured events (execution, credential refresh, gate wait, retry, time
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | Public module re-exports and crate documentation |
 | `src/event.rs` | EventType enum, EventRecord struct, EventFields bag |
 | `src/writer.rs` | JournalWriter — append-only JSONL file writer |

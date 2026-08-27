@@ -12,6 +12,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing param test specs |
 | 01_name.md | Edge cases for `name::` parameter |
 | 03_format.md | Edge cases for `format::` parameter |
 | 04_threshold.md | Edge cases for `threshold::` parameter |

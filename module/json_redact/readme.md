@@ -10,6 +10,7 @@ Scrubs values whose key name contains a configurable deny-list atom (case-insens
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/lib.rs` | RedactionPolicy, redact_json, redact_str |
 | `verb/` | Shell scripts implementing do-protocol verbs for this crate. |
 | `docs/` | Public API contract |

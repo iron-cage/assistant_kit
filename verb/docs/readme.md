@@ -14,15 +14,15 @@ Per-verb reference for the `do` Universal Action Protocol.
 | File | Responsibility |
 |------|----------------|
 | `procedure.md` | Add a verb/ dir to a module or workspace; update a verb command |
-| `001_build.md` | `build` verb: compile project artifacts |
-| `002_test.md` | `test` verb: run the full test suite |
-| `003_clean.md` | `clean` verb: remove generated artifacts |
-| `004_run.md` | `run` verb: execute the project entry point |
-| `005_lint.md` | `lint` verb: static analysis and style checking |
-| `006_verbs.md` | `verbs` meta-verb: list available verbs |
-| `007_package_info.md` | `package_info` meta-verb: report deterministic package metadata as JSON |
-| `008_verify.md` | `verify` verb: full checks including dependency analysis and audit |
-| `009_test1.md` | `test1` verb: run a single nextest filter inside container |
+| [001_build.md](001_build.md) | `build` verb: compile project artifacts |
+| [002_test.md](002_test.md) | `test` verb: run the full test suite |
+| [003_clean.md](003_clean.md) | `clean` verb: remove generated artifacts |
+| [004_run.md](004_run.md) | `run` verb: execute the project entry point |
+| [005_lint.md](005_lint.md) | `lint` verb: static analysis and style checking |
+| [006_verbs.md](006_verbs.md) | `verbs` meta-verb: list available verbs |
+| [007_package_info.md](007_package_info.md) | `package_info` meta-verb: report deterministic package metadata as JSON |
+| [008_verify.md](008_verify.md) | `verify` verb: full checks including dependency analysis and audit |
+| [009_test1.md](009_test1.md) | `test1` verb: run a single nextest filter inside container |
 
 ### Overview Table
 

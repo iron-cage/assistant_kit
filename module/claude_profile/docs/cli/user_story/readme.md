@@ -4,6 +4,7 @@ Five canonical user stories covering the major personas and goals of the `clp` C
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Steps for adding, updating, or removing user_story instances |
 | [001_account_rotation.md](001_account_rotation.md) | Automatic account rotation when token expires |
 | [002_onboarding.md](002_onboarding.md) | Onboarding a new account to the credential store |
 | [003_quota_monitoring.md](003_quota_monitoring.md) | Multi-account quota visibility and rotation planning |

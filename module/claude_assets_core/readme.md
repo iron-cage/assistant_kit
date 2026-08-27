@@ -2,6 +2,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `Cargo.toml` | Crate manifest and dependency configuration |
 | src/lib.rs | Crate root; module re-exports |
 | src/artifact.rs | ArtifactKind and ArtifactLayout enums with inherent methods |
 | src/error.rs | AssetError enum for domain-level operation failures |

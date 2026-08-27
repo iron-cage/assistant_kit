@@ -15,12 +15,12 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 | Name | Purpose | Status |
 |------|---------|--------|
 | `procedure.md` | Test execution procedure for user story acceptance tests | — |
-| `001_audit_session_history.md` | Acceptance tests for Audit Session History (developer) | ✅ |
-| `002_find_past_conversation.md` | Acceptance tests for Find Past Conversation (developer) | ✅ |
-| `003_export_session_for_review.md` | Acceptance tests for Export Session for Review (developer) | ✅ |
-| `004_query_storage_programmatically.md` | Acceptance tests for Query Storage Programmatically (developer) | ✅ |
-| `005_resume_claude_session.md` | Acceptance tests for Resume Claude Session (developer) | ✅ |
-| `006_quick_context_refresh.md` | Acceptance tests for Quick Context Refresh (developer) | ✅ |
+| [001_audit_session_history.md](001_audit_session_history.md) | Acceptance tests for Audit Session History (developer) | ✅ |
+| [002_find_past_conversation.md](002_find_past_conversation.md) | Acceptance tests for Find Past Conversation (developer) | ✅ |
+| [003_export_session_for_review.md](003_export_session_for_review.md) | Acceptance tests for Export Session for Review (developer) | ✅ |
+| [004_query_storage_programmatically.md](004_query_storage_programmatically.md) | Acceptance tests for Query Storage Programmatically (developer) | ✅ |
+| [005_resume_claude_session.md](005_resume_claude_session.md) | Acceptance tests for Resume Claude Session (developer) | ✅ |
+| [006_quick_context_refresh.md](006_quick_context_refresh.md) | Acceptance tests for Quick Context Refresh (developer) | ✅ |
 
 ### Test ID Convention
 
@@ -32,12 +32,12 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 
 | File | Tests |
 |------|-------|
-| `001_audit_session_history.md` | 5 |
-| `002_find_past_conversation.md` | 5 |
-| `003_export_session_for_review.md` | 5 |
-| `004_query_storage_programmatically.md` | 5 |
-| `005_resume_claude_session.md` | 5 |
-| `006_quick_context_refresh.md` | 4 |
+| [001_audit_session_history.md](001_audit_session_history.md) | 5 |
+| [002_find_past_conversation.md](002_find_past_conversation.md) | 5 |
+| [003_export_session_for_review.md](003_export_session_for_review.md) | 5 |
+| [004_query_storage_programmatically.md](004_query_storage_programmatically.md) | 5 |
+| [005_resume_claude_session.md](005_resume_claude_session.md) | 5 |
+| [006_quick_context_refresh.md](006_quick_context_refresh.md) | 4 |
 | **Total** | **29** |
 
 ### Related Documentation

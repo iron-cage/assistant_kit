@@ -14,18 +14,19 @@ one invariant doc instance and asserts the invariant holds at normal and boundar
 
 | File | Responsibility |
 |------|----------------|
-| `001_zero_third_party_deps.md` | IN- spec for zero crates.io dependency invariant |
-| `002_cross_platform.md` | IN- spec for cross-platform path operation invariant |
-| `003_clear_errors.md` | IN- spec for actionable error message invariant |
-| `004_no_process_execution.md` | IN- spec for zero process execution invariant |
-| `005_atomic_switching.md` | IN- spec for atomic account switching invariant |
-| `006_param_defaults.md` | IN- spec for parameter default context invariant |
-| `007_json_storage_format.md` | IN- spec for JSON pretty-print + trailing newline invariant |
-| `008_single_token_refresh_entry.md` | IN- spec for single `refresh_account_token()` entry point invariant |
-| `009_container_only_test_execution.md` | IN- spec for container-only test execution invariant |
-| `010_floating_point_comparison_vs_display_consistency.md` | IN- spec for raw-vs-rounded classification consistency invariant |
-| `011_shared_predicate_consistency.md` | IN- spec for shared multi-field predicate consistency invariant |
-| `012_label_selection_requires_cooccurrence_coverage.md` | IN- spec for label-selection co-occurrence coverage invariant |
+| procedure.md | Steps for adding, updating, or removing invariant test specs |
+| [001_zero_third_party_deps.md](001_zero_third_party_deps.md) | IN- spec for zero crates.io dependency invariant |
+| [002_cross_platform.md](002_cross_platform.md) | IN- spec for cross-platform path operation invariant |
+| [003_clear_errors.md](003_clear_errors.md) | IN- spec for actionable error message invariant |
+| [004_no_process_execution.md](004_no_process_execution.md) | IN- spec for zero process execution invariant |
+| [005_atomic_switching.md](005_atomic_switching.md) | IN- spec for atomic account switching invariant |
+| [006_param_defaults.md](006_param_defaults.md) | IN- spec for parameter default context invariant |
+| [007_json_storage_format.md](007_json_storage_format.md) | IN- spec for JSON pretty-print + trailing newline invariant |
+| [008_single_token_refresh_entry.md](008_single_token_refresh_entry.md) | IN- spec for single `refresh_account_token()` entry point invariant |
+| [009_container_only_test_execution.md](009_container_only_test_execution.md) | IN- spec for container-only test execution invariant |
+| [010_floating_point_comparison_vs_display_consistency.md](010_floating_point_comparison_vs_display_consistency.md) | IN- spec for raw-vs-rounded classification consistency invariant |
+| [011_shared_predicate_consistency.md](011_shared_predicate_consistency.md) | IN- spec for shared multi-field predicate consistency invariant |
+| [012_label_selection_requires_cooccurrence_coverage.md](012_label_selection_requires_cooccurrence_coverage.md) | IN- spec for label-selection co-occurrence coverage invariant |
 
 ### Coverage Summary
 
