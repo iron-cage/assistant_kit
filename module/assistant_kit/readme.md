@@ -10,6 +10,7 @@ Zero own logic — every public item originates from a Layer 2 crate.
 | `Cargo.toml` | Crate manifest: five feature-gated optional workspace deps |
 | `src/` | Feature-gated `pub mod` re-export modules for all five domains |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
+| `docs/` | Behavioral requirements: aggregation feature spec and zero-own-logic invariants |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## Feature Flags

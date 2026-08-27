@@ -7,7 +7,7 @@
 //! | Feature   | Adds                          | Extra dep  |
 //! |-----------|-------------------------------|------------|
 //! | (none)    | `TokenRefreshResult`, `AuthError`, `parse_response` | — |
-//! | `enabled` | `refresh_token`               | `ureq ~3`  |
+//! | `enabled` | `refresh_token`               | `ureq ^3`  |
 
 use std::fmt;
 

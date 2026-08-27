@@ -13,7 +13,7 @@ parsing. No quota, no profile management, no output formatting — those belong 
 | Feature   | Adds                          | Extra dep  |
 |-----------|-------------------------------|------------|
 | (none)    | `TokenRefreshResult`, `AuthError`, `parse_response`, `TOKEN_URL`, `CLIENT_ID` | — |
-| `enabled` | `refresh_token(refresh_tok, scope)` | `ureq ~2` |
+| `enabled` | `refresh_token(refresh_tok, scope)` | `ureq ^3` |
 
 ## Public API
 
@@ -37,4 +37,5 @@ pub fn refresh_token(refresh_tok: &str, scope: &str) -> Result<TokenRefreshResul
 | `src/lib.rs` | Types, errors, constants, `parse_response`, `refresh_token` (feature-gated) |
 | `tests/readme.md` | Test directory organization guide |
 | `tests/auth_test.rs` | Unit tests T01–T06 for `parse_response` and `AuthError` (offline, no ureq) |
+| `docs/` | Behavioral requirements: wire protocol, response parsing, invariants, API contract |
 | `verb/` | Shell scripts for each `do` protocol verb. |
