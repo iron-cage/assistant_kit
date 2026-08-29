@@ -307,19 +307,20 @@ fn ec02_help_contains_claude_code_options_section()
   );
 }
 
-// EC-03: help has sixteen usage forms (one per command, including scope, topic,
-// topics, daemon, chat, and sessions; query contributes two — start form and
-// PID-dispatch form, task 418)
+// EC-03: help has nineteen usage forms — one per command plus two extras. The
+// 18 commands contribute 17 lines (`run` and the bare `clr <command>` form share
+// the leading slot), `query` contributes a second line for its PID-dispatch form
+// (task 418), and `pool`/`delegate`/`broadcast` are the forwarding trio.
 #[ test ]
-fn ec03_help_has_sixteen_usage_forms()
+fn ec03_help_has_nineteen_usage_forms()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let count = stdout.lines().filter( | l | l.starts_with( "  clr " ) ).count();
   assert_eq!(
-    count, 16,
-    "help must have 16 usage lines starting with '  clr '. Got {count}:\n{stdout}"
+    count, 19,
+    "help must have 19 usage lines starting with '  clr '. Got {count}:\n{stdout}"
   );
 }
 

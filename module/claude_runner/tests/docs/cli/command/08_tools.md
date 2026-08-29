@@ -2,7 +2,7 @@
 
 Integration test planning for the `tools` command. See [command/08_tools.md](../../../../docs/cli/command/08_tools.md) for specification.
 
-`tools` lists all Claude Code built-in tools (40 as of the contract doc's current tool count —
+`tools` lists all Claude Code built-in tools (43 as of the contract doc's current tool count —
 see [invariant/015](../../../docs/invariant/015_tools_array_doc_sync.md) for the sync guard that
 keeps this accurate) with name, category, and description in a plain-style table, with optional
 `--name`/`--category` filtering, `--columns`/`--value` projection, and `--inspect` record format.

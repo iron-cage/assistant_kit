@@ -123,6 +123,23 @@ impl HostedSession
     self.busy = busy;
   }
 
+  /// Whether the child has already exited, without waiting for it.
+  ///
+  /// `None` while it is still running. A session that answers `Some` is dead
+  /// weight and cannot become live again: it still occupies a conversation id,
+  /// still reports a pid to `list_sessions`, and still holds a pump thread, but
+  /// every `send` to it fails. Nothing else notices — a client learns about it
+  /// only by writing to a session that cannot answer.
+  ///
+  /// # Errors
+  ///
+  /// Returns [`Error::Pty`] if reaping the child fails.
+  #[ inline ]
+  pub fn exited( &mut self ) -> Result< Option< ExitStatus > >
+  {
+    self.pty.try_wait().map_err( Error::Pty )
+  }
+
   /// Deliver `bytes` to the session's terminal.
   ///
   /// # Errors
@@ -331,5 +348,41 @@ impl SessionTable
     let mut out : Vec< String > = self.sessions.keys().cloned().collect();
     out.sort();
     out
+  }
+
+  /// Remove every session whose child has already exited, ordered by
+  /// conversation id.
+  ///
+  /// A session outlives its child: the daemon holds the handle, the pump keeps
+  /// its thread, and the table keeps the row. Nothing here notices, so the row
+  /// stays listed as hosted until a client happens to write to it and gets an
+  /// error for a session that died an hour ago.
+  ///
+  /// Returned rather than dropped, for the same reason [`SessionTable::insert`]
+  /// returns what it replaced: each one still owns a pump thread, and dropping it
+  /// silently would leak that thread. Call [`HostedSession::shutdown`] on each —
+  /// it costs nothing on a child that has already exited, because the grace loop
+  /// finds it gone on the first check.
+  ///
+  /// A failure to determine liveness leaves the session in place. `try_wait`
+  /// erroring means the daemon does not *know* whether the child is alive, and
+  /// evicting on "do not know" would take a working session out of the table —
+  /// the same reasoning that makes a failed registry scan leave `busy` untouched
+  /// rather than guess at it.
+  #[ inline ]
+  #[ must_use = "each removed session still holds a pump thread until it is shut down" ]
+  pub fn take_exited( &mut self ) -> Vec< HostedSession >
+  {
+    let mut dead = Vec::new();
+    for ( session_id, session ) in &mut self.sessions
+    {
+      if matches!( session.exited(), Ok( Some( _ ) ) )
+      {
+        dead.push( session_id.clone() );
+      }
+    }
+    dead.sort();
+
+    dead.iter().filter_map( | session_id | self.sessions.remove( session_id ) ).collect()
   }
 }

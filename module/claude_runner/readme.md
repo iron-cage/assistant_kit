@@ -111,7 +111,7 @@ Listed in the order `clr help` prints them.
 | `clr daemon` | Manage the single-instance session daemon that hosts interactive sessions |
 | `clr chat` | Send a prompt to a daemon-hosted session and print the answer |
 | `clr sessions` | List the sessions the daemon is currently hosting |
-| `clr tools` | List the 40 Claude Code built-in tools |
+| `clr tools` | List the 43 Claude Code built-in tools |
 | `clr help` | Show help text |
 
 ```sh

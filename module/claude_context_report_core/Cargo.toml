@@ -1,0 +1,33 @@
+[package]
+name = "claude_context_report_core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_context_report_core"
+description = "Ordered, weighted, redacted inventory of what a Claude Code session holds in context"
+keywords = [ "claude", "context", "report", "session", "redaction" ]
+categories = [ "development-tools" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Layer * dependencies only — this is what keeps the crate at Layer 0 and lets
+# both claude_daemon_core (Layer 1) and claude_runner (Layer 2) consume it
+# without a same-layer edge. See docs/pattern/001_crate_layering.md
+# § Layer 0 By Dependency Shape.
+claude_storage_core = { workspace = true }
+json_redact         = { workspace = true }
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]
+
+[dev-dependencies]
+tempfile = { workspace = true }

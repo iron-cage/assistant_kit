@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Start a hosted session attached to a conversation that already exists, rather than a fresh one — so releasing a session from the daemon stops meaning destroying the conversation inside it.
-- **In Scope**: The spawner's resume parameter, the daemon's memory of which conversation last occupied a directory, and the conditions under which a spawn resumes instead of starting over.
+- **In Scope**: The spawner's resume parameter, resolving which conversation last occupied a directory, and the conditions under which a spawn resumes instead of starting over.
 - **Out of Scope**: When a session is released (→ [010_session_reaping.md](010_session_reaping.md), and `claude_runner/docs/feature/008_interactive_handoff.md`), the flag a concrete spawner emits (→ `claude_runner/docs/cli/command/14_chat.md`), learning the id of a session just started (→ [005_session_registration.md](005_session_registration.md)).
 
 ### Why This Exists
@@ -148,7 +148,8 @@ echo "was: $ID"
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/serve.rs` | `Daemon::spawn`, the spawner bound |
-| source | `src/table.rs` | The cwd → conversation id map |
+| source | `src/paths.rs` | Locating the transcript directory a cwd maps to |
+| dep | `claude_storage_core` | Reads the transcripts the last-occupant lookup resolves against |
 | doc | [005_session_registration.md](005_session_registration.md) | The registration wait a resumed spawn also goes through |
 | doc | [010_session_reaping.md](010_session_reaping.md) | The first consumer — releasing an idle session |
 | doc | [003_session_table.md](003_session_table.md) | The table this re-keys |

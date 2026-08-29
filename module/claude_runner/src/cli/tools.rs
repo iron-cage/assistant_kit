@@ -2,7 +2,7 @@
 
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
 
-/// Static list of 40 Claude Code built-in tools: (name, category, description).
+/// Static list of 43 Claude Code built-in tools: (name, category, description).
 ///
 /// Source: `contract/claude_code/docs/tool/readme.md`
 ///
@@ -53,6 +53,9 @@ pub static TOOLS : &[ ( &str, &str, &str ) ] = &[
   ( "ToolSearch",            "Extensibility",  "Search/load deferred MCP tool schemas" ),
   ( "WaitForMcpServers",     "Extensibility",  "Wait for background MCP server connections" ),
   ( "Workflow",              "Agents",         "Run dynamic multi-subagent workflow" ),
+  ( "DesignSync",            "Extensibility",  "Sync design-system state (schema unverified)" ),
+  ( "EndConversation",       "Interaction",    "End the conversation from the assistant side" ),
+  ( "ReportFindings",        "Interaction",    "Report code-review findings as a typed list" ),
 ];
 
 /// Runtime configuration for `clr tools`, assembled from CLI tokens.
