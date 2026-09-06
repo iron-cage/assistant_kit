@@ -277,7 +277,8 @@ where
     }
   }
 
-  /// Bring every hosted session's `busy` flag up to date from the registry.
+  /// Bring every hosted session's `busy` flag up to date from the registry, and
+  /// drop any whose child has already exited.
   ///
   /// One scan for all of them, because they share a directory and a per-session
   /// scan would read the same files over again.
@@ -316,6 +317,19 @@ where
         Some( TurnEvent::Settled | TurnEvent::SettledUnverified ) => session.set_busy( false ),
         None => {},
       }
+    }
+
+    // A session whose child died is dead weight nobody else notices: it keeps
+    // its row, its pid, its pump thread, and answers every `send` with an
+    // error. Reaped here rather than only inside `Daemon::reap` because this
+    // method already runs on every `list_sessions` today, before the daemon
+    // has a clock of its own to drive a reaper on a schedule — see
+    // `docs/feature/010_session_reaping.md`. Shutdown failures are dropped for
+    // the same reason a scan failure is: there is no request in flight to
+    // report them to, and the session is leaving the table either way.
+    for mut session in self.sessions.take_exited()
+    {
+      drop( session.shutdown() );
     }
   }
 

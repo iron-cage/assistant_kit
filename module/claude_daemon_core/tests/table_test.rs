@@ -28,6 +28,10 @@
 //! | tab11 | Shut down a child blocked on stdin | Returns promptly; the child is reaped |
 //! | tab12 | Read after shutdown | Reports `ended` |
 //! | tab13 | Repeated reads without writing | Second read is empty, cursor unchanged |
+//! | tab14 | `exited` on a live child | `Ok( None )` |
+//! | tab15 | `exited` on a child that ran to completion | `Ok( Some )`, without waiting for it |
+//! | tab16 | `take_exited` with nothing dead | Empty, live sessions untouched |
+//! | tab17 | `take_exited` with one dead among two live | Only the dead one comes back, ordered |
 
 use core::time::Duration;
 use std::path::{ Path, PathBuf };
@@ -48,6 +52,31 @@ fn hosted( session_id : &str, cwd : &Path ) -> HostedSession
   let config = SessionConfig::new( "cat" ).cwd( cwd );
   let pty = PtySession::spawn( &config ).expect( "spawn failed" );
   HostedSession::adopt( session_id, cwd, pty ).expect( "adopt failed" )
+}
+
+/// Host a child that exits on its own almost immediately, rather than blocking
+/// on stdin the way [`hosted`]'s `cat` does — the shape of a session whose
+/// process died with nobody watching.
+fn hosted_short_lived( session_id : &str, cwd : &Path ) -> HostedSession
+{
+  let config = SessionConfig::new( "true" ).cwd( cwd );
+  let pty = PtySession::spawn( &config ).expect( "spawn failed" );
+  HostedSession::adopt( session_id, cwd, pty ).expect( "adopt failed" )
+}
+
+/// Poll `session` until [`HostedSession::exited`] reports it has.
+fn wait_for_exit( session : &mut HostedSession )
+{
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  loop
+  {
+    if session.exited().expect( "exited() failed" ).is_some()
+    {
+      return;
+    }
+    assert!( Instant::now() < deadline, "child never exited" );
+    std::thread::sleep( Duration::from_millis( 5 ) );
+  }
 }
 
 /// Insert, shutting down whatever session the insert displaced.
@@ -371,4 +400,71 @@ fn tab13_second_read_without_output_is_empty()
 
   let mut session = session;
   session.shutdown().expect( "shutdown failed" );
+}
+
+/// tab14: `exited` on a child still running reports `None`.
+#[ test ]
+fn tab14_exited_on_a_live_child_is_none()
+{
+  let dir = tempfile::tempdir().expect( "cannot create temp dir" );
+  let mut session = hosted( "conv-1", dir.path() );
+
+  assert!( session.exited().expect( "exited() failed" ).is_none(), "a live cat reported exited" );
+
+  session.shutdown().expect( "shutdown failed" );
+}
+
+/// tab15: `exited` on a child that ran to completion reports its status,
+/// without anyone having called `shutdown`.
+#[ test ]
+fn tab15_exited_on_a_finished_child_is_some()
+{
+  let dir = tempfile::tempdir().expect( "cannot create temp dir" );
+  let mut session = hosted_short_lived( "conv-1", dir.path() );
+
+  wait_for_exit( &mut session );
+  let status = session.exited().expect( "exited() failed" ).expect( "expected the child to be gone" );
+
+  assert!( status.success(), "`true` exited non-zero: {status:?}" );
+}
+
+/// tab16: `take_exited` on a table with nothing dead removes nothing.
+#[ test ]
+fn tab16_take_exited_with_nothing_dead_is_empty()
+{
+  let dir = tempfile::tempdir().expect( "cannot create temp dir" );
+  let mut table = SessionTable::new();
+  insert( &mut table, hosted( "conv-1", dir.path() ) );
+
+  let dead = table.take_exited();
+
+  assert!( dead.is_empty(), "a live session was reported as exited" );
+  assert_eq!( table.len(), 1, "take_exited removed a live session" );
+
+  drain( &mut table );
+}
+
+/// tab17: `take_exited` removes only the dead session, leaving the live one.
+///
+/// This is the defect closed alongside turn refresh: a session whose child died
+/// stays listed as hosted, with a live pump thread, until something notices.
+#[ test ]
+fn tab17_take_exited_removes_only_the_dead_one()
+{
+  let dir = tempfile::tempdir().expect( "cannot create temp dir" );
+  let mut table = SessionTable::new();
+  insert( &mut table, hosted( "conv-live", dir.path() ) );
+  insert( &mut table, hosted_short_lived( "conv-dead", dir.path() ) );
+
+  wait_for_exit( table.get_mut( "conv-dead" ).expect( "not found" ) );
+
+  let mut dead = table.take_exited();
+
+  assert_eq!( dead.len(), 1, "expected exactly one dead session" );
+  assert_eq!( dead[ 0 ].session_id(), "conv-dead" );
+  assert_eq!( table.len(), 1, "the live session was also removed" );
+  assert_eq!( table.get( "conv-live" ).expect( "the live session was removed" ).session_id(), "conv-live" );
+
+  dead[ 0 ].shutdown().expect( "shutdown of the reaped session failed" );
+  drain( &mut table );
 }

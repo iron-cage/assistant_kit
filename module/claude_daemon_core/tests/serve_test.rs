@@ -38,6 +38,7 @@
 //! | srv12 | `spawn` whose child never registers | The request fails *and* the child is dead |
 //! | srv13 | The return that submits a prompt | Sent well after the text, not in the same burst |
 //! | srv14 | `context_summary`, hosted and absent | Read from the recorded `cwd`; an unhosted id refused |
+//! | srv15 | A hosted child that exits on its own | `list_sessions` drops it, and the pid is actually reaped |
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 use core::time::Duration;
@@ -231,6 +232,34 @@ fn spawn_session( harness : &Harness ) -> String
     .as_str()
     .expect( "spawn reported no session_id" )
     .to_string()
+}
+
+/// A spawner that starts a process which exits on its own almost immediately,
+/// standing in for a `claude` that crashed or was killed outside the daemon.
+///
+/// `Request::Spawn` answers only a session id, never a pid — the one place a
+/// test can learn the pid the daemon is tracking is the spawner itself, so this
+/// reports it out of band through `pid_out` rather than through the wire
+/// protocol, which owes no test any more than a real client gets.
+fn short_lived_spawner( sessions_dir : PathBuf, pid_out : Arc< Mutex< Option< u32 > > > ) -> Spawner
+{
+  let mut minted = 0_u32;
+  Box::new( move | cwd : &Path |
+  {
+    let config = SessionConfig::new( "true" ).cwd( cwd );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    minted += 1;
+    *pid_out.lock().expect( "pid_out mutex poisoned" ) = Some( pty.pid() );
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+      .expect( "writing the registry record failed" );
+    Ok( pty )
+  } )
 }
 
 /// srv01: the daemon answers a liveness probe with its version.
@@ -659,6 +688,53 @@ fn srv14_context_summary_resolves_through_the_table()
     ),
     Response::Ok { result, .. } => panic!( "an unhosted session summarized: {result}" ),
   }
+
+  harness.finish();
+}
+
+/// srv15: a child that dies on its own is dropped by `list_sessions`, and its
+/// pid is actually reaped rather than merely forgotten.
+///
+/// Nothing tells the daemon when a hosted process exits — the table only finds
+/// out when something asks. `list_sessions` is that something: it already runs
+/// `refresh_turns` on every call, and `refresh_turns` is where dead children are
+/// swept, per `docs/feature/010_session_reaping.md`'s adjacent-defect note. This
+/// pins the two sides of that: the session leaves the list, and the pid is
+/// actually waited on rather than left a zombie under a table that no longer
+/// remembers it.
+#[ test ]
+fn srv15_list_sessions_reaps_a_dead_child()
+{
+  let pid_out : Arc< Mutex< Option< u32 > > > = Arc::new( Mutex::new( None ) );
+  let captured = Arc::clone( &pid_out );
+  let harness = Harness::start_with
+  (
+    move | sessions_dir | short_lived_spawner( sessions_dir, captured ),
+    Duration::from_secs( 5 ),
+  );
+
+  let session_id = spawn_session( &harness );
+  let pid = pid_out.lock().expect( "pid_out mutex poisoned" )
+    .expect( "the spawner never recorded a pid" );
+
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  loop
+  {
+    let listed = harness.call( &Request::ListSessions );
+    let sessions = listed.as_array().expect( "list_sessions is not an array" );
+    if sessions.iter().all( | s | s[ "session_id" ] != session_id.as_str() )
+    {
+      break;
+    }
+    assert!( Instant::now() < deadline, "the dead session was never dropped from list_sessions" );
+    std::thread::sleep( POLL );
+  }
+
+  assert!
+  (
+    !Path::new( &format!( "/proc/{pid}" ) ).exists(),
+    "session left the table but pid {pid} is still alive — it was forgotten, not reaped",
+  );
 
   harness.finish();
 }

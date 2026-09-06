@@ -218,7 +218,7 @@ fn bug_reproducer_426_interactive_resume_unaffected()
 // (`is_print_invocation`/`use_print`) — it only fires once `cli.print_mode` is
 // already true (explicit `-p`/`--print`, env, or config); a bare invocation that
 // reaches print mode implicitly via the TTY-check term alone never hits this guard
-// at all (see D3 in `docs/001_design_decisions.md`).
+// at all (see D3 in `docs/decision/003_print_mode_requires_content.md`).
 #[ test ]
 fn bug_reproducer_427_file_without_message_rejected()
 {

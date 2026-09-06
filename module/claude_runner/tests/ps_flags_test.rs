@@ -27,6 +27,7 @@
 //! | IT-52  | Ended Since Last Check table for a session no longer running       | Behavioral   |
 //! | IT-53  | Ended Since Last Check table absent on first invocation            | Behavioral   |
 //! | IT-54  | `CLR_PS_STATE_DIR` override is honored                             | Behavioral   |
+//! | IT-55  | 🏠 flag for a PID the session daemon reports as hosted             | Behavioral   |
 //! | US-18  | `Flags` column absent when no flags apply                           | User Story   |
 //! | US-19  | 🐳 Container flag for session cwd outside `$HOME`                   | User Story   |
 //! | US-20  | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold              | User Story   |
@@ -726,7 +727,7 @@ fn it48_odd_state_flag_for_stopped_session()
 
 // ── IT-49: `ps --help` lists every session flag ────────────────────────────
 
-/// IT-49: `clr ps --help` documents all 10 session flags, symbol and name.
+/// IT-49: `clr ps --help` documents all 11 session flags, symbol and name.
 ///
 /// Guards the drift that let 🔌 Query mode ship in `FLAG_LEGEND` while `--help`
 /// listed only 7 flags: the legend a user sees under the table and the legend
@@ -743,6 +744,7 @@ fn it49_help_lists_every_session_flag()
   // Canonical display order, matching `FLAG_LEGEND` in `claude_runner_core::ps_table`.
   let expected : &[ ( &str, &str ) ] = &[
     ( "👈", "This session" ),
+    ( "🏠", "Daemon-hosted" ),
     ( "🆕", "New since last check" ),
     ( "🖨",  "Print mode"   ),
     ( "🔌", "Query mode"   ),
@@ -975,5 +977,125 @@ fn it54_state_dir_override_is_honored()
   assert!(
     !sibling_dir.path().join( "last_snapshot.json" ).is_file(),
     "IT-54: an unrelated sibling directory must NOT receive a snapshot file"
+  );
+}
+
+// ── IT-55: 🏠 flag for a PID the session daemon reports as hosted ──────────
+
+/// IT-55: 🏠 fires for a pid the session daemon's `list_sessions` reports as hosted.
+///
+/// Stands up a real `claude_daemon_core::Daemon` in-process — the same technique
+/// `claude_daemon_core/tests/serve_test.rs`'s `Harness` uses — bound to the exact
+/// socket path `hosted_pids()`'s `DaemonPaths::new()` resolves to once `clr ps` runs
+/// with a matching `HOME`. The daemon's spawner starts the fake `claude` ELF (via the
+/// same injected `PATH` every other test in this file uses) rather than `cat`, so the
+/// resulting pid is discoverable by `find_claude_processes()` too — not just by the
+/// daemon — keeping this an end-to-end check of the wiring rather than an assertion
+/// against a mocked `hosted_pids` value.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it55_daemon_hosted_flag_fires_for_a_hosted_pid()
+{
+  use core::sync::atomic::{ AtomicBool, Ordering };
+  use std::path::Path;
+  use std::sync::Arc;
+  use cli_binary_test_helpers::fake_claude_binary_dir;
+  use claude_daemon_core::{ acquire, client, Daemon, DaemonPaths, Error, Listener, Request };
+  use claude_pty_core::{ PtySession, SessionConfig };
+
+  type Spawner = Box< dyn FnMut( &Path ) -> claude_daemon_core::Result< PtySession > + Send >;
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let home = tempfile::TempDir::new().expect( "home tempdir" );
+  let daemon_paths = DaemonPaths::with_home( home.path() );
+  std::fs::create_dir_all( daemon_paths.sessions_dir() ).expect( "create sessions dir" );
+
+  let lock = acquire( &daemon_paths.lock_file() ).expect( "acquire instance lock" );
+  let socket = daemon_paths.socket_file();
+  let listener = Listener::bind( &socket, &lock ).expect( "bind daemon socket" );
+
+  let sessions_dir  = daemon_paths.sessions_dir().to_path_buf();
+  let spawner_path  = path_val.clone();
+  let mut minted    = 0_u32;
+  let spawner : Spawner = Box::new( move | cwd : &Path |
+  {
+    let config = SessionConfig::new( "claude" )
+      .arg( "30" )
+      .cwd( cwd )
+      .env( "PATH", spawner_path.clone() );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    minted += 1;
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+      .expect( "writing the registry record failed" );
+    Ok( pty )
+  } );
+
+  let mut daemon = Daemon::new( daemon_paths.sessions_dir().to_path_buf(), spawner )
+    .with_registration_timeout( core::time::Duration::from_secs( 5 ) );
+
+  let stop = Arc::new( AtomicBool::new( false ) );
+  let flag = Arc::clone( &stop );
+  let server = std::thread::spawn( move ||
+  {
+    while !flag.load( Ordering::Relaxed )
+    {
+      claude_daemon_core::serve_once( &listener, &mut daemon ).expect( "serving failed" );
+      if daemon.stop_requested()
+      {
+        break;
+      }
+    }
+    daemon
+  } );
+
+  let spawn_result = client::call( &socket, &Request::Spawn { cwd : std::env::temp_dir(), prompt : None } )
+    .expect( "spawn request failed" );
+  assert!(
+    spawn_result[ "session_id" ].as_str().is_some(),
+    "IT-55: spawn must report a session_id, got {spawn_result:?}"
+  );
+
+  let list = client::call( &socket, &Request::ListSessions ).expect( "list_sessions failed" );
+  let raw_pid = list.as_array()
+    .and_then( | rows | rows.first() )
+    .and_then( | row | row[ "pid" ].as_u64() )
+    .expect( "list_sessions reported no hosted pid" );
+  let pid = u32::try_from( raw_pid ).expect( "hosted pid overflowed u32" );
+
+  let proc = make_proc_dir( &[ pid ] );
+  let bin  = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "HOME", home.path() )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  // Teardown before asserting: a failed assertion must never leave the hosted
+  // child alive or the instance lock held.
+  stop.store( true, Ordering::Relaxed );
+  drop( std::os::unix::net::UnixStream::connect( &socket ) );
+  let mut daemon = server.join().expect( "daemon thread panicked" );
+  drop( daemon.shutdown_all() );
+  drop( lock );
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-55: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "🏠" ),
+    "IT-55: 🏠 flag must appear for a daemon-hosted pid. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "Daemon-hosted" ),
+    "IT-55: legend must contain 'Daemon-hosted'. Got:\n{stdout}"
   );
 }

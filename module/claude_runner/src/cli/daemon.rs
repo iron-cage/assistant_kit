@@ -142,6 +142,36 @@ pub( crate ) fn probe( socket : &Path ) -> Option< String >
   Some( result[ "version" ].as_str().unwrap_or( "unknown" ).to_string() )
 }
 
+/// Pids the daemon currently hosts, for `clr ps`'s 🏠 flag.
+///
+/// Empty whenever the question cannot be answered — no daemon running, or one
+/// that answered the ping and then failed to list — because `clr ps` decorating
+/// with less information is preferable to `clr ps` failing over a question it
+/// did not ask. Never starts a daemon: a `ps` invocation is a look, not a
+/// request for one to exist.
+#[ must_use ]
+pub( crate ) fn hosted_pids() -> std::collections::HashSet< u32 >
+{
+  let Some( paths ) = claude_daemon_core::DaemonPaths::new() else { return std::collections::HashSet::new() };
+  let socket = paths.socket_file();
+  if probe( &socket ).is_none()
+  {
+    return std::collections::HashSet::new();
+  }
+
+  client::call( &socket, &Request::ListSessions )
+    .ok()
+    .map( | sessions |
+    {
+      sessions.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map( | session | session[ "pid" ].as_u64().and_then( | pid | u32::try_from( pid ).ok() ) )
+        .collect::< std::collections::HashSet< u32 > >()
+    } )
+    .unwrap_or_default()
+}
+
 /// `clr daemon status`.
 fn cmd_status() -> !
 {

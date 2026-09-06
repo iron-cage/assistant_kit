@@ -21,7 +21,7 @@
 //!
 //! `dream_agent` references:
 //! - `no_dream_agent_ref_in_docs`: all `docs/` `.md` files must have zero `dream_agent`
-//!   matches, except `design_decisions.md` which documents the historical decoupling
+//!   matches
 //! - `no_dream_agent_ref_in_lib_rs`: `src/lib.rs` must have zero `dream_agent` matches
 //! - `no_dream_agent_ref_in_readme`: `readme.md` must have zero `dream_agent` matches
 //!
@@ -35,10 +35,6 @@
 //!
 //! **`spec.md` was migrated to `docs/`.** The guards that previously checked `spec.md` now
 //! scan all `.md` files under `docs/`. `spec.md` no longer exists in this crate.
-//!
-//! **`design_decisions.md` is exempt from `dream_agent` guard.** That file documents *why*
-//! the decoupling happened — mentioning `dream_agent` there is intentional historical context,
-//! not a stale coupling. Exempt pattern: skip files named `design_decisions.md`.
 //!
 //! **Proset ≠ deleted.** `claude_runner_plugin` still exists at `consumer/proset/module/`
 //! as a reference implementation. It was only *removed from the consumer workspace*. Guard
@@ -231,12 +227,10 @@ fn src_readme_exists()
 #[ test ]
 fn no_dream_agent_ref_in_docs()
 {
-  // design_decisions.md is exempt: it documents *why* the decoupling happened —
-  // mentioning dream_agent there is intentional historical context, not a stale coupling.
   // spec.md was migrated to docs/ — scan all .md files under docs/ instead.
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
   let docs_dir = manifest.join( "docs" );
-  let files = md_files_in_dir( &docs_dir, &[ "design_decisions" ] );
+  let files = md_files_in_dir( &docs_dir, &[] );
   let violations : Vec< String > = files
     .iter()
     .flat_map( |f| collect_violations( f, "dream_agent" ) )

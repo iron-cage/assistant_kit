@@ -7,7 +7,7 @@
 //! - [`render_ps_table`]: bare PID + cwd + state (3 columns). No `/proc` scanning
 //!   beyond what the caller already gathered into [`ProcessInfo`].
 //! - [`render_active_sessions_table`]: the full "Active Sessions" table — elapsed,
-//!   CPU%, RAM, session flags (👈🆕🖨🔌⚡🕰🐘🧟⚠🐳), and the Task column (last
+//!   CPU%, RAM, session flags (👈🏠🆕🖨🔌⚡🕰🐘🧟⚠🐳), and the Task column (last
 //!   human message from the session's JSONL log) — shared by `clr ps` and
 //!   `claude_version`'s `.ps` so both CLIs render sessions identically. Linux-only
 //!   per-process metrics come from `/proc`; on other platforms those columns render
@@ -120,6 +120,10 @@ pub struct PsTableOptions
   /// this, and `clr ps`'s very first invocation has no snapshot yet). `Some(set)`
   /// — even if empty — enables 🆕 for any current PID absent from `set`.
   pub prior_pids   : Option< std::collections::HashSet< u32 > >,
+  /// PIDs the session daemon currently hosts, for the 🏠 flag. Empty — never
+  /// `Option` — because an empty set and "no daemon running" decorate identically:
+  /// neither flags anything, so there is no second state worth a `None` for.
+  pub hosted_pids  : std::collections::HashSet< u32 >,
 }
 
 impl Default for PsTableOptions
@@ -135,6 +139,7 @@ impl Default for PsTableOptions
       ancient_secs : 28_800,
       high_ram_mb  : 400,
       prior_pids   : None,
+      hosted_pids  : std::collections::HashSet::new(),
     }
   }
 }
@@ -261,11 +266,12 @@ pub fn render_headed_table( builder : RowBuilder, heading : Heading ) -> String
   ).unwrap_or_default()
 }
 
-// Per-flag metadata in canonical display order (👈🖨🔌⚡🕰🐘🧟⚠🐳).
+// Per-flag metadata in canonical display order (👈🏠🆕🖨🔌⚡🕰🐘🧟⚠🐳).
 // Only used on Linux because compute_flags is Linux-only.
 #[ cfg( target_os = "linux" ) ]
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "👈", "This session" ),
+  ( "🏠", "Daemon-hosted" ),
   ( "🆕", "New since last check" ),
   ( "🖨",  "Print mode"   ),
   ( "🔌", "Query mode"   ),
@@ -326,6 +332,8 @@ struct FlagContext< 'a >
   high_ram_mb  : u64,
   // This process's own parent PID, for the 👈 this-session test.
   my_ppid      : u32,
+  // Pids the session daemon currently hosts, for the 🏠 test.
+  hosted_pids  : &'a std::collections::HashSet< u32 >,
 }
 
 #[ cfg( target_os = "linux" ) ]
@@ -363,6 +371,11 @@ fn compute_flags(
       } );
     if is_claude { push_flag( &mut flags, '👈' ); }
   }
+
+  // 🏠 Daemon-hosted: this pid is one the session daemon currently reports as
+  // hosted. Sourced from a `list_sessions` snapshot taken once for the whole
+  // table, not a per-row daemon call — see `hosted_pids` on `PsTableOptions`.
+  if ctx.hosted_pids.contains( &proc.pid ) { push_flag( &mut flags, '🏠' ); }
 
   // 🆕 New since last check: this PID was absent from the previous `clr ps`
   // snapshot. `is_new` is precomputed by the caller from `opts.prior_pids` —
@@ -450,8 +463,10 @@ fn build_legend( flags_per_row : &[ String ] ) -> String
 /// rendering engine `clr ps` uses, shared here so `claude_version`'s `.ps` produces
 /// identical output.
 ///
-/// On Linux, per-process metrics (elapsed/cpu/ram/state) and session flags come from
-/// `/proc`; other platforms render those columns as `-` and no flags ever fire. Samples
+/// On Linux, per-process metrics (elapsed/cpu/ram/state) and most session flags come
+/// from `/proc` — 🏠 is the one exception, sourced from `opts.hosted_pids` instead (see
+/// `PsTableOptions`); other platforms render those columns as `-` and no flags ever
+/// fire, 🏠 included, since flag computation itself is compiled out there. Samples
 /// cumulative CPU ticks twice, 1 second apart, to compute the ⚡ Active flag — every
 /// call whose (mode/pid-filtered) process list is non-empty blocks for ~1s as a result.
 ///
@@ -461,8 +476,10 @@ fn build_legend( flags_per_row : &[ String ] ) -> String
 /// ≥1 flag fired across all displayed rows, or `None` when all rows are flag-free.
 #[ must_use ]
 // pub only because the ps_table extraction moved this out of clr's private cli::ps module.
-// Single-pass renderer: every column and session flag is derived from one /proc sampling
-// window, so splitting it would either re-sample or scatter the row contract across helpers.
+// Single-pass renderer: every column and most session flags are derived from one /proc
+// sampling window (🏠 is a plain lookup against the caller-supplied `hosted_pids` set, no
+// sampling involved), so splitting it would either re-sample or scatter the row contract
+// across helpers.
 #[ allow( clippy::missing_inline_in_public_items, clippy::too_many_lines ) ]
 pub fn render_active_sessions_table(
   procs : &[ ProcessInfo ],
@@ -541,6 +558,7 @@ pub fn render_active_sessions_table(
       ancient_secs : opts.ancient_secs,
       high_ram_mb  : opts.high_ram_mb,
       my_ppid,
+      hosted_pids  : &opts.hosted_pids,
     };
     sorted.iter().map( | proc |
     {

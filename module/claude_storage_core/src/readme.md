@@ -24,6 +24,7 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `family.rs` | Discover root session plus its agent children |
 | `continuation.rs` | Detect session continuation chains |
 | `transcript_answer.rs` | Read one turn's assistant answer out of a live transcript |
+| `startup.rs` | Project skills/agents/commands/settings a session would start with, from disk |
 | `canonical.rs` | Resolve paths to canonical physical absolute form |
 | `topic_session.rs` | Deterministic topic-name to session-UUID rule (UUIDv5) |
 | `session_id.rs` | Typed wrapper for session UUID stem |

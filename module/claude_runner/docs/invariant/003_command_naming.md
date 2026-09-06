@@ -88,4 +88,4 @@ If a command were prefixed with `--`:
 
 | File | Notes |
 |------|-------|
-| Design decision D13 | Command naming convention rationale |
+| [D13](../decision/013_commands_are_bare_words.md) | Command naming convention rationale |
