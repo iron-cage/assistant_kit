@@ -984,7 +984,8 @@ fn it54_state_dir_override_is_honored()
 
 /// IT-55: 🏠 fires for a pid the session daemon's `list_sessions` reports as hosted.
 ///
-/// Stands up a real `claude_daemon_core::Daemon` in-process — the same technique
+/// Stands up a real `claude_daemon_core::Daemon` in-process, via
+/// `cli_binary_test_helpers::spawn_real_daemon` — the same technique
 /// `claude_daemon_core/tests/serve_test.rs`'s `Harness` uses — bound to the exact
 /// socket path `hosted_pids()`'s `DaemonPaths::new()` resolves to once `clr ps` runs
 /// with a matching `HOME`. The daemon's spawner starts the fake `claude` ELF (via the
@@ -996,63 +997,12 @@ fn it54_state_dir_override_is_honored()
 #[ test ]
 fn it55_daemon_hosted_flag_fires_for_a_hosted_pid()
 {
-  use core::sync::atomic::{ AtomicBool, Ordering };
-  use std::path::Path;
-  use std::sync::Arc;
-  use cli_binary_test_helpers::fake_claude_binary_dir;
-  use claude_daemon_core::{ acquire, client, Daemon, DaemonPaths, Error, Listener, Request };
-  use claude_pty_core::{ PtySession, SessionConfig };
-
-  type Spawner = Box< dyn FnMut( &Path ) -> claude_daemon_core::Result< PtySession > + Send >;
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_real_daemon };
+  use claude_daemon_core::{ client, Request };
 
   let ( _bin_dir, path_val ) = fake_claude_binary_dir();
   let home = tempfile::TempDir::new().expect( "home tempdir" );
-  let daemon_paths = DaemonPaths::with_home( home.path() );
-  std::fs::create_dir_all( daemon_paths.sessions_dir() ).expect( "create sessions dir" );
-
-  let lock = acquire( &daemon_paths.lock_file() ).expect( "acquire instance lock" );
-  let socket = daemon_paths.socket_file();
-  let listener = Listener::bind( &socket, &lock ).expect( "bind daemon socket" );
-
-  let sessions_dir  = daemon_paths.sessions_dir().to_path_buf();
-  let spawner_path  = path_val.clone();
-  let mut minted    = 0_u32;
-  let spawner : Spawner = Box::new( move | cwd : &Path |
-  {
-    let config = SessionConfig::new( "claude" )
-      .arg( "30" )
-      .cwd( cwd )
-      .env( "PATH", spawner_path.clone() );
-    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
-    minted += 1;
-    let record = format!
-    (
-      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
-      pty.pid(),
-      cwd.display(),
-    );
-    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
-      .expect( "writing the registry record failed" );
-    Ok( pty )
-  } );
-
-  let mut daemon = Daemon::new( daemon_paths.sessions_dir().to_path_buf(), spawner )
-    .with_registration_timeout( core::time::Duration::from_secs( 5 ) );
-
-  let stop = Arc::new( AtomicBool::new( false ) );
-  let flag = Arc::clone( &stop );
-  let server = std::thread::spawn( move ||
-  {
-    while !flag.load( Ordering::Relaxed )
-    {
-      claude_daemon_core::serve_once( &listener, &mut daemon ).expect( "serving failed" );
-      if daemon.stop_requested()
-      {
-        break;
-      }
-    }
-    daemon
-  } );
+  let ( socket, shutdown ) = spawn_real_daemon( home.path(), &path_val );
 
   let spawn_result = client::call( &socket, &Request::Spawn { cwd : std::env::temp_dir(), prompt : None } )
     .expect( "spawn request failed" );
@@ -1082,11 +1032,7 @@ fn it55_daemon_hosted_flag_fires_for_a_hosted_pid()
 
   // Teardown before asserting: a failed assertion must never leave the hosted
   // child alive or the instance lock held.
-  stop.store( true, Ordering::Relaxed );
-  drop( std::os::unix::net::UnixStream::connect( &socket ) );
-  let mut daemon = server.join().expect( "daemon thread panicked" );
-  drop( daemon.shutdown_all() );
-  drop( lock );
+  shutdown();
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "IT-55: exit 0 expected, got {:?}", out.status.code() );

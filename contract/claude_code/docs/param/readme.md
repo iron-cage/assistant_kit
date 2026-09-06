@@ -16,7 +16,7 @@ parameter in this directory.
 | File | Responsibility |
 |------|----------------|
 | readme.md | Master flat parameter table (this file) |
-| 001_action_mode.md | `CLAUDE_CODE_ACTION_MODE` — tool execution mode |
+| 001_action_mode.md | `CLAUDE_CODE_ACTION_MODE` — ❌ refuted; not read by the binary |
 | 002_add_dir.md | `--add-dir` — grant tool access to directories |
 | 003_agent.md | `--agent` — override agent for session |
 | 004_agents.md | `--agents` — define custom agents as JSON |
@@ -24,11 +24,11 @@ parameter in this directory.
 | 006_allowed_tools.md | `--allowedTools` / `--allowed-tools` — allowlist of permitted tools |
 | 007_api_key.md | `ANTHROPIC_API_KEY` — Anthropic API key |
 | 008_append_system_prompt.md | `--append-system-prompt` — append to default system prompt |
-| 009_auto_approve_tools.md | `CLAUDE_CODE_AUTO_APPROVE_TOOLS` — auto-approve tool calls |
+| 009_auto_approve_tools.md | `CLAUDE_CODE_AUTO_APPROVE_TOOLS` — ❌ refuted; not read by the binary |
 | 010_auto_continue.md | `CLAUDE_CODE_AUTO_CONTINUE` — ❌ refuted; variable does not exist |
 | 011_auto_updates.md | `autoUpdates` config key — auto-update binary |
-| 012_bash_max_timeout.md | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — max bash command timeout |
-| 013_bash_timeout.md | `CLAUDE_CODE_BASH_TIMEOUT` — default bash command timeout |
+| 012_bash_max_timeout.md | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — ❌ refuted; not read by the binary |
+| 013_bash_timeout.md | `CLAUDE_CODE_BASH_TIMEOUT` — ❌ refuted; not read by the binary |
 | 014_betas.md | `--betas` — beta API headers |
 | 015_brief.md | `--brief` — enable SendUserMessage for agents |
 | 016_chrome.md | `--chrome` / `--no-chrome` — Claude-in-Chrome integration |
@@ -50,7 +50,7 @@ parameter in this directory.
 | 033_include_partial_messages.md | `--include-partial-messages` — stream partial chunks |
 | 034_input_format.md | `--input-format` — input format (text/stream-json) |
 | 035_json_schema.md | `--json-schema` — JSON Schema for structured output |
-| 036_log_level.md | `CLAUDE_CODE_LOG_LEVEL` — log verbosity level |
+| 036_log_level.md | `CLAUDE_CODE_LOG_LEVEL` — ❌ refuted; not read by the binary |
 | 037_max_budget_usd.md | `--max-budget-usd` — max API spend cap in USD |
 | 038_max_output_tokens.md | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` — max tokens per response |
 | 039_mcp_config.md | `--mcp-config` — load MCP servers from JSON |
@@ -67,7 +67,7 @@ parameter in this directory.
 | 052_prompt.md | `<message>` positional — message sent to Claude |
 | 054_replay_user_messages.md | `--replay-user-messages` — re-emit user messages on stdout |
 | 055_resume.md | `-r` / `--resume` — resume session by ID |
-| 056_sandbox_mode.md | `CLAUDE_CODE_SANDBOX_MODE` — enable sandbox mode |
+| 056_sandbox_mode.md | `CLAUDE_CODE_SANDBOX_MODE` — ❌ refuted; not read by the binary |
 | 057_session_dir.md | `CLAUDE_CODE_SESSION_DIR` — ❌ refuted; use `CLAUDE_CONFIG_DIR` (141–159 block) |
 | 058_session_id.md | `--session-id` — specify session UUID |
 | 059_setting_sources.md | `--setting-sources` — filter which config sources load |
@@ -75,13 +75,13 @@ parameter in this directory.
 | 061_skip_dangerous_mode_permission_prompt.md | `skipDangerousModePermissionPrompt` — auto-accept dangerous mode prompt |
 | 062_strict_mcp_config.md | `--strict-mcp-config` — ignore non-`--mcp-config` MCP sources |
 | 063_system_prompt.md | `--system-prompt` — replace default system prompt |
-| 064_telemetry.md | `CLAUDE_CODE_TELEMETRY` — send usage telemetry |
-| 065_temperature.md | `CLAUDE_CODE_TEMPERATURE` — model temperature |
+| 064_telemetry.md | `CLAUDE_CODE_TELEMETRY` — ❌ refuted; not read by the binary |
+| 065_temperature.md | `CLAUDE_CODE_TEMPERATURE` — ❌ refuted; not read by the binary |
 | 066_theme.md | `theme` config key — UI color theme |
 | 067_tmux.md | `--tmux` — create tmux session for worktree |
 | 068_tools.md | `--tools` — override full available tool set |
-| 069_top_k.md | `CLAUDE_CODE_TOP_K` — top-k sampling cutoff |
-| 070_top_p.md | `CLAUDE_CODE_TOP_P` — top-p nucleus sampling |
+| 069_top_k.md | `CLAUDE_CODE_TOP_K` — ❌ refuted; not read by the binary |
+| 070_top_p.md | `CLAUDE_CODE_TOP_P` — ❌ refuted; not read by the binary |
 | 071_verbose.md | `--verbose` — override verbose mode from config |
 | 072_voice_enabled.md | `voiceEnabled` config key — voice input/output features |
 | 073_worktree.md | `-w` / `--worktree` — create git worktree for session |
@@ -205,8 +205,8 @@ Precedence: CLI arg > env var > settings config.
 | 20 | [allowed_tools](006_allowed_tools.md) | `--allowedTools` / `--allowed-tools <tools...>` | — | `allowedTools` | string[] | all | pre-v1.0 | Allowlist of permitted tools; both flag spellings accepted |
 | 21 | [disallowed_tools](022_disallowed_tools.md) | `--disallowedTools` / `--disallowed-tools <tools...>` | — | `disallowedTools` | string[] | none | pre-v1.0 | Denylist of forbidden tools; both flag spellings accepted |
 | 22 | [tools](068_tools.md) | `--tools <tools...>` | — | — | string[] | `default` | pre-v1.0 | Override full tool set; `""` disables all |
-| 23 | [auto_approve_tools](009_auto_approve_tools.md) | — | `CLAUDE_CODE_AUTO_APPROVE_TOOLS` | — | bool | false | pre-v1.0 | Auto-approve all tool calls without prompting |
-| 24 | [action_mode](001_action_mode.md) | — | `CLAUDE_CODE_ACTION_MODE` | — | enum | `Ask` | pre-v1.0 | Tool execution action mode |
+| 23 | [auto_approve_tools](009_auto_approve_tools.md) | — | ~~`CLAUDE_CODE_AUTO_APPROVE_TOOLS`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220; real mechanism is `--dangerously-skip-permissions` (#9) |
+| 24 | [action_mode](001_action_mode.md) | — | ~~`CLAUDE_CODE_ACTION_MODE`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220; real mechanism is `--permission-mode` (#11) |
 | 25 | [output_format](044_output_format.md) | `--output-format <fmt>` | — | — | enum | `text` | pre-v1.0 | `text` `json` `stream-json` |
 | 26 | [input_format](034_input_format.md) | `--input-format <fmt>` | — | — | enum | `text` | pre-v1.0 | `text` `stream-json` |
 | 27 | [include_partial_messages](033_include_partial_messages.md) | `--include-partial-messages` | — | — | bool | off | pre-v1.0 | Stream partial chunks (requires stream-json) |
@@ -216,11 +216,11 @@ Precedence: CLI arg > env var > settings config.
 | 31 | [effort](023_effort.md) | `--effort <level>` | — | `effortLevel` | enum | `medium` | pre-v1.0 | `low` `medium` `high` `max` |
 | 32 | [fallback_model](026_fallback_model.md) | `--fallback-model <model>` | — | — | string | — | pre-v1.0 | Fallback model when primary is overloaded |
 | 33 | [max_budget_usd](037_max_budget_usd.md) | `--max-budget-usd <amount>` | — | — | float | — | pre-v1.0 | Max API spend cap in USD (print mode only) |
-| 34 | [temperature](065_temperature.md) | — | `CLAUDE_CODE_TEMPERATURE` | — | float | 1.0 | pre-v1.0 | Model temperature (0.0–1.0) |
-| 35 | [top_p](070_top_p.md) | — | `CLAUDE_CODE_TOP_P` | — | float | none | pre-v1.0 | Top-p nucleus sampling (0.0–1.0) |
-| 36 | [top_k](069_top_k.md) | — | `CLAUDE_CODE_TOP_K` | — | integer | none | pre-v1.0 | Top-k sampling cutoff |
-| 37 | [bash_timeout](013_bash_timeout.md) | — | `CLAUDE_CODE_BASH_TIMEOUT` | — | integer ms | 120 000 | pre-v1.0 | Default bash command timeout (2 min) |
-| 38 | [bash_max_timeout](012_bash_max_timeout.md) | — | `CLAUDE_CODE_BASH_MAX_TIMEOUT` | — | integer ms | 600 000 | pre-v1.0 | Max allowed bash command timeout (10 min) |
+| 34 | [temperature](065_temperature.md) | — | ~~`CLAUDE_CODE_TEMPERATURE`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220 |
+| 35 | [top_p](070_top_p.md) | — | ~~`CLAUDE_CODE_TOP_P`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220 |
+| 36 | [top_k](069_top_k.md) | — | ~~`CLAUDE_CODE_TOP_K`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220 |
+| 37 | [bash_timeout](013_bash_timeout.md) | — | ~~`CLAUDE_CODE_BASH_TIMEOUT`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** Real mechanism is `BASH_DEFAULT_TIMEOUT_MS` (#96) |
+| 38 | [bash_max_timeout](012_bash_max_timeout.md) | — | ~~`CLAUDE_CODE_BASH_MAX_TIMEOUT`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** Real mechanism is `BASH_MAX_TIMEOUT_MS` (#98) |
 | 39 | [mcp_config](039_mcp_config.md) | `--mcp-config <configs...>` | — | — | json[] | — | pre-v1.0 | Load MCP servers from JSON files or strings |
 | 40 | [strict_mcp_config](062_strict_mcp_config.md) | `--strict-mcp-config` | — | — | bool | off | pre-v1.0 | Ignore all non-`--mcp-config` MCP sources |
 | 41 | [settings](060_settings.md) | `--settings <file-or-json>` | — | — | path/json | — | pre-v1.0 | Load additional settings from file or JSON string |
@@ -234,9 +234,9 @@ Precedence: CLI arg > env var > settings config.
 | 49 | [chrome](016_chrome.md) | `--chrome` / `--no-chrome` | — | — | bool | off | pre-v1.0 | Claude-in-Chrome integration |
 | 50 | [debug](019_debug.md) | `-d` / `--debug [filter]` | — | — | string? | off | pre-v1.0 | Debug mode; optional category filter e.g. `"api,hooks"` |
 | 51 | [debug_file](020_debug_file.md) | `--debug-file <path>` | — | — | path | — | pre-v1.0 | Write debug logs to file (implicitly enables debug) |
-| 52 | [log_level](036_log_level.md) | — | `CLAUDE_CODE_LOG_LEVEL` | — | enum | `Info` | pre-v1.0 | `Error` `Warn` `Info` `Debug` `Trace` |
-| 53 | [sandbox_mode](056_sandbox_mode.md) | — | `CLAUDE_CODE_SANDBOX_MODE` | — | bool | true | pre-v1.0 | Enable sandbox mode |
-| 54 | [telemetry](064_telemetry.md) | — | `CLAUDE_CODE_TELEMETRY` | — | bool | true | pre-v1.0 | Send usage telemetry to Anthropic |
+| 52 | [log_level](036_log_level.md) | — | ~~`CLAUDE_CODE_LOG_LEVEL`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220; see `--debug` (#50) |
+| 53 | [sandbox_mode](056_sandbox_mode.md) | — | ~~`CLAUDE_CODE_SANDBOX_MODE`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** 0 occurrences in v2.1.220 |
+| 54 | [telemetry](064_telemetry.md) | — | ~~`CLAUDE_CODE_TELEMETRY`~~ | — | — | n/a | never | ❌ **Refuted — does not exist.** Real mechanism is `DISABLE_TELEMETRY` (#118) |
 | 55 | [betas](014_betas.md) | `--betas <betas...>` | — | — | string[] | — | pre-v1.0 | Beta API headers (API key auth only) |
 | 56 | [brief](015_brief.md) | `--brief` | — | — | bool | off | pre-v1.0 | Enable `SendUserMessage` tool for agents |
 | 57 | [disable_slash_commands](021_disable_slash_commands.md) | `--disable-slash-commands` | — | — | bool | off | pre-v1.0 | Disable all slash command skills |

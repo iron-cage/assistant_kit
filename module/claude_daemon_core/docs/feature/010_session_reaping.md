@@ -105,6 +105,13 @@ the next `clr chat` — a few seconds, with the conversation intact via
 All three are injectable, following `with_registration_timeout`'s precedent, because no test
 can wait out a thirty-minute default.
 
+Configured through the `CLR_*` environment tier — `CLR_IDLE_TIMEOUT_SECS`, `CLR_LINGER_SECS`,
+`CLR_TICK_SECS` — read directly in `claude_runner/src/cli/daemon.rs`, not the TOML config tier.
+Both tiers exist, but the TOML tier and `claude_runner`'s `CliArgs` machinery run exclusively
+inside `dispatch_run()`, which `daemon start` never reaches. The reads live in the CLI-facing
+binary crate rather than here, so this crate stays Claude-agnostic ahead of splitting its
+Claude-specific bits out.
+
 ### One Session Per Tick
 
 `HostedSession::shutdown` waits up to `SHUTDOWN_GRACE` (5s) for a child to exit on its own.
@@ -124,11 +131,6 @@ destroys conversations; the argument is set out in that document and not repeate
 This inverts the feature's character, and the defaults should be read in that light. *"Your
 session is killed after thirty minutes"* would be a reason to set the timeout high. *"Your
 session sleeps and wakes where it left off"* is not.
-
-### What Is Not Yet Settled
-
-- **Where they are configured.** The `CLR_*` environment tier and the TOML config tier both
-  already exist; which one owns these is **TBD**. The values themselves are settled above.
 
 ### Adjacent Defect This Closes
 
@@ -166,9 +168,10 @@ clr chat "what did I say first?"        # resumes; same id as before
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/serve.rs` | `Daemon::reap`, `should_exit`, the refresh inside it |
-| source | `src/table.rs` | `HostedSession::last_active`, `shutdown` grace |
+| source | `child_supervisor/src/table.rs` | `HostedSession::last_active`, `shutdown` grace |
+| source | `claude_runner/src/cli/daemon.rs` | `CLR_*_SECS` reads, wired into `Daemon::new`'s builder chain |
 | doc | [009_session_resume.md](009_session_resume.md) | Prerequisite — what makes a release recoverable |
 | doc | [008_turn_state.md](008_turn_state.md) | The `busy` flag idle depends on, and the no-clock note this extends |
 | doc | [001_single_instance.md](001_single_instance.md) | The lock ordering an exiting daemon must honour |
-| doc | [003_session_table.md](003_session_table.md) | The table reaped from |
+| doc | [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md) | The table reaped from |
 | test | `tests/serve_test.rs` | Dispatch against a real socket and real children |

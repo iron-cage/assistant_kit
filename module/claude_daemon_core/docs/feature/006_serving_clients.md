@@ -4,7 +4,7 @@
 
 - **Purpose**: Accept a client on the Unix socket, turn its request into an answer, and send that answer back.
 - **In Scope**: `Listener`, `Daemon::dispatch`, `serve_connection`, `serve_once`, `client::request`, `client::call`.
-- **Out of Scope**: The request and response types (→ [002_wire_protocol.md](002_wire_protocol.md)), the line framing they travel in (→ `src/ipc.rs`), what a session *is* (→ [003_session_table.md](003_session_table.md)), the daemon binary's main loop and its lifetime (→ `claude_daemon`).
+- **Out of Scope**: The request and response types (→ [002_wire_protocol.md](002_wire_protocol.md)), the line framing they travel in (→ `daemon_kit/src/ipc.rs`), what a session *is* (→ [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md)), the generic socket-lifecycle mechanism itself, which now lives in `daemon_kit` (→ [`daemon_kit/src/readme.md`](../../../daemon_kit/src/readme.md) — this doc still covers the feature as this crate delivers it), the daemon binary's main loop and its lifetime (→ `claude_daemon`).
 
 ### The Socket
 
@@ -113,11 +113,11 @@ cd module/claude_daemon_core && ./verb/test
 Or the two suites directly, inside the container:
 
 ```bash
-cargo nextest run -p claude_daemon_core --test listener_test
+cargo nextest run -p daemon_kit --test listener_test
 cargo nextest run -p claude_daemon_core --test serve_test
 ```
 
-`tests/listener_test.rs` covers binding, cleanup on drop, binding over a stale socket, the foreign-lock refusal, the non-socket refusal, permissions, and accepting a real client.
+`daemon_kit/tests/listener_test.rs` covers binding, cleanup on drop, binding over a stale socket, the foreign-lock refusal, the non-socket refusal, permissions, and accepting a real client.
 
 `tests/serve_test.rs` runs a daemon on a thread with a real socket and real PTY-attached children, and drives it through the client: ping, listing, spawning, the send/read round trip, the cursor `send` reports, unknown sessions, a malformed line, shutdown, resize, a prompt carried by `spawn`, stopping the daemon, a child that never registers, and the submit gap.
 
@@ -129,12 +129,12 @@ The submit gap (srv13) is checked with a stopwatch rather than an observation, w
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/listener.rs` | Binding, stale-socket removal, cleanup on drop |
+| source | `daemon_kit/src/listener.rs` | Binding, stale-socket removal, cleanup on drop |
 | source | `src/serve.rs` | `Daemon`, `serve_connection`, `serve_once` |
 | source | `src/client.rs` | `request`, `request_within`, `call` |
 | doc | [001_single_instance.md](001_single_instance.md) | The lock the socket's safety rests on |
 | doc | [002_wire_protocol.md](002_wire_protocol.md) | The request and response shapes |
-| doc | [004_session_output.md](004_session_output.md) | The cursors `send` and `read` trade in |
+| doc | [`child_supervisor/docs/feature/002_session_output.md`](../../../child_supervisor/docs/feature/002_session_output.md) | The cursors `send` and `read` trade in |
 | doc | [005_session_registration.md](005_session_registration.md) | Why `spawn` has to wait before it can answer |
-| test | `tests/listener_test.rs` | The socket's lifecycle |
+| test | `daemon_kit/tests/listener_test.rs` | The socket's lifecycle |
 | test | `tests/serve_test.rs` | End-to-end dispatch over a real socket |

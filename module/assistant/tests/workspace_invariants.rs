@@ -18,7 +18,7 @@
 //!
 //! | Test | Spec | Scenario |
 //! |------|------|----------|
-//! | `wd1_workspace_members_completeness` | WD-1 | All 26 documented crates in members list |
+//! | `wd1_workspace_members_completeness` | WD-1 | All 28 documented crates in members list |
 //! | `pi1_no_private_path_deps` | PI-1 | No workspace path dep points outside the workspace |
 //! | `pi2_out_of_workspace_path_deps_have_version` | PI-2 | Out-of-workspace path deps carry version field |
 //! | `vs1_workspace_package_version_declared` | VS-1 | `[workspace.package]` declares a version |
@@ -38,7 +38,7 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 26 workspace member crate names.
+/// All 28 workspace member crate names.
 //
 // Fix(BUG-482): doc comment said "18" while this constant already listed 19 entries
 // (json_redact present) — the constant itself was correct, only the count in this
@@ -73,6 +73,8 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_pty_core",
   "claude_terminal_core",
   "claude_session_core",
+  "daemon_kit",
+  "child_supervisor",
   "claude_daemon_core",
   "claude_topic_core",
 ];
@@ -172,7 +174,7 @@ fn layer_of( name : &str ) -> Option< u8 >
 {
   match name
   {
-    "claude_core" | "claude_session_core" => Some( 0 ),
+    "claude_core" | "claude_session_core" | "daemon_kit" | "child_supervisor" => Some( 0 ),
     "claude_assets_core"
     | "claude_profile_core"
     | "claude_version_core"
@@ -197,7 +199,7 @@ fn layer_of( name : &str ) -> Option< u8 >
 
 // ──────────────────────── feature: workspace design ───────────────────────
 
-/// WD-1: All 26 documented workspace members are present in `[workspace.members]`.
+/// WD-1: All 28 documented workspace members are present in `[workspace.members]`.
 ///
 /// ## Root Cause (why this test exists)
 /// Workspace membership controls which crates are built and tested in CI.

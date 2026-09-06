@@ -90,7 +90,7 @@ clr daemon stop
 | [`../command/13_daemon.md`](../command/13_daemon.md) | `clr daemon` command reference |
 | [`../../../../claude_daemon_core/docs/feature/001_single_instance.md`](../../../../claude_daemon_core/docs/feature/001_single_instance.md) | The lock behind AC-9 |
 | [`../../../../claude_daemon_core/docs/feature/006_serving_clients.md`](../../../../claude_daemon_core/docs/feature/006_serving_clients.md) | The socket, and the submit gap behind AC-6 |
-| [`../../../../claude_daemon_core/docs/feature/004_session_output.md`](../../../../claude_daemon_core/docs/feature/004_session_output.md) | The cursors AC-1's reading loop trades in |
+| [`../../../../child_supervisor/docs/feature/002_session_output.md`](../../../../child_supervisor/docs/feature/002_session_output.md) | The cursors AC-1's reading loop trades in |
 | [`../../guide/002_hosted_sessions.md`](../../guide/002_hosted_sessions.md) | End-to-end walkthrough of the eight hosted-session phases |
 
 ### Related User Stories

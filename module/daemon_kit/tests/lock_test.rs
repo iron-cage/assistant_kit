@@ -7,7 +7,9 @@
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/001_single_instance.md` — why `flock` and not a PID file
+//! - `claude_daemon_core/docs/feature/001_single_instance.md` — why `flock` and
+//!   not a PID file; the feature stays documented beside the daemon that uses
+//!   it, even though the mechanism itself lives here
 //!
 //! ## Coverage
 //!
@@ -23,7 +25,7 @@
 
 use std::fs;
 
-use claude_daemon_core::{ acquire, Error };
+use daemon_kit::{ acquire, Error };
 
 /// lock01: taking a lock creates the file and reports the path.
 #[ test ]

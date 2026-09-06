@@ -5,7 +5,7 @@
 - **Purpose**: Specify the JSONL format used by Claude Code to store conversation entries in session files.
 - **Responsibility**: Master file for the `jsonl` collection — lists all 10 format concept instances covering entry types, content blocks, usage tracking, and threading model.
 - **In Scope**: User entry fields, assistant entry fields, content block types (text, thinking, tool_use, tool_result), usage object, conversation threading via `parentUuid`, sidechain/agent entry format.
-- **Out of Scope**: Storage directory layout and file naming (→ [`../storage/`](../storage/readme.md)); ancillary formats (history.jsonl, tasks, shell-snapshots, commands) (→ [`../format/`](../format/readme.md)); settings file format (→ [`../settings/`](../settings/readme.md)).
+- **Out of Scope**: Storage directory layout and file naming (→ [`../storage/`](../storage/readme.md)); ancillary formats (history.jsonl, tasks, shell-snapshots, commands) (→ [`../format/`](../format/readme.md)); settings file format (→ [`../settings/`](../settings/readme.md)); the full top-level envelope taxonomy — this collection covers only the `user`/`assistant` conversation entries, 2 of 19 observed top-level `type` kinds in the same file (→ [`../envelope/`](../envelope/readme.md)).
 
 **File location**: `~/.claude/projects/{project-id}/{session-id}.jsonl`
 
@@ -30,8 +30,10 @@
 
 | Type | `type` field | `message.content` | Key additional fields |
 |------|-------------|-------------------|-----------------------|
-| User | `"user"` | string (plain text) | `thinkingMetadata` |
-| Assistant | `"assistant"` | array of content blocks | `requestId`, `message.model`, `message.usage` |
+| User | `"user"` | string (5.7% — typed text) OR array (94.3% — usually a `tool_result` block; see [002_user_entry.md](002_user_entry.md)) | `thinkingMetadata`, `sourceToolAssistantUUID`, `toolUseResult` |
+| Assistant | `"assistant"` | array of content blocks (always) | `requestId`, `message.model`, `message.usage`, `effort`, `attributionSkill` |
+
+Percentages from a 2026-09-06 full local-store scan (17,210 session files, 5,446,921 lines) — see [002_user_entry.md](002_user_entry.md) Notes for the corrected content-shape finding (this table previously stated user content was always a plain string).
 
 ### Type-Specific Requirements
 
@@ -63,3 +65,4 @@ For large sessions: stream line-by-line instead of loading entire file.
 - `../../../../module/claude_storage/src/` — parser implementation
 - `../../../../module/claude_storage/docs/` — storage implementation docs
 - `../behavior/` — evidence E9 references threading model
+- [`../envelope/readme.md`](../envelope/readme.md) — envelope taxonomy collection depends on this collection for conversation-entry field detail of the `user`/`assistant` kinds it only classifies

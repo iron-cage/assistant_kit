@@ -108,20 +108,29 @@ fn spawn_claude( cwd : &Path, resume : Option< &str > ) -> Result< PtySession >
 
 ### What Is Not Yet Settled
 
-- **Behaviour on a terminal.** The flags above are documented for the tool as a whole. That
-  `--resume <id>` brings up a *usable interactive* session on a pty — rather than one that
-  needs a keystroke first, the way the picker does — is **TBD** until observed against a real
-  `claude`. Everything in this document assumes it does.
-- **Whether a resumed session re-registers.** [005_session_registration.md](005_session_registration.md)
-  waits for a conversation id to appear in the registry after a spawn. Whether a resumed
-  session republishes its id, and how quickly, is **TBD**; if it does not, the registration
-  wait needs a resume-shaped branch rather than the same timeout. Settled by a test during
-  implementation rather than by inspection — the answer is cheaper to observe than to reason
-  about.
-- **Which transcript wins when a directory holds several.** Most-recently-modified is the
-  obvious rule and probably right, but a directory that has hosted both a daemon session and
-  an interactive one has two plausible answers. **TBD** whether the daemon should prefer the
-  most recent unconditionally, or the most recent it previously hosted.
+- **Behaviour on a terminal — settled.** Observed against a real `claude` (HS-0): `--resume
+  <id>` brings up a usable interactive session immediately, with no picker and no keystroke
+  needed first. Everything in this document assuming that turned out correct, and nothing
+  about `Daemon::spawn` had to special-case the other outcome.
+- **Which transcript wins when a directory holds several — settled.** Most-recently-modified,
+  unconditionally: [`src/serve.rs`](../../src/serve.rs)'s `spawn` calls
+  `claude_storage_core::most_recent_session_id(cwd)`, the same primitive continuation
+  detection already uses, rather than tracking "the most recent this daemon previously
+  hosted." That rejected alternative would need daemon-side memory — exactly the thing
+  [Where the Decision Lives](#where-the-decision-lives) already ruled out for the resume
+  question generally, for the same reaping-window reason.
+- **Whether a resumed session re-registers, and how fast — still open.** [005_session_registration.md](005_session_registration.md)'s
+  wait is unchanged: `Daemon::spawn` polls for the spawned pid exactly as it does for a fresh
+  conversation, on the same `registration_timeout`, relying on nothing more than "resume
+  reuses the original id" (verified against `claude --help`, load-bearing above). Whether a
+  *resumed* Claude Code process republishes a registry record at all, and within the normal
+  window, is a fact about the real tool this crate cannot observe from a test fixture —
+  `tests/serve_test.rs`'s `srv16`/`srv17` cover the daemon's own logic against a fixture
+  spawner that always re-registers promptly, which only proves the daemon behaves correctly
+  *if* the real tool does too. Confirm empirically with the `### Verification` block below;
+  if the real answer turns out to be "no, or much slower," the fix is a resume-shaped branch
+  on the registration wait, not a redesign — the mechanism this document describes stays the
+  same either way.
 
 ### Verification
 
@@ -152,6 +161,6 @@ echo "was: $ID"
 | dep | `claude_storage_core` | Reads the transcripts the last-occupant lookup resolves against |
 | doc | [005_session_registration.md](005_session_registration.md) | The registration wait a resumed spawn also goes through |
 | doc | [010_session_reaping.md](010_session_reaping.md) | The first consumer — releasing an idle session |
-| doc | [003_session_table.md](003_session_table.md) | The table this re-keys |
+| doc | [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md) | The table this re-keys |
 | doc | `claude_runner/docs/feature/008_interactive_handoff.md` | The second consumer — releasing to an interactive client |
 | test | `tests/serve_test.rs` | Dispatch against a real socket and real children |

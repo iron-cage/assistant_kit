@@ -1,8 +1,14 @@
-//! Wire-shape tests for requests and responses.
+//! Wire-shape tests for requests, plus the Claude-specific `SessionSummary`.
 //!
 //! These assert the bytes on the wire, not just that a value survives a
 //! round-trip. A protocol whose shape is only tested against itself will happily
 //! rename a field and keep passing while every existing client breaks.
+//!
+//! The response envelope (`Response`/`OkTrue`/`OkFalse`) is [`daemon_kit`]'s —
+//! payload-agnostic, so its wire-shape tests live there now, in
+//! `daemon_kit/tests/response_test.rs`. `OutputSlice` is [`child_supervisor`]'s,
+//! tested in `child_supervisor/tests/output_test.rs`. What stays here is what
+//! stays Claude-specific: `Request` and `SessionSummary`.
 //!
 //! ## Specification References
 //!
@@ -18,21 +24,19 @@
 //! | proto03 | `Spawn` with `prompt` absent | Deserializes to `None` |
 //! | proto04 | `Send`, `Resize`, `Shutdown` | Each names `session_id`, never a pid |
 //! | proto05 | Every request round-trips | Value in == value out |
-//! | proto06 | `Response::ok` | `{"ok":true,"result":…}` |
-//! | proto07 | `Response::err` | `{"ok":false,"error":…}` |
-//! | proto08 | Deserializing both response forms | Correct variant each time |
-//! | proto09 | `ok:true` with an `error` field | Rejected — neither variant matches |
 //! | proto10 | An unknown method | Rejected |
 //! | proto11 | `SessionSummary` | Field names as documented |
-//! | proto12 | One line per message | No embedded newlines |
+//! | proto12 | One request per line | No embedded newlines |
 //! | proto13 | `Read` | Names a session id and a cursor |
 //! | proto14 | `Read` with `cursor` absent | Deserializes to `0` |
-//! | proto15 | `OutputSlice` | Field names as documented |
 //! | proto16 | `ContextSummary` | Names a session id and nothing else |
+//!
+//! IDs are identifiers, not indices — proto06/07/08/09/15 moved out rather than
+//! being renumbered; see `daemon_kit`'s and `child_supervisor`'s own suites.
 
 use std::path::PathBuf;
 
-use claude_daemon_core::{ OutputSlice, Request, Response, SessionSummary };
+use claude_daemon_core::{ Request, SessionSummary };
 use serde_json::json;
 
 /// Serialize `request` to a `Value` for shape comparison.
@@ -138,57 +142,6 @@ fn proto05_every_request_round_trips()
   }
 }
 
-/// proto06, proto07: the two response shapes.
-///
-/// The explicit `ok` discriminant is what lets a client written against the
-/// earlier per-PID `query.rs` protocol read these responses unchanged.
-#[ test ]
-fn proto06_response_shapes()
-{
-  assert_eq!(
-    serde_json::to_value( Response::ok( json!( { "version" : "1.2.0" } ) ) )
-      .expect( "serialize failed" ),
-    json!( { "ok" : true, "result" : { "version" : "1.2.0" } } ),
-  );
-  assert_eq!(
-    serde_json::to_value( Response::err( "no such session: conv-9" ) ).expect( "serialize failed" ),
-    json!( { "ok" : false, "error" : "no such session: conv-9" } ),
-  );
-}
-
-/// proto08: both forms deserialize to the variant their `ok` field names.
-#[ test ]
-fn proto08_both_response_forms_deserialize()
-{
-  let success : Response = serde_json::from_str( r#"{ "ok": true, "result": [1,2] }"# )
-    .expect( "success response failed to parse" );
-  assert_eq!( success, Response::ok( json!( [ 1, 2 ] ) ) );
-
-  let failure : Response = serde_json::from_str( r#"{ "ok": false, "error": "boom" }"# )
-    .expect( "error response failed to parse" );
-  assert_eq!( failure, Response::err( "boom" ) );
-}
-
-/// proto09: `ok` and the payload must agree.
-///
-/// `ok:true` alongside an `error` matches neither variant. Accepting it would
-/// let a client read a failure as a success whose result happened to be missing.
-#[ test ]
-fn proto09_mismatched_ok_and_payload_is_rejected()
-{
-  for body in [
-    r#"{ "ok": true, "error": "boom" }"#,
-    r#"{ "ok": false, "result": 1 }"#,
-    r#"{ "ok": true }"#,
-  ]
-  {
-    assert!(
-      serde_json::from_str::< Response >( body ).is_err(),
-      "accepted a self-contradictory response: {body}",
-    );
-  }
-}
-
 /// proto10: an unknown method is refused rather than silently ignored.
 #[ test ]
 fn proto10_unknown_method_is_rejected()
@@ -224,25 +177,19 @@ fn proto11_session_summary_shape()
   );
 }
 
-/// proto12: a serialized message never contains a newline.
+/// proto12: a serialized request never contains a newline.
 ///
 /// The framing is one JSON object per line, so an embedded newline would split a
-/// single message into two unparseable halves.
+/// single message into two unparseable halves. The same property for the
+/// response envelope is `daemon_kit`'s `resp05`.
 #[ test ]
-fn proto12_serialized_messages_are_single_lines()
+fn proto12_serialized_requests_are_single_lines()
 {
   for request in every_request()
   {
     let text = serde_json::to_string( &request ).expect( "serialize failed" );
     assert!( !text.contains( '\n' ), "request serialized across lines: {text}" );
   }
-
-  let response = serde_json::to_string( &Response::err( "line one\nline two" ) )
-    .expect( "serialize failed" );
-  assert!(
-    !response.contains( '\n' ),
-    "a newline inside an error message reached the wire unescaped: {response}",
-  );
 }
 
 /// proto13: `Read` names a session and a position within it.
@@ -269,34 +216,6 @@ fn proto14_absent_cursor_defaults_to_zero()
     .expect( "read without a cursor should parse" );
 
   assert_eq!( request, Request::Read { session_id : "conv-1".into(), cursor : 0 } );
-}
-
-/// proto15: an output slice reports its text, the next cursor, and what was lost.
-///
-/// `missed` is on the wire rather than inferred by the client, because only the
-/// daemon knows how much it evicted. A client that quietly renders a gap as
-/// continuous output is worse than one that prints a warning.
-#[ test ]
-fn proto15_output_slice_shape()
-{
-  let slice = OutputSlice
-  {
-    text : "hello".into(),
-    cursor : 5,
-    missed : 2,
-    ended : false,
-  };
-
-  assert_eq!(
-    serde_json::to_value( &slice ).expect( "serialize failed" ),
-    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
-  );
-
-  let back : OutputSlice = serde_json::from_value(
-    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
-  )
-  .expect( "slice failed to parse" );
-  assert_eq!( back, slice );
 }
 
 /// proto16: `ContextSummary` names a session id and carries nothing else.

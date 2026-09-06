@@ -19,6 +19,10 @@
 //! - [`OutputPump`] / [`OutputSlice`] — output kept drained and read by cursor
 //! - [`Request`] / [`Response`] — the wire protocol
 //! - [`Daemon`] / [`serve_once`] — what a request means, and the body of a loop
+//! - [`Daemon::reap`] / [`spawn_waker`] — the daemon's clock: a synthetic client
+//!   guarantees a floor rate, but any real connection drives it too
+//! - [`Daemon::should_exit`] — whether the table has stayed empty long enough
+//!   to end the process itself
 //! - [`client::call`] — the other end of that exchange
 //! - [`StaticBaseline`] — what a conversation costs before a word of it is said
 //!
@@ -36,7 +40,7 @@
 //! **Protocol lines are capped.** The `query.rs` prototype this generalizes reads
 //! its socket with an unbounded `read_line`; with one daemon hosting every
 //! session, an unterminated line is no longer one session's problem. See
-//! [`ipc::MAX_IPC_LINE_BYTES`].
+//! [`MAX_IPC_LINE_BYTES`].
 
 #![ deny( missing_docs ) ]
 #![ warn( rust_2018_idioms ) ]
@@ -45,29 +49,28 @@ pub mod baseline;
 pub mod client;
 pub mod context;
 mod error;
-pub mod ipc;
-pub mod listener;
-pub mod lock;
-pub mod output;
 pub mod paths;
 pub mod protocol;
 pub mod registration;
 pub mod serve;
-pub mod table;
 
 pub use baseline::StaticBaseline;
+pub use child_supervisor::
+{
+  HostedSession, OutputBuffer, OutputPump, OutputSlice, SessionTable, DEFAULT_OUTPUT_CAP,
+};
+pub use daemon_kit::
+{
+  acquire, read_capped_line, serve_connection, spawn_waker, InstanceLock, Listener,
+  MAX_IPC_LINE_BYTES, DEFAULT_TICK,
+};
 pub use error::{ Error, Result };
-pub use ipc::{ read_capped_line, MAX_IPC_LINE_BYTES };
-pub use listener::Listener;
-pub use lock::{ acquire, InstanceLock };
-pub use output::{ OutputBuffer, OutputPump, OutputSlice, DEFAULT_OUTPUT_CAP };
 pub use paths::DaemonPaths;
 pub use protocol::{ Request, Response, SessionSummary };
 pub use registration::{ await_session_id, REGISTRATION_TIMEOUT };
-pub use serve::{ serve_connection, serve_once, Daemon };
+pub use serve::{ serve_once, Daemon, DEFAULT_IDLE_TIMEOUT, DEFAULT_LINGER };
 // Re-exported rather than left to the caller to depend on `claude_session_core`
 // for: [`Daemon::with_background_reporting`] takes it, and an argument type a
 // caller cannot name without adding a dependency is not really public.
 pub use claude_session_core::BackgroundReporting;
 pub use claude_session_core::turn::BG_TASKS_REPORT_RUNNING_ENV;
-pub use table::{ HostedSession, SessionTable };

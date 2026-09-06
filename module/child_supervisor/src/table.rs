@@ -1,10 +1,12 @@
-//! The daemon's table of hosted sessions.
+//! A table of supervised child sessions, keyed by a caller-chosen id rather
+//! than PID.
 //!
-//! Keyed by conversation id rather than PID. Claude Code's own daemon re-hosts a
-//! session with `--fork-session` on auto-update or recovery, producing a process
-//! with a different PID, no inherited environment, and a new conversation id — so
-//! a PID key detaches silently at exactly the moment recovery is meant to help.
-//! The conversation id survives as the handle a client keeps using.
+//! PID is a poor key for anything that outlives one process incarnation: a
+//! caller that re-hosts a child under a fresh process — same conversation, new
+//! PID, no inherited environment — needs the table to keep recognizing it. A
+//! PID key detaches silently at exactly the moment re-hosting was meant to
+//! help. Whatever id the caller mints instead survives that, as long as it is
+//! durable across the replacement.
 
 use core::time::Duration;
 use std::collections::HashMap;
@@ -16,7 +18,6 @@ use claude_pty_core::{ PtySession, WinSize };
 
 use crate::error::{ Error, Result };
 use crate::output::{ OutputPump, OutputSlice, DEFAULT_OUTPUT_CAP };
-use crate::protocol::SessionSummary;
 
 /// End-of-transmission — the byte a terminal sends for `Ctrl-D`.
 const EOT : u8 = 0x04;
@@ -30,7 +31,7 @@ const SHUTDOWN_GRACE : Duration = Duration::from_secs( 5 );
 /// How often the shutdown path re-checks whether the child has exited.
 const SHUTDOWN_POLL : Duration = Duration::from_millis( 20 );
 
-/// One session hosted by the daemon.
+/// One session hosted by the supervisor.
 ///
 /// Fields are private because two of them have an invariant between them: the
 /// [`OutputPump`] holds a clone of the pty master, so a session cannot be
@@ -45,6 +46,7 @@ pub struct HostedSession
   pty : PtySession,
   pump : OutputPump,
   busy : bool,
+  last_active : Instant,
 }
 
 impl HostedSession
@@ -74,6 +76,7 @@ impl HostedSession
       pump : OutputPump::spawn( reader, DEFAULT_OUTPUT_CAP ),
       pty,
       busy : false,
+      last_active : Instant::now(),
     })
   }
 
@@ -96,7 +99,7 @@ impl HostedSession
   /// Current process id.
   ///
   /// Diagnostic only — for correlating against `ps` or a registry scan. Never an
-  /// address: a re-host changes it while the conversation id stays put.
+  /// address: a re-host changes it while the session id stays put.
   #[ inline ]
   #[ must_use ]
   pub fn pid( &self ) -> u32
@@ -104,7 +107,11 @@ impl HostedSession
     self.pty.pid()
   }
 
-  /// Whether the daemon currently believes a turn is in flight.
+  /// Whether the caller currently believes this session is doing work.
+  ///
+  /// Purely a flag this type stores and reports — nothing here decides when it
+  /// flips. Deciding that is the job of whatever caller can observe the child's
+  /// own progress; see [`Self::set_busy`].
   #[ inline ]
   #[ must_use ]
   pub const fn busy( &self ) -> bool
@@ -112,24 +119,43 @@ impl HostedSession
     self.busy
   }
 
-  /// Record whether a turn is in flight.
+  /// When this session last saw activity, per [`Self::touch`], or was last
+  /// reported busy, per [`Self::set_busy`].
   ///
-  /// Maintained from `claude_session_core`'s turn watcher, not sampled from the
-  /// registry directly — the difference is the whole point of turn detection
-  /// being its own feature rather than a field read.
+  /// What an idle-reaping policy built on this table measures against.
+  #[ inline ]
+  #[ must_use ]
+  pub const fn last_active( &self ) -> Instant
+  {
+    self.last_active
+  }
+
+  /// Record whether the session is doing work.
+  ///
+  /// Deliberately does not touch [`Self::last_active`] itself: a long-running
+  /// turn needs the clock refreshed on *every* tick it is still busy, not only
+  /// at the moment it started, and repeating that refresh is the caller's own
+  /// job — the caller is what knows how often "still busy" gets re-observed.
   #[ inline ]
   pub fn set_busy( &mut self, busy : bool )
   {
     self.busy = busy;
   }
 
+  /// Record activity, resetting the idle clock [`Self::last_active`] reports.
+  #[ inline ]
+  pub fn touch( &mut self )
+  {
+    self.last_active = Instant::now();
+  }
+
   /// Whether the child has already exited, without waiting for it.
   ///
   /// `None` while it is still running. A session that answers `Some` is dead
-  /// weight and cannot become live again: it still occupies a conversation id,
-  /// still reports a pid to `list_sessions`, and still holds a pump thread, but
-  /// every `send` to it fails. Nothing else notices — a client learns about it
-  /// only by writing to a session that cannot answer.
+  /// weight and cannot become live again: it still occupies a session id, still
+  /// reports a pid, and still holds a pump thread, but every write to it fails.
+  /// Nothing else notices — a caller learns about it only by writing to a
+  /// session that cannot answer.
   ///
   /// # Errors
   ///
@@ -142,58 +168,53 @@ impl HostedSession
 
   /// Deliver `bytes` to the session's terminal.
   ///
+  /// Counts as activity: touches [`Self::last_active`].
+  ///
   /// # Errors
   ///
   /// Returns [`Error::Pty`] if the write queue is full or its thread is gone.
   #[ inline ]
-  pub fn write( &self, bytes : &[ u8 ] ) -> Result< () >
+  pub fn write( &mut self, bytes : &[ u8 ] ) -> Result< () >
   {
+    self.touch();
     self.pty.write( bytes ).map_err( Error::Pty )
   }
 
   /// Change the session's terminal dimensions.
   ///
+  /// Counts as activity: touches [`Self::last_active`].
+  ///
   /// # Errors
   ///
   /// Returns [`Error::Pty`] if the session is already closed or the ioctl fails.
   #[ inline ]
-  pub fn resize( &self, rows : u16, cols : u16 ) -> Result< () >
+  pub fn resize( &mut self, rows : u16, cols : u16 ) -> Result< () >
   {
+    self.touch();
     self.pty.resize( WinSize::new( rows, cols ) ).map_err( Error::Pty )
   }
 
   /// Read the session's output since `cursor`.
+  ///
+  /// Counts as activity: touches [`Self::last_active`].
   #[ inline ]
   #[ must_use ]
-  pub fn read_from( &self, cursor : u64 ) -> OutputSlice
+  pub fn read_from( &mut self, cursor : u64 ) -> OutputSlice
   {
+    self.touch();
     self.pump.read_from( cursor )
   }
 
   /// Absolute position just past the newest byte of output.
   ///
   /// Taken immediately before writing a prompt, this is exactly where that
-  /// prompt's output begins — the daemon is single-threaded, so nothing can
-  /// have written to this session in between.
+  /// prompt's output begins — a single-threaded caller has nothing else that
+  /// could have written to this session in between.
   #[ inline ]
   #[ must_use ]
   pub fn output_end( &self ) -> u64
   {
     self.pump.end()
-  }
-
-  /// Summarize for [`crate::protocol::Request::ListSessions`].
-  #[ inline ]
-  #[ must_use ]
-  pub fn summary( &self ) -> SessionSummary
-  {
-    SessionSummary
-    {
-      session_id : self.session_id.clone(),
-      pid : self.pty.pid(),
-      cwd : self.cwd.clone(),
-      busy : self.busy,
-    }
   }
 
   /// End the session and reap it, in the only order that terminates.
@@ -203,7 +224,7 @@ impl HostedSession
   /// 1. **`Ctrl-D`.** An interactive program handed end-of-input exits through
   ///    its own shutdown path — flushing a transcript, releasing locks. Nothing
   ///    below gives it that chance, so it goes first.
-  /// 2. **Kill on grace expiry.** A wedged child would otherwise hold the daemon
+  /// 2. **Kill on grace expiry.** A wedged child would otherwise hold the caller
   ///    here forever, because step 3 cannot proceed while the child lives.
   /// 3. **Join the pump, then shut the pty down.** The pump holds a master
   ///    descriptor that [`PtySession::shutdown`] cannot reach; while it lives the
@@ -246,7 +267,7 @@ impl HostedSession
   }
 }
 
-/// Every session the daemon owns.
+/// Every session this table owns.
 #[ derive( Debug, Default ) ]
 pub struct SessionTable
 {
@@ -279,7 +300,7 @@ impl SessionTable
     self.sessions.is_empty()
   }
 
-  /// Add a session, replacing any existing entry with the same conversation id.
+  /// Add a session, replacing any existing entry with the same id.
   ///
   /// A replaced session is returned rather than dropped: dropping one silently
   /// would leak its pump thread and leave its child running with nobody holding
@@ -291,7 +312,7 @@ impl SessionTable
     self.sessions.insert( session.session_id.clone(), session )
   }
 
-  /// Borrow a session by conversation id.
+  /// Borrow a session by id.
   ///
   /// # Errors
   ///
@@ -304,7 +325,7 @@ impl SessionTable
       .ok_or_else( || Error::UnknownSession( session_id.to_string() ) )
   }
 
-  /// Borrow a session mutably by conversation id.
+  /// Borrow a session mutably by id.
   ///
   /// # Errors
   ///
@@ -330,17 +351,7 @@ impl SessionTable
       .ok_or_else( || Error::UnknownSession( session_id.to_string() ) )
   }
 
-  /// Summarize every hosted session, ordered by conversation id.
-  #[ inline ]
-  #[ must_use ]
-  pub fn summaries( &self ) -> Vec< SessionSummary >
-  {
-    let mut out : Vec< SessionSummary > = self.sessions.values().map( HostedSession::summary ).collect();
-    out.sort_by( | a, b | a.session_id.cmp( &b.session_id ) );
-    out
-  }
-
-  /// Conversation ids of every hosted session, ordered.
+  /// Ids of every hosted session, ordered.
   #[ inline ]
   #[ must_use ]
   pub fn session_ids( &self ) -> Vec< String >
@@ -350,12 +361,11 @@ impl SessionTable
     out
   }
 
-  /// Remove every session whose child has already exited, ordered by
-  /// conversation id.
+  /// Remove every session whose child has already exited, ordered by id.
   ///
-  /// A session outlives its child: the daemon holds the handle, the pump keeps
+  /// A session outlives its child: the caller holds the handle, the pump keeps
   /// its thread, and the table keeps the row. Nothing here notices, so the row
-  /// stays listed as hosted until a client happens to write to it and gets an
+  /// stays listed as hosted until something happens to write to it and gets an
   /// error for a session that died an hour ago.
   ///
   /// Returned rather than dropped, for the same reason [`SessionTable::insert`]
@@ -365,10 +375,8 @@ impl SessionTable
   /// finds it gone on the first check.
   ///
   /// A failure to determine liveness leaves the session in place. `try_wait`
-  /// erroring means the daemon does not *know* whether the child is alive, and
-  /// evicting on "do not know" would take a working session out of the table —
-  /// the same reasoning that makes a failed registry scan leave `busy` untouched
-  /// rather than guess at it.
+  /// erroring means the caller does not *know* whether the child is alive, and
+  /// evicting on "do not know" would take a working session out of the table.
   #[ inline ]
   #[ must_use = "each removed session still holds a pump thread until it is shut down" ]
   pub fn take_exited( &mut self ) -> Vec< HostedSession >

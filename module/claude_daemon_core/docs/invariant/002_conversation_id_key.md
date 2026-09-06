@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Guarantee that a client's handle on a session keeps working after Claude Code re-hosts that session under a different process.
-- **Governs**: `SessionTable`'s key type, and every `session_id` field in `Request` and `SessionSummary`.
+- **Governs**: `SessionTable`'s key type (`child_supervisor`), and every `session_id` field in `Request` and `SessionSummary`.
 - **In Scope**: Anything a client uses to address a session.
 - **Out of Scope**: `SessionSummary::pid`, which is reported for diagnostics and is explicitly not an address.
 
@@ -32,7 +32,7 @@ A `--fork-session` re-host produces a *new* conversation id for the continuation
 ### Verification
 
 ```bash
-cargo test -p claude_daemon_core --test table_test
+cargo test -p child_supervisor --test table_test
 ```
 
 ```bash
@@ -42,14 +42,14 @@ cd module/claude_daemon_core && \
   grep -n 'pid' src/protocol.rs | grep -v 'SessionSummary\|/// \|pub pid'
 ```
 
-`tests/table_test.rs` asserts that inserting a session, then inserting again under the same conversation id with a different PID, replaces the entry rather than creating a second one.
+`child_supervisor/tests/table_test.rs` asserts that inserting a session, then inserting again under the same conversation id with a different PID, replaces the entry rather than creating a second one.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/table.rs` | The `HashMap< String, HostedSession >` key |
+| source | `child_supervisor/src/table.rs` | The `HashMap< String, HostedSession >` key |
 | source | `src/protocol.rs` | `session_id` on every targeted request |
-| doc | [feature/003_session_table.md](../feature/003_session_table.md) | The table this constrains |
+| doc | [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md) | The table this constrains |
 | doc | [feature/002_wire_protocol.md](../feature/002_wire_protocol.md) | Where `session_id` appears on the wire |
-| test | `tests/table_test.rs` | Replacement-by-conversation-id |
+| test | `child_supervisor/tests/table_test.rs` | Replacement-by-conversation-id |

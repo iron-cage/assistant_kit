@@ -95,7 +95,8 @@ it back.
 ### Verification
 
 ```bash
-cargo test -p claude_runner --test chat_command_test
+cargo test -p claude_runner --test interactive_handoff_test
+cargo test -p claude_runner --test interactive_handoff_unit_test
 ```
 
 Against a live daemon — the collision this feature removes:
@@ -122,11 +123,14 @@ answered; the damage was in the transcript.
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/cli/run.rs` | The probe and release, before the interactive spawn |
+| source | `src/cli/mod.rs` | `release_hosted_session` (the probe and release) and `apply_interactive_handoff` (the participation gate), called from `dispatch_run` before the interactive spawn |
+| source | `src/cli/chat.rs` | `find_by_cwd` — the cwd-matching rule this reuses from `clr chat`'s own session resolution |
 | source | `src/cli/daemon.rs` | `probe`, and the spawner that emits `--resume` |
 | doc | `claude_daemon_core/docs/feature/009_session_resume.md` | Prerequisite — what makes the return trip possible |
 | doc | `claude_daemon_core/docs/feature/010_session_reaping.md` | The other release path, and the linger clock this can start |
 | doc | [../cli/command/14_chat.md](../cli/command/14_chat.md) | The cwd-matching rule this reuses |
 | doc | [../cli/command/15_sessions.md](../cli/command/15_sessions.md) | The probe-don't-start precedent |
 | doc | [../cli/user_story/032_hosted_session_chat.md](../cli/user_story/032_hosted_session_chat.md) | Acceptance criteria for the hosted-session stack |
+| test | `tests/interactive_handoff_test.rs` | No-daemon, no-match, and idle-release integration coverage against a real in-process daemon (IH-1–IH-3) |
+| test | `tests/interactive_handoff_unit_test.rs` | `find_by_cwd` unit coverage |
 | test | `tests/docs/cli/command/14_chat.md` | Test-case planning for the chat surface |

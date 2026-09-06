@@ -267,26 +267,40 @@ fn resolve_session( paths : &DaemonPaths, socket : &std::path::Path, args : &Cha
     return ( id.clone(), cwd );
   }
 
-  let here = args.dir.canonicalize().unwrap_or_else( | _ | args.dir.clone() );
-  let existing = sessions.iter().find( | session |
-  {
-    session.cwd.canonicalize().unwrap_or_else( | _ | session.cwd.clone() ) == here
-  } );
-
-  if let Some( session ) = existing
+  if let Some( session ) = find_by_cwd( &sessions, &args.dir )
   {
     return ( session.session_id.clone(), session.cwd.clone() );
   }
 
+  let here = args.dir.canonicalize().unwrap_or_else( | _ | args.dir.clone() );
   let session_id = spawn_session( paths, socket, &here );
   ( session_id, here )
 }
 
 /// Ask the daemon what it is hosting.
-fn list_sessions( socket : &std::path::Path ) -> Vec< SessionSummary >
+pub( super ) fn list_sessions( socket : &std::path::Path ) -> Vec< SessionSummary >
 {
   let Ok( listed ) = client::call( socket, &Request::ListSessions ) else { return Vec::new() };
   serde_json::from_value( listed ).unwrap_or_default()
+}
+
+/// Find the hosted session, if any, whose working directory matches `dir`.
+///
+/// Canonicalises both sides before comparing. This is "the same rule `clr chat`
+/// resolves by" that `docs/feature/008_interactive_handoff.md` deliberately
+/// reuses for its own pre-spawn match, so the two commands can never disagree
+/// about what "this directory's session" means.
+#[ inline ]
+#[ must_use ]
+pub fn find_by_cwd< 'sessions >(
+  sessions : &'sessions [ SessionSummary ],
+  dir      : &std::path::Path,
+) -> Option< &'sessions SessionSummary >
+{
+  let here = dir.canonicalize().unwrap_or_else( | _ | dir.to_path_buf() );
+  sessions.iter().find( | session |
+    session.cwd.canonicalize().unwrap_or_else( | _ | session.cwd.clone() ) == here
+  )
 }
 
 /// True when `result` failed only because nothing was listening on the socket.

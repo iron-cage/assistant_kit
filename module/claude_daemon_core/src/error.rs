@@ -33,7 +33,7 @@ pub enum Error
     /// Path of the socket it was offered for.
     socket_path : std::path::PathBuf,
   },
-  /// A protocol line exceeded [`crate::ipc::MAX_IPC_LINE_BYTES`].
+  /// A protocol line exceeded [`daemon_kit::MAX_IPC_LINE_BYTES`].
   LineTooLong,
   /// A protocol line was not valid UTF-8.
   NonUtf8Line,
@@ -114,7 +114,7 @@ impl fmt::Display for Error
         socket_path.display(),
       ),
       Self::LineTooLong =>
-        write!( f, "protocol line exceeds {} bytes", crate::ipc::MAX_IPC_LINE_BYTES ),
+        write!( f, "protocol line exceeds {} bytes", daemon_kit::MAX_IPC_LINE_BYTES ),
       Self::NonUtf8Line => write!( f, "protocol line is not valid UTF-8" ),
       Self::Malformed( detail ) => write!( f, "malformed request: {detail}" ),
       Self::UnknownSession( id ) => write!( f, "no such session: {id}" ),
@@ -191,5 +191,45 @@ impl From< claude_storage_core::Error > for Error
   fn from( source : claude_storage_core::Error ) -> Self
   {
     Self::Storage( source )
+  }
+}
+
+impl From< daemon_kit::Error > for Error
+{
+  #[ inline ]
+  fn from( source : daemon_kit::Error ) -> Self
+  {
+    match source
+    {
+      daemon_kit::Error::Io( source ) => Self::Io( source ),
+      daemon_kit::Error::AlreadyRunning { lock_path } => Self::AlreadyRunning { lock_path },
+      daemon_kit::Error::LockMismatch { lock_path, socket_path } =>
+        Self::LockMismatch { lock_path, socket_path },
+      daemon_kit::Error::LineTooLong => Self::LineTooLong,
+      daemon_kit::Error::NonUtf8Line => Self::NonUtf8Line,
+      daemon_kit::Error::Malformed( detail ) => Self::Malformed( detail ),
+      daemon_kit::Error::Remote( message ) => Self::Remote( message ),
+      // `daemon_kit::Error` is `#[non_exhaustive]`; every variant it has today is
+      // matched above. A future variant lands here rather than failing to build,
+      // same as any other cross-crate non-exhaustive match — reported as an
+      // opaque local failure rather than misrepresented as one of the above.
+      other => Self::Io( std::io::Error::other( other.to_string() ) ),
+    }
+  }
+}
+
+impl From< child_supervisor::Error > for Error
+{
+  #[ inline ]
+  fn from( source : child_supervisor::Error ) -> Self
+  {
+    match source
+    {
+      child_supervisor::Error::ReaderTaken => Self::ReaderTaken,
+      child_supervisor::Error::Pty( source ) => Self::Pty( source ),
+      child_supervisor::Error::UnknownSession( id ) => Self::UnknownSession( id ),
+      // See the matching comment in `From< daemon_kit::Error >` above.
+      other => Self::Io( std::io::Error::other( other.to_string() ) ),
+    }
   }
 }

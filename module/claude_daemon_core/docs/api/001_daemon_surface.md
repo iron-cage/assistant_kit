@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Pin the signature and error contract of every item `claude_daemon_core` exports.
-- **In Scope**: All items re-exported from `lib.rs` — including `BackgroundReporting` and `BG_TASKS_REPORT_RUNNING_ENV`, re-exported from `claude_session_core` because `Daemon::with_background_reporting` takes one — plus the `baseline`, `client`, `context`, `ipc`, `listener`, `lock`, `output`, `paths`, `protocol`, `registration`, `serve`, and `table` modules.
+- **In Scope**: All items re-exported from `lib.rs` — the `baseline`, `client`, `context`, `paths`, `protocol`, `registration`, and `serve` modules this crate owns directly; `BackgroundReporting` and `BG_TASKS_REPORT_RUNNING_ENV`, re-exported from `claude_session_core` because `Daemon::with_background_reporting` takes one; and the lock/socket/framing surface (`acquire`, `InstanceLock`, `Listener`, `read_capped_line`, `MAX_IPC_LINE_BYTES`, `serve_connection`, `spawn_waker`, `DEFAULT_TICK`) and the session-table/output surface (`HostedSession`, `OutputBuffer`, `OutputPump`, `OutputSlice`, `SessionTable`, `DEFAULT_OUTPUT_CAP`), both re-exported flat at the crate root from `daemon_kit` and `child_supervisor` respectively — there is no `claude_daemon_core::lock`/`ipc`/`listener`/`output`/`table` module path any more, even though the sections below keep those names as conceptual groupings.
 - **Out of Scope**: The `error` module's internals; construct errors through the operations that return them.
 
 ### Errors
@@ -30,7 +30,7 @@
 
 `From< io::Error >`, `From< claude_pty_core::Error >`, `From< claude_session_core::Error >`, and `From< claude_storage_core::Error >` are implemented, so `?` works across all four boundaries.
 
-### `lock`
+### `lock` (re-exported from `daemon_kit`)
 
 | Signature | Contract |
 |-----------|----------|
@@ -57,7 +57,7 @@ The lock is released on drop, including on panic and on `SIGKILL` — see [featu
 | `.log_file( &self ) -> PathBuf` | `<home>/-daemon/daemon.log` — where a detached daemon's output is appended |
 | `.sessions_dir( &self ) -> &Path` | Claude Code's registry directory, for `claude_session_core::scan` |
 
-### `ipc`
+### `ipc` (re-exported from `daemon_kit`)
 
 | Signature | Contract |
 |-----------|----------|
@@ -77,7 +77,7 @@ A partial line at EOF is returned rather than discarded — a peer that closes w
 
 `Response` is `#[ serde( untagged ) ]` with marker types carrying hand-written impls, so the `ok` discriminant is a real field rather than an enum tag — preserving the shape existing clients already parse.
 
-### `output`
+### `output` (re-exported from `child_supervisor`)
 
 | Signature | Contract |
 |-----------|----------|
@@ -93,7 +93,7 @@ A partial line at EOF is returned rather than discarded — a peer that closes w
 | `.join( &mut self )` | Waits for the pump thread to finish |
 | `OutputSlice` | Fields `text`, `cursor`, `missed`, `ended`. `Serialize`/`Deserialize` |
 
-**Caller obligation:** `OutputPump` holds a clone of the PTY master, which keeps the session alive. Join it only after the child has exited — see [feature/004_session_output.md](../feature/004_session_output.md).
+**Caller obligation:** `OutputPump` holds a clone of the PTY master, which keeps the session alive. Join it only after the child has exited — see [`child_supervisor/docs/feature/002_session_output.md`](../../../child_supervisor/docs/feature/002_session_output.md).
 
 A poisoned buffer mutex is recovered from rather than propagated: a panic in one reader must not make a live session permanently unreadable.
 
@@ -160,7 +160,7 @@ The JSON is projected field by field here rather than derived from `Serialize`: 
 
 **Caller obligation:** `alive` must report the *spawned child's* liveness, from the handle the caller holds. The registry cannot distinguish "not yet" from "never".
 
-### `table`
+### `table` (re-exported from `child_supervisor`)
 
 | Signature | Contract |
 |-----------|----------|
@@ -170,7 +170,6 @@ The JSON is projected field by field here rather than derived from `Serialize`: 
 | `.get( &self, session_id : &str ) -> Result< &HostedSession >` | `UnknownSession` when absent |
 | `.get_mut( &mut self, session_id : &str ) -> Result< &mut HostedSession >` | `UnknownSession` when absent |
 | `.remove( &mut self, session_id : &str ) -> Result< HostedSession >` | `UnknownSession` when absent |
-| `.summaries( &self ) -> Vec< SessionSummary >` | Sorted by conversation id, so repeated calls are stable |
 | `.session_ids( &self ) -> Vec< String >` | Sorted |
 | `HostedSession::adopt( session_id, cwd, pty : PtySession ) -> Result< Self >` | Takes the PTY's reader and starts a pump on it. `ReaderTaken` if it is already gone |
 | `.session_id() / .cwd() / .pid() / .busy()` | Accessors; `pid` is diagnostic only |
@@ -179,14 +178,15 @@ The JSON is projected field by field here rather than derived from `Serialize`: 
 | `.read_from( &self, cursor : u64 ) -> OutputSlice` | Output since `cursor` |
 | `.output_end( &self ) -> u64` | Absolute position just past the newest byte |
 | `.resize( &self, rows : u16, cols : u16 ) -> Result< () >` | `Pty` if the session is closed |
-| `.summary( &self ) -> SessionSummary` | Snapshot of one session |
 | `.shutdown( &mut self ) -> Result< ExitStatus >` | `Ctrl-D`, then `SIGKILL` after 5s, then join the pump and close the PTY. Idempotent |
 
-`HostedSession`'s fields are private. The pump and the PTY have an invariant between them that public fields would let a caller break silently — see [feature/003_session_table.md](../feature/003_session_table.md).
+`HostedSession`'s fields are private. The pump and the PTY have an invariant between them that public fields would let a caller break silently — see [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md).
+
+`child_supervisor::SessionTable` has no `summaries()` — it has no notion of `SessionSummary`, which is this crate's own wire DTO. `Daemon` builds that DTO itself, privately, from `.session_ids()` and the per-session accessors above; see `src/serve.rs`'s `Daemon::summaries`.
 
 `busy` is the daemon's belief, maintained from `claude_session_core`'s `TurnWatcher` — not read from the registry per request.
 
-### `listener`
+### `listener` (re-exported from `daemon_kit`)
 
 | Signature | Contract |
 |-----------|----------|
@@ -256,19 +256,22 @@ cd module/claude_daemon_core && cargo doc --no-deps --all-features
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/lib.rs` | The re-export list this documents |
+| source | `daemon_kit/src/lib.rs` | The lock/socket/framing re-exports this crate composes |
+| source | `child_supervisor/src/lib.rs` | The session-table/output re-exports this crate composes |
 | doc | [feature/001_single_instance.md](../feature/001_single_instance.md) | Behavior behind `acquire` |
 | doc | [feature/002_wire_protocol.md](../feature/002_wire_protocol.md) | Behavior behind `Request`/`Response` |
-| doc | [feature/003_session_table.md](../feature/003_session_table.md) | Behavior behind `SessionTable` |
-| doc | [feature/004_session_output.md](../feature/004_session_output.md) | Behavior behind `OutputPump` |
+| doc | [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md) | Behavior behind `SessionTable` |
+| doc | [`child_supervisor/docs/feature/002_session_output.md`](../../../child_supervisor/docs/feature/002_session_output.md) | Behavior behind `OutputPump` |
 | doc | [feature/005_session_registration.md](../feature/005_session_registration.md) | Behavior behind `await_session_id` |
 | doc | [feature/006_serving_clients.md](../feature/006_serving_clients.md) | Behavior behind `Listener`, `Daemon`, and `client` |
 | doc | [`claude_terminal_core` api/001](../../../claude_terminal_core/docs/api/001_terminal_surface.md) | `to_plain_text`, which this surface deliberately does not carry |
 | doc | [feature/008_turn_state.md](../feature/008_turn_state.md) | Behavior behind `with_background_reporting` and `SessionSummary::busy` |
-| test | `tests/lock_test.rs` | Exclusion and release |
-| test | `tests/ipc_test.rs` | Framing and the cap |
-| test | `tests/protocol_test.rs` | Serde round-trips |
-| test | `tests/output_test.rs` | Cursors, eviction, character boundaries |
+| test | `daemon_kit/tests/lock_test.rs` | Exclusion and release |
+| test | `daemon_kit/tests/ipc_test.rs` | Framing and the cap |
+| test | `daemon_kit/tests/response_test.rs` | `Response` round-trips and the `ok` discriminant shape |
+| test | `tests/protocol_test.rs` | `Request`/`SessionSummary` serde round-trips |
+| test | `child_supervisor/tests/output_test.rs` | Cursors, eviction, character boundaries |
 | test | `tests/registration_test.rs` | Waiting for a conversation id |
-| test | `tests/table_test.rs` | Table operations and teardown |
-| test | `tests/listener_test.rs` | The socket's lifecycle |
+| test | `child_supervisor/tests/table_test.rs` | Table operations and teardown |
+| test | `daemon_kit/tests/listener_test.rs` | The socket's lifecycle |
 | test | `tests/serve_test.rs` | End-to-end dispatch over a real socket |

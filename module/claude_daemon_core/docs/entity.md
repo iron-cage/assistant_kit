@@ -4,7 +4,7 @@
 
 | Entity | Purpose | Master File | Instances |
 |--------|---------|-------------|----------:|
-| `feature/` | Behavioral requirements for instance locking, the wire protocol, the session table, session output, registration, serving clients, turn state, session resume, and session reaping | [feature/readme.md](feature/readme.md) | 9 |
+| `feature/` | Behavioral requirements for instance locking, the wire protocol, registration, serving clients, turn state, session resume, and session reaping | [feature/readme.md](feature/readme.md) | 7 |
 | `invariant/` | Measurable constraints on framing and session identity | [invariant/readme.md](invariant/readme.md) | 2 |
 | `api/` | Public library API contracts | [api/readme.md](api/readme.md) | 1 |
 
@@ -14,8 +14,6 @@
 |--------|----|------|------|
 | feature | 001 | Single Instance | [feature/001_single_instance.md](feature/001_single_instance.md) |
 | feature | 002 | Wire Protocol | [feature/002_wire_protocol.md](feature/002_wire_protocol.md) |
-| feature | 003 | Session Table | [feature/003_session_table.md](feature/003_session_table.md) |
-| feature | 004 | Session Output | [feature/004_session_output.md](feature/004_session_output.md) |
 | feature | 005 | Session Registration | [feature/005_session_registration.md](feature/005_session_registration.md) |
 | feature | 006 | Serving Clients | [feature/006_serving_clients.md](feature/006_serving_clients.md) |
 | feature | 008 | Turn State | [feature/008_turn_state.md](feature/008_turn_state.md) |

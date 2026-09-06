@@ -1,8 +1,9 @@
 //! Turning a request into an answer.
 //!
 //! [`Daemon`] holds the session table and decides what each [`Request`] means.
-//! [`serve_connection`] does the framing around it — one line in, one line out —
-//! and [`serve_once`] wires the two together over an accepted connection.
+//! [`daemon_kit::serve_connection`] does the framing around it — one line in,
+//! one line out — and [`serve_once`] wires the two together over an accepted
+//! connection.
 //!
 //! # One request per connection
 //!
@@ -25,31 +26,41 @@
 //! # When turn state is sampled
 //!
 //! A session's `busy` flag comes from Claude Code's own registry, by way of
-//! [`TurnWatcher`] — and it is refreshed while answering [`Request::ListSessions`],
-//! not on a timer.
+//! [`TurnWatcher`]. It is refreshed eagerly while answering
+//! [`Request::ListSessions`], so that request's own answer is never a tick
+//! stale — and, per `docs/feature/010_session_reaping.md`, on every
+//! [`Daemon::reap`] as well, which the main loop drives after *every*
+//! connection, real or not.
 //!
-//! The daemon has no timer to hang it on. It is single-threaded and spends its
-//! life blocked in `accept`, so between requests there is nobody to sample and
-//! nobody to sample *for*: `busy` is only ever observed through the one request
-//! that reports it. Refreshing there means every answer is as fresh as the
-//! question, and a client polling for a turn boundary is itself the clock.
+//! The daemon is single-threaded and spends its life blocked in `accept`, so
+//! between requests there is nobody to sample unless something manufactures a
+//! connection to sample on. [`daemon_kit::spawn_waker`] is that something: a
+//! synthetic client that sleeps for one tick, connects, and hangs up, purely so
+//! `accept` returns and [`Daemon::reap`] gets to run even when no real client
+//! has anything to ask.
+//!
+//! # Idle and linger
+//!
+//! [`Daemon::reap`] releases at most one session per tick that is both not
+//! busy and untouched for `idle_timeout`, and [`Daemon::should_exit`] answers
+//! `true` once the table has stayed continuously empty for `linger`. Full
+//! policy, defaults, and the reasoning behind both bounds:
+//! `docs/feature/010_session_reaping.md`.
 
 use core::time::Duration;
 use std::collections::HashMap;
-use std::io::Write;
-use std::os::unix::net::UnixStream;
 use std::path::{ Path, PathBuf };
+use std::time::Instant;
 
 use claude_pty_core::PtySession;
 use claude_session_core::{ BackgroundReporting, TurnEvent, TurnWatcher };
+use child_supervisor::{ HostedSession, SessionTable };
+use daemon_kit::Listener;
 use serde_json::json;
 
 use crate::error::{ Error, Result };
-use crate::ipc::read_capped_line;
-use crate::listener::Listener;
-use crate::protocol::{ Request, Response };
+use crate::protocol::{ Request, Response, SessionSummary };
 use crate::registration::await_session_id;
-use crate::table::{ HostedSession, SessionTable };
 
 /// How long to leave between a prompt's text and the return that submits it.
 ///
@@ -58,6 +69,14 @@ use crate::table::{ HostedSession, SessionTable };
 /// two as one burst, short enough to be invisible next to the model call it
 /// precedes.
 const SUBMIT_GAP : Duration = Duration::from_millis( 200 );
+
+/// How long a session may go untouched and not busy before [`Daemon::reap`]
+/// releases it. `0` means never — see `docs/feature/010_session_reaping.md`.
+pub const DEFAULT_IDLE_TIMEOUT : Duration = Duration::from_secs( 30 * 60 );
+
+/// How long the table may stay continuously empty before [`Daemon::should_exit`]
+/// answers `true`. `0` means never — see `docs/feature/010_session_reaping.md`.
+pub const DEFAULT_LINGER : Duration = Duration::from_secs( 5 * 60 );
 
 /// The daemon's state, and what it does with a request.
 ///
@@ -72,6 +91,15 @@ pub struct Daemon< S >
   sessions : SessionTable,
   spawner : S,
   registration_timeout : Duration,
+  idle_timeout : Duration,
+  linger : Duration,
+  /// When the table last became continuously empty, if it is empty now.
+  ///
+  /// `None` while the table is non-empty. Stamped by [`Daemon::reap`] the
+  /// first tick it finds the table empty with no stamp already in place, and
+  /// cleared by [`Daemon::spawn`] — so it measures *continuously* empty, per
+  /// `docs/feature/010_session_reaping.md`, never cumulatively.
+  empty_since : Option< Instant >,
   stop_requested : bool,
   /// One watcher per hosted session, keyed by conversation id.
   ///
@@ -91,13 +119,16 @@ pub struct Daemon< S >
 
 impl< S > Daemon< S >
 where
-  S : FnMut( &Path ) -> Result< PtySession >,
+  S : FnMut( &Path, Option< &str > ) -> Result< PtySession >,
 {
   /// A daemon with no sessions, reading conversation ids from `sessions_dir`.
   ///
-  /// `spawner` starts a session in the working directory it is handed and
-  /// returns it before it has registered — which is the only thing it can do,
-  /// since the conversation id does not exist yet.
+  /// `spawner` starts a session in the working directory it is handed, resuming
+  /// the conversation id given as its second argument when `Some` rather than
+  /// starting fresh, and returns before the session has registered — which is
+  /// the only thing it can do, since a fresh conversation's id does not exist
+  /// yet (a resumed one already reuses the id it was given — see
+  /// [`Daemon::spawn`]).
   #[ inline ]
   pub fn new( sessions_dir : impl Into< PathBuf >, spawner : S ) -> Self
   {
@@ -107,6 +138,12 @@ where
       sessions : SessionTable::new(),
       spawner,
       registration_timeout : crate::registration::REGISTRATION_TIMEOUT,
+      idle_timeout : DEFAULT_IDLE_TIMEOUT,
+      linger : DEFAULT_LINGER,
+      // Empty from the moment it exists, same as a table that has just been
+      // emptied out — a daemon that never hosts anything should still be
+      // reachable by the linger clock rather than exempt from it forever.
+      empty_since : Some( Instant::now() ),
       stop_requested : false,
       watchers : HashMap::new(),
       // The conservative default. Only `spawner`'s author knows whether the
@@ -123,6 +160,29 @@ where
   pub fn with_registration_timeout( mut self, timeout : Duration ) -> Self
   {
     self.registration_timeout = timeout;
+    self
+  }
+
+  /// Override how long a session may go untouched and not busy before
+  /// [`Daemon::reap`] releases it. `0` disables idle reaping entirely.
+  /// Defaults to [`DEFAULT_IDLE_TIMEOUT`]. See
+  /// `docs/feature/010_session_reaping.md`.
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_idle_timeout( mut self, timeout : Duration ) -> Self
+  {
+    self.idle_timeout = timeout;
+    self
+  }
+
+  /// Override how long the table may stay continuously empty before
+  /// [`Daemon::should_exit`] answers `true`. `0` disables it entirely.
+  /// Defaults to [`DEFAULT_LINGER`]. See `docs/feature/010_session_reaping.md`.
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_linger( mut self, linger : Duration ) -> Self
+  {
+    self.linger = linger;
     self
   }
 
@@ -189,6 +249,89 @@ where
     self.stop_requested
   }
 
+  /// Give idle-detection a chance to run, whether or not the connection that just
+  /// woke the main loop asked for anything.
+  ///
+  /// Called from the main loop next to [`Daemon::stop_requested`] and
+  /// [`Daemon::should_exit`], immediately after [`serve_once`] returns — so
+  /// *any* connection drives it, including the synthetic one [`spawn_waker`]
+  /// makes on a schedule when no real client has anything to ask. See
+  /// `docs/feature/010_session_reaping.md`.
+  ///
+  /// Refreshes turn state and drops sessions whose child has already exited
+  /// (both inside [`Daemon::refresh_turns`]), then releases at most one
+  /// session idle long enough to reap.
+  #[ inline ]
+  pub fn reap( &mut self )
+  {
+    self.refresh_turns();
+    self.reap_idle();
+  }
+
+  /// Whether the table has been continuously empty for at least `linger`.
+  ///
+  /// Checked by the main loop next to [`Daemon::stop_requested`] — both break
+  /// the same loop into the same shutdown tail, so an idle exit unlinks the
+  /// socket before dropping the lock exactly as a requested one does. See
+  /// `docs/feature/010_session_reaping.md`.
+  #[ inline ]
+  #[ must_use ]
+  pub fn should_exit( &self ) -> bool
+  {
+    if self.linger.is_zero()
+    {
+      return false;
+    }
+    self.empty_since.is_some_and( | since | since.elapsed() >= self.linger )
+  }
+
+  /// Release at most one session nobody has touched for `idle_timeout` and
+  /// that is not currently busy, chosen deterministically by conversation id
+  /// when more than one qualifies.
+  ///
+  /// At most one, never a whole backlog at once: [`HostedSession::shutdown`]
+  /// can block for up to `SHUTDOWN_GRACE`, and the daemon is single-threaded,
+  /// so releasing several in one tick is that many multiples of
+  /// `SHUTDOWN_GRACE` during which no other client is served — from outside
+  /// that reads as a hung daemon. `tick` is far shorter than `idle_timeout` by
+  /// design, so a backlog drains long before anyone notices it existed. See
+  /// `docs/feature/010_session_reaping.md`.
+  fn reap_idle( &mut self )
+  {
+    if self.idle_timeout.is_zero()
+    {
+      return;
+    }
+
+    let idle = self.sessions.session_ids().into_iter().find( | id |
+    {
+      self.sessions.get( id ).is_ok_and( | session |
+        !session.busy() && session.last_active().elapsed() >= self.idle_timeout )
+    } );
+
+    if let Some( id ) = idle
+    {
+      if let Ok( mut session ) = self.sessions.remove( &id )
+      {
+        drop( session.shutdown() );
+      }
+    }
+
+    self.note_emptied();
+  }
+
+  /// Stamp [`Daemon::empty_since`] the instant the table has nothing left, so
+  /// the linger clock starts exactly when a removal causes it rather than
+  /// waiting for some later tick to notice. A no-op while the table already
+  /// carries a stamp or still hosts something.
+  fn note_emptied( &mut self )
+  {
+    if self.sessions.is_empty() && self.empty_since.is_none()
+    {
+      self.empty_since = Some( Instant::now() );
+    }
+  }
+
   /// Answer `request`.
   ///
   /// Infallible by construction: every failure becomes a [`Response::err`],
@@ -222,10 +365,31 @@ where
       let Ok( mut session ) = self.sessions.remove( &id ) else { continue };
       if let Err( error ) = session.shutdown()
       {
-        first.get_or_insert( error );
+        first.get_or_insert( error.into() );
       }
     }
     first.map_or( Ok( () ), Err )
+  }
+
+  /// Snapshot every hosted session as a [`SessionSummary`].
+  ///
+  /// `child_supervisor::SessionTable` has no notion of [`SessionSummary`] — that
+  /// DTO is this crate's wire shape, not the generic table's — so this crate
+  /// builds it from the table's own id list and per-session accessors rather
+  /// than from a `summaries()` method the table does not have.
+  fn summaries( &self ) -> Vec< SessionSummary >
+  {
+    self.sessions.session_ids().into_iter().filter_map( | session_id |
+    {
+      let session = self.sessions.get( &session_id ).ok()?;
+      Some( SessionSummary
+      {
+        session_id : session.session_id().to_string(),
+        pid : session.pid(),
+        cwd : session.cwd().to_path_buf(),
+        busy : session.busy(),
+      } )
+    } ).collect()
   }
 
   /// The fallible half of [`Daemon::dispatch`].
@@ -237,13 +401,13 @@ where
       Request::ListSessions =>
       {
         self.refresh_turns();
-        Ok( json!( self.sessions.summaries() ) )
+        Ok( json!( self.summaries() ) )
       },
       Request::Spawn { cwd, prompt } => self.spawn( &cwd, prompt.as_deref() ),
       Request::Send { session_id, text } => self.send( &session_id, &text ),
       Request::Read { session_id, cursor } =>
       {
-        Ok( json!( self.sessions.get( &session_id )?.read_from( cursor ) ) )
+        Ok( json!( self.sessions.get_mut( &session_id )?.read_from( cursor ) ) )
       },
       Request::ContextSummary { session_id } =>
       {
@@ -254,12 +418,13 @@ where
       },
       Request::Resize { session_id, rows, cols } =>
       {
-        self.sessions.get( &session_id )?.resize( rows, cols )?;
+        self.sessions.get_mut( &session_id )?.resize( rows, cols )?;
         Ok( serde_json::Value::Null )
       },
       Request::Shutdown { session_id } =>
       {
         let status = self.sessions.remove( &session_id )?.shutdown()?;
+        self.note_emptied();
         Ok( json!( { "exit_code" : status.code() } ) )
       },
       Request::StopDaemon =>
@@ -317,26 +482,51 @@ where
         Some( TurnEvent::Settled | TurnEvent::SettledUnverified ) => session.set_busy( false ),
         None => {},
       }
+
+      // Every tick this session is *still* busy, not only the tick it became
+      // busy — a forty-minute autonomous turn has no `send`/`read`/`resize` of
+      // its own for the whole forty minutes, and would otherwise look idle the
+      // instant it settles rather than getting the full `idle_timeout` from
+      // that point. See `docs/feature/010_session_reaping.md`.
+      if session.busy()
+      {
+        session.touch();
+      }
     }
 
     // A session whose child died is dead weight nobody else notices: it keeps
     // its row, its pid, its pump thread, and answers every `send` with an
-    // error. Reaped here rather than only inside `Daemon::reap` because this
-    // method already runs on every `list_sessions` today, before the daemon
-    // has a clock of its own to drive a reaper on a schedule — see
-    // `docs/feature/010_session_reaping.md`. Shutdown failures are dropped for
-    // the same reason a scan failure is: there is no request in flight to
-    // report them to, and the session is leaving the table either way.
+    // error. Collected here rather than only from `Daemon::reap` because this
+    // method also runs eagerly on every `list_sessions` — a client asking right
+    // now shouldn't have to wait for the next tick to see a dead session drop
+    // off. `reap` covers the gap between requests; this covers the request
+    // itself. See `docs/feature/010_session_reaping.md`. Shutdown failures are
+    // dropped for the same reason a scan failure is: there is no request in
+    // flight to report them to, and the session is leaving the table either way.
     for mut session in self.sessions.take_exited()
     {
       drop( session.shutdown() );
     }
+    self.note_emptied();
   }
 
   /// Start a session, wait for it to name itself, and host it.
+  ///
+  /// Resumes the conversation that last occupied `cwd`, if any, rather than
+  /// always starting fresh. Resolved from disk on every call — via
+  /// `claude_storage_core`'s own continuation-detection primitive, the same one
+  /// an interactive `claude -c` agrees with — never from an in-memory map: a map
+  /// would die with the daemon and reintroduce, in the exact window
+  /// `docs/feature/010_session_reaping.md`'s idle exit creates, the silent
+  /// new-conversation failure this feature exists to prevent. When a directory
+  /// has hosted several conversations, the most-recently-modified transcript
+  /// wins unconditionally — settled, not a per-daemon preference, so a
+  /// directory's "current" conversation means the same thing whether the last
+  /// session in it was hosted or interactive.
   fn spawn( &mut self, cwd : &Path, prompt : Option< &str > ) -> Result< serde_json::Value >
   {
-    let mut pty = ( self.spawner )( cwd )?;
+    let resume = claude_storage_core::most_recent_session_id( cwd );
+    let mut pty = ( self.spawner )( cwd, resume.as_ref().map( claude_storage_core::SessionId::as_str ) )?;
     let pid = pty.pid();
 
     // The child is borrowed for the wait and free again after it. Liveness comes
@@ -368,6 +558,10 @@ where
       // nobody can address any more.
       drop( replaced.shutdown() );
     }
+    // Any spawn clears it, per `docs/feature/010_session_reaping.md` — the
+    // linger clock measures continuously empty, and this table just stopped
+    // being that.
+    self.empty_since = None;
 
     if let Some( text ) = prompt
     {
@@ -379,7 +573,7 @@ where
   /// Queue `text` for `session_id`, reporting where its output will start.
   fn send( &mut self, session_id : &str, text : &str ) -> Result< serde_json::Value >
   {
-    let session = self.sessions.get( session_id )?;
+    let session = self.sessions.get_mut( session_id )?;
     let cursor = session.output_end();
 
     // A carriage return, not a newline: the child is on a terminal in canonical
@@ -437,51 +631,14 @@ fn end_unregistered( pty : &mut PtySession )
   drop( pty.shutdown() );
 }
 
-/// Serve exactly one request from `stream`, then leave it to be closed.
-///
-/// `handle` turns the parsed request into the response to send back.
-///
-/// A client that hangs up without sending anything is not an error: nothing is
-/// read, nothing is written, and this returns `Ok`. Neither is a request that
-/// cannot be parsed — that gets a well-formed error response, which is the whole
-/// point of having one. Only a failure to *write* the answer is an error here,
-/// since at that point there is nothing left to tell the client.
-///
-/// # Errors
-///
-/// Returns [`Error::Io`] if the response cannot be written.
-#[ inline ]
-pub fn serve_connection< H >( stream : &UnixStream, handle : H ) -> Result< () >
-where
-  H : FnOnce( Request ) -> Response,
-{
-  let mut reader = std::io::BufReader::new( stream );
-  let response = match read_capped_line( &mut reader )
-  {
-    Ok( None ) => return Ok( () ),
-    Ok( Some( line ) ) => match serde_json::from_str::< Request >( &line )
-    {
-      Ok( request ) => handle( request ),
-      Err( source ) => Response::err( Error::Malformed( source.to_string() ).to_string() ),
-    },
-    Err( error ) => Response::err( error.to_string() ),
-  };
-
-  let mut line = serde_json::to_vec( &response ).map_err( | source |
-  {
-    Error::Io( std::io::Error::other( source ) )
-  } )?;
-  line.push( b'\n' );
-
-  let mut writer = stream;
-  writer.write_all( &line ).map_err( Error::Io )?;
-  writer.flush().map_err( Error::Io )
-}
-
 /// Accept one client and serve its request against `daemon`.
 ///
 /// The whole body of a daemon's main loop, minus the loop — which is the
 /// caller's, because only the caller knows what should end it.
+///
+/// Thin wrapper over [`daemon_kit::serve_once`]: the framing and dispatch loop
+/// are generic over the request type and live there; this crate supplies
+/// [`Request`] and [`Daemon::dispatch`].
 ///
 /// # Errors
 ///
@@ -491,8 +648,7 @@ where
 #[ inline ]
 pub fn serve_once< S >( listener : &Listener, daemon : &mut Daemon< S > ) -> Result< () >
 where
-  S : FnMut( &Path ) -> Result< PtySession >,
+  S : FnMut( &Path, Option< &str > ) -> Result< PtySession >,
 {
-  let stream = listener.accept()?;
-  serve_connection( &stream, | request | daemon.dispatch( request ) )
+  daemon_kit::serve_once( listener, | request | daemon.dispatch( request ) ).map_err( Into::into )
 }

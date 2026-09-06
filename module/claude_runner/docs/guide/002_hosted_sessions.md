@@ -262,11 +262,16 @@ that starts a process to answer itself has changed the thing it was asking about
   default-path code with no test-only override, but that scratch `HOME` needs its own
   completed first run (see Prerequisites) or every spawn fails. This guide does not choose,
   because the answer depends on whether you are trying the stack out or using it.
-- **When sessions end.** Nothing reaps an idle session. A hosted session lives until
-  `clr daemon stop` takes the daemon and its sessions down together, or the machine
-  reboots — each one holding a `claude` process and a pty for as long as it exists.
-  Whether that is left running between work sessions is a per-user call; there is no
-  per-session stop, only the daemon-wide one.
+- **When sessions end — settled.** [010_session_reaping.md](../../../claude_daemon_core/docs/feature/010_session_reaping.md)
+  shipped this: a session idles out after `idle_timeout` (default 30 min) once neither
+  client activity nor a busy turn has touched it, and an empty daemon exits after
+  `linger` (default 5 min) — 35 minutes of continuous inactivity end-to-end. Both are
+  `0`-to-disable and injectable via `CLR_IDLE_TIMEOUT_SECS` / `CLR_LINGER_SECS`
+  (`CLR_TICK_SECS` for the clock itself, default 30s). A reaped session is released,
+  not destroyed — the next `clr chat` in that directory resumes the same conversation
+  ([009_session_resume.md](../../../claude_daemon_core/docs/feature/009_session_resume.md))
+  rather than starting over. There is still no per-session stop; only `clr daemon stop`
+  or the idle/linger clocks end anything.
 - **The 300-second default timeout.** Long enough for ordinary turns, short enough to
   give up on a wedged one. A turn cut short by it still exits 0 with a warning, and
   `clr chat` again prints the rest — so raising it with `--timeout` is a convenience,

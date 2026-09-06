@@ -41,6 +41,7 @@
 //! | `spawn_parked_helper_thread` (unix) | `concurrency_gate_test`, `ps_command_test` |
 //! | `wait_for_marker_in_files` | `concurrency_gate_ext_test` |
 //! | `DaemonGuard` | `daemon_command_test`, `sessions_command_test`, `chat_command_test` |
+//! | `spawn_real_daemon` | `ps_flags_test`, `interactive_handoff_test` |
 //!
 //! # Testing Techniques
 //!
@@ -1151,6 +1152,99 @@ impl Drop for DaemonGuard
         .output(),
     );
   }
+}
+
+/// Stands up a real `claude_daemon_core::Daemon` in-process, bound to the socket
+/// `home` resolves to, with a spawner that runs the fake (`/bin/sleep`-backed)
+/// `claude` from `path_val` and mirrors each spawn into a registry record — the
+/// same technique `claude_daemon_core/tests/serve_test.rs`'s `Harness` uses, so a
+/// test exercises the real wire protocol against a real socket and real child
+/// processes rather than a mock.
+///
+/// Returns the resolved socket path and a teardown closure. Call the closure
+/// before asserting: a failed assertion must never leave a hosted child alive or
+/// the instance lock held, so teardown always runs first, never in a `Drop`
+/// racing against a panic unwind.
+///
+/// Shared by `ps_flags_test` (IT-55) and `interactive_handoff_test`.
+///
+/// # Panics
+///
+/// Panics if the sessions directory cannot be created, the instance lock cannot be
+/// acquired, or the socket cannot be bound — all setup steps a test has no way to
+/// recover from.
+#[ inline ]
+#[ must_use ]
+#[ allow( dead_code ) ]
+pub fn spawn_real_daemon( home : &std::path::Path, path_val : &str ) -> ( std::path::PathBuf, Box< dyn FnOnce() + Send > )
+{
+  use core::sync::atomic::{ AtomicBool, Ordering };
+  use std::path::Path;
+  use std::sync::Arc;
+  use claude_daemon_core::{ acquire, Daemon, DaemonPaths, Error, Listener };
+  use claude_pty_core::{ PtySession, SessionConfig };
+
+  type Spawner = Box< dyn FnMut( &Path, Option< &str > ) -> claude_daemon_core::Result< PtySession > + Send >;
+
+  let daemon_paths = DaemonPaths::with_home( home );
+  std::fs::create_dir_all( daemon_paths.sessions_dir() ).expect( "create sessions dir" );
+
+  let lock = acquire( &daemon_paths.lock_file() ).expect( "acquire instance lock" );
+  let socket = daemon_paths.socket_file();
+  let listener = Listener::bind( &socket, &lock ).expect( "bind daemon socket" );
+
+  let sessions_dir = daemon_paths.sessions_dir().to_path_buf();
+  let spawner_path = path_val.to_string();
+  let mut minted = 0_u32;
+  let spawner : Spawner = Box::new( move | cwd : &Path, _resume : Option< &str > |
+  {
+    let config = SessionConfig::new( "claude" )
+      .arg( "30" )
+      .cwd( cwd )
+      .env( "PATH", spawner_path.clone() );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    minted += 1;
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+      .expect( "writing the registry record failed" );
+    Ok( pty )
+  } );
+
+  let mut daemon = Daemon::new( daemon_paths.sessions_dir().to_path_buf(), spawner )
+    .with_registration_timeout( core::time::Duration::from_secs( 5 ) );
+
+  let stop = Arc::new( AtomicBool::new( false ) );
+  let flag = Arc::clone( &stop );
+  let server = std::thread::spawn( move ||
+  {
+    while !flag.load( Ordering::Relaxed )
+    {
+      claude_daemon_core::serve_once( &listener, &mut daemon ).expect( "serving failed" );
+      daemon.reap();
+      if daemon.stop_requested() || daemon.should_exit()
+      {
+        break;
+      }
+    }
+    daemon
+  } );
+
+  let socket_for_teardown = socket.clone();
+  let shutdown : Box< dyn FnOnce() + Send > = Box::new( move ||
+  {
+    stop.store( true, Ordering::Relaxed );
+    drop( std::os::unix::net::UnixStream::connect( &socket_for_teardown ) );
+    let mut daemon = server.join().expect( "daemon thread panicked" );
+    drop( daemon.shutdown_all() );
+    drop( lock );
+  } );
+
+  ( socket, shutdown )
 }
 
 /// Poll `child` with `try_wait()` until it exits or `deadline` passes, sleeping

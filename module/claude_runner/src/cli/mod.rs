@@ -45,7 +45,13 @@ pub use gate_limits::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_s
 #[ allow( unused_imports ) ]
 pub use tools::TOOLS;
 
+// interactive_handoff_test.rs (external test) imports find_by_cwd via the public API.
+// Same false-positive unused_imports rationale as above.
+#[ allow( unused_imports ) ]
+pub use chat::find_by_cwd;
+
 use std::io::IsTerminal;
+use claude_daemon_core::{ client, Request };
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
 use parse::CliArgs;
@@ -78,6 +84,7 @@ pub( super ) use sessions::dispatch_sessions;
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
 pub( super ) use builder::build_claude_command;
+use builder::RunPreparation;
 pub( super ) use help::print_help;
 
 /// Handle dry-run mode: print command preview and exit.
@@ -294,6 +301,30 @@ fn auto_prune_daily( dir : &std::path::Path )
   let _ = std::fs::write( &stamp, format!( "{today_str}\n" ) );
 }
 
+/// Whether this invocation is print-mode (one-shot request/response) rather than
+/// an interactive session.
+///
+/// SINGLE SOURCE OF TRUTH: called from both `run_built_command` (the concurrency
+/// gate and its own dispatch branch) and `dispatch_run`'s pre-spawn handoff check
+/// (`docs/feature/008_interactive_handoff.md`), so all three decisions can never
+/// disagree about which mode an invocation is in.
+///
+/// Fix(BUG-425/427): route to print mode whenever stdin has no TTY to interact
+///   through, or file/stdin content is already available to serve as the prompt.
+/// Root cause: the formula only checked message presence, so a script/CI invocation
+///   with no message hung on the interactive REPL despite stdin having no terminal
+///   to interact with, and --file/piped content alone never triggered print mode.
+/// Pitfall: an explicit --interactive must gate every inferred term here, not only
+///   message-presence — gating message alone still forced print mode under
+///   --interactive whenever stdin was non-TTY, defeating the flag's purpose for the
+///   ordinary case (piped/redirected stdin with no real TTY attached).
+fn is_print_invocation( cli : &CliArgs, is_tty : bool ) -> bool
+{
+  cli.print_mode
+    || ( !cli.interactive
+      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) )
+}
+
 pub( super ) fn run_built_command(
   builder             : &ClaudeCommand,                            // assembled command to trace (--trace) and execute
   cli                 : &CliArgs,                                  // parsed flags driving the gate/trace/dispatch decisions below
@@ -304,20 +335,8 @@ pub( super ) fn run_built_command(
   // Print/interactive dispatch decision, computed once and reused for both the
   // concurrency gate (print-mode only — interactive sessions never contend for
   // a slot) and the dispatch branch below, so the two can never disagree.
-  //
-  // Fix(BUG-425/427): route to print mode whenever stdin has no TTY to interact
-  //   through, or file/stdin content is already available to serve as the prompt.
-  // Root cause: the formula only checked message presence, so a script/CI invocation
-  //   with no message hung on the interactive REPL despite stdin having no terminal
-  //   to interact with, and --file/piped content alone never triggered print mode.
-  // Pitfall: an explicit --interactive must gate every inferred term here, not only
-  //   message-presence — gating message alone still forced print mode under
-  //   --interactive whenever stdin was non-TTY, defeating the flag's purpose for the
-  //   ordinary case (piped/redirected stdin with no real TTY attached).
   let is_tty = std::io::stdin().is_terminal();
-  let is_print_invocation = cli.print_mode
-    || ( !cli.interactive
-      && ( cli.message.is_some() || !is_tty || cli.file.is_some() || cli.stdin_content.is_some() ) );
+  let is_print_invocation = is_print_invocation( cli, is_tty );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
   // sessions is reached. Default limit is 8; 0 = unlimited.  dry-run is bypassed
@@ -392,6 +411,78 @@ fn warn_deprecated_session_dir( cli : &CliArgs )
          Use --from to seed continuation from another project's session history instead."
       );
     }
+  }
+}
+
+/// Release a hosted session occupying `dir`, before an interactive spawn takes
+/// it over. Implements `docs/feature/008_interactive_handoff.md`.
+///
+/// Probes rather than starts — `daemon::probe`, never `ensure_running`: an
+/// interactive invocation that started a daemon in order to ask it a question
+/// would be doing the thing `docs/cli/command/15_sessions.md` already refuses to
+/// do. No daemon answering is a complete answer on its own — nothing is hosted,
+/// so the spawn proceeds exactly as it does today.
+///
+/// A busy match stops the command outright (see the doc's "A Busy Session Is Not
+/// Taken") rather than waiting: refusing wrongly costs a retry the caller can
+/// see and act on; waiting wrongly costs an unbounded hang with no honest way to
+/// bound it, since a session mid-way through a long autonomous turn looks
+/// identical to one seconds from done.
+///
+/// Returns the session id to resume via `--resume`, once a matching idle session
+/// has actually been released. `None` means proceed unchanged: no daemon
+/// running, or nothing hosted for this directory.
+fn release_hosted_session( dir : &std::path::Path ) -> Option< String >
+{
+  let paths = daemon::daemon_paths();
+  let socket = paths.socket_file();
+
+  daemon::probe( &socket )?;
+
+  let sessions = chat::list_sessions( &socket );
+  let session = chat::find_by_cwd( &sessions, dir )?;
+
+  if session.busy
+  {
+    eprintln!( "Error: the session in this directory is mid-turn ({}).", session.session_id );
+    eprintln!( "       Wait for it to finish, or watch it with `clr sessions`." );
+    std::process::exit( 1 );
+  }
+
+  let session_id = session.session_id.clone();
+  if let Err( error ) = client::call( &socket, &Request::Shutdown { session_id : session_id.clone() } )
+  {
+    eprintln!( "Error: could not release the hosted session in this directory: {error}" );
+    std::process::exit( 1 );
+  }
+
+  Some( session_id )
+}
+
+/// Apply the interactive handoff (`docs/feature/008_interactive_handoff.md`) to `builder`,
+/// releasing and resuming a hosted session in the target directory when one exists.
+///
+/// Fork-mode topics address a session by deterministic id rather than "whatever's most
+/// recent here", so they never collide the way a plain `-c` would and are excluded.
+/// `builder` already carries whatever `-c`/fork decision `build_claude_command` made;
+/// a release found here always overrides it with an explicit `--resume`.
+fn apply_interactive_handoff( cli : &CliArgs, prep : &RunPreparation, builder : ClaudeCommand ) -> ClaudeCommand
+{
+  let is_tty = std::io::stdin().is_terminal();
+  let released_session = if is_print_invocation( cli, is_tty ) || prep.fork.is_some()
+  {
+    None
+  }
+  else
+  {
+    let target_dir = prep.effective_working_dir.clone()
+      .unwrap_or_else( || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ) );
+    release_hosted_session( &target_dir )
+  };
+  match released_session
+  {
+    Some( session_id ) => builder.with_continue_conversation( false ).with_arg( "--resume" ).with_arg( session_id ),
+    None => builder,
   }
 }
 
@@ -550,6 +641,12 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   {
     claude_topic_core::registry::record( &fork.canonical_base, &fork.topic );
   }
+
+  // Interactive handoff (docs/feature/008_interactive_handoff.md): a hosted
+  // session already occupying the target directory would otherwise collide
+  // with the plain `-c` this invocation is about to send — same directory,
+  // same conversation, two processes.
+  let builder = apply_interactive_handoff( &cli, &prep, builder );
 
   // Fix(BUG-319): resolve journal writer AFTER the dry-run exit so that `--dry-run`
   //   does not create the journal directory as a filesystem side effect.

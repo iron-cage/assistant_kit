@@ -21,7 +21,10 @@ None.
 ### Description
 
 Checks whether a newer version of Claude Code is available and installs it if
-so. Respects the `preferredVersionSpec` setting if configured.
+so. Does **not** reference `preferredVersionSpec` — that key is absent from
+the binary (verified via string scan) and is managed exclusively by this
+repo's own `claude_version` tool (`cm .version.install`/`.version.guard`),
+not by `claude update` itself.
 
 Alias: `claude upgrade` works identically to `claude update`.
 
@@ -37,7 +40,6 @@ pre-v1.0 (unverified)
 | doc | [004_doctor.md](004_doctor.md) | Auto-updater health check |
 | doc | [005_install.md](005_install.md) | Specific version installation |
 | doc | [../param/011_auto_updates.md](../param/011_auto_updates.md) | `autoUpdates` config key |
-| doc | [../param/050_preferred_version_spec.md](../param/050_preferred_version_spec.md) | Preferred version spec |
 | doc | [../param/119_disable_updates.md](../param/119_disable_updates.md) | Env var to block all updates |
 | doc | [../param/120_disable_upgrade_command.md](../param/120_disable_upgrade_command.md) | Env var to hide `/upgrade` command |
 | doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

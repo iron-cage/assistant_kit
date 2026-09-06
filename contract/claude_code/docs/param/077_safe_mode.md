@@ -28,8 +28,9 @@ When set, Claude Code disables bundled skills, experimental agent features, and 
 non-essential capabilities. Intended for sandboxed or safety-constrained environments
 where only core functionality should be active.
 
-Distinct from `CLAUDE_CODE_SANDBOX_MODE` (param 53) which controls the sandbox
-permission layer. `CLAUDE_CODE_SAFE_MODE` is a higher-level "disable extras" toggle.
+Distinct from `CLAUDE_CODE_SANDBOX_MODE` (param 53) — ❌ refuted, 0 occurrences in
+the v2.1.220 binary; see [056_sandbox_mode.md](056_sandbox_mode.md). `CLAUDE_CODE_SAFE_MODE`
+is a higher-level "disable extras" toggle, unrelated to sandbox permissions.
 
 ### Cross-References
 

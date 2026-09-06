@@ -2,13 +2,13 @@
 //!
 //! Each hosted session owns a real `cat` on a real pty. A stub would let the
 //! table's key discipline look correct while hiding the two things that actually
-//! bite: a summary reads its pid from a live process, and a session's teardown
-//! has to unblock a pump thread holding a master descriptor before it can reap.
+//! bite: a live pid comes from a live process, and a session's teardown has to
+//! unblock a pump thread holding a master descriptor before it can reap.
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/003_session_table.md` — the table's contract
-//! - `docs/feature/004_session_output.md` — output buffering and teardown order
+//! - `docs/feature/001_session_table.md` — the table's contract
+//! - `docs/feature/002_session_output.md` — output buffering and teardown order
 //! - `docs/invariant/002_conversation_id_key.md` — why the key is not a pid
 //!
 //! ## Coverage
@@ -20,10 +20,9 @@
 //! | tab03 | Look up an unknown id | `Err( UnknownSession )` naming the id |
 //! | tab04 | Insert twice under one id | Replaced, not duplicated; the old one is handed back |
 //! | tab05 | Remove | Returns the session; a second remove fails |
-//! | tab06 | Summaries | Ordered by conversation id |
-//! | tab07 | A summary's fields | Match the hosted session, pid from the live child |
+//! | tab06 | `session_ids` | Ordered by conversation id |
 //! | tab08 | Two sessions re-hosted under one id | The id, not the pid, is the handle |
-//! | tab09 | Mutating through `get_mut` | The change is visible in the summary |
+//! | tab09 | Mutating through `get_mut` | The change is visible through `get` |
 //! | tab10 | Write to a session, then read it | The output comes back through the cursor |
 //! | tab11 | Shut down a child blocked on stdin | Returns promptly; the child is reaped |
 //! | tab12 | Read after shutdown | Reports `ended` |
@@ -32,12 +31,18 @@
 //! | tab15 | `exited` on a child that ran to completion | `Ok( Some )`, without waiting for it |
 //! | tab16 | `take_exited` with nothing dead | Empty, live sessions untouched |
 //! | tab17 | `take_exited` with one dead among two live | Only the dead one comes back, ordered |
+//!
+//! Wire-shape coverage — whether a `SessionSummary` built from this table's
+//! accessors actually matches the hosted session (`session_id`, pid, cwd) — lives
+//! in `claude_daemon_core`'s `serve_test.rs` (`srv03`), against the real
+//! `Request::ListSessions` response: that DTO is Claude-specific and does not
+//! exist at this layer. This suite covers only what the table itself owns.
 
 use core::time::Duration;
-use std::path::{ Path, PathBuf };
+use std::path::Path;
 use std::time::Instant;
 
-use claude_daemon_core::{ Error, HostedSession, SessionTable };
+use child_supervisor::{ Error, HostedSession, SessionTable };
 use claude_pty_core::{ PtySession, SessionConfig };
 
 /// Longest a test waits for a child's output, or for a shutdown to return.
@@ -106,7 +111,7 @@ fn drain( table : &mut SessionTable )
 ///
 /// Returns the accumulated text. Polling rather than blocking is the client-side
 /// shape the cursor protocol is built for.
-fn read_until( session : &HostedSession, needle : &str ) -> String
+fn read_until( session : &mut HostedSession, needle : &str ) -> String
 {
   let deadline = Instant::now() + TEST_TIMEOUT;
   let mut cursor = 0_u64;
@@ -138,7 +143,6 @@ fn tab01_new_table_is_empty()
 
   assert!( table.is_empty(), "a new table is not empty" );
   assert_eq!( table.len(), 0 );
-  assert!( table.summaries().is_empty(), "a new table produced summaries" );
 }
 
 /// tab02: an inserted session is reachable by its conversation id.
@@ -225,12 +229,12 @@ fn tab05_remove_yields_the_session_once()
   removed.shutdown().expect( "shutdown failed" );
 }
 
-/// tab06: summaries are ordered by conversation id.
+/// tab06: `session_ids` is ordered by conversation id.
 ///
 /// The backing map has no order, so without the sort a `list_sessions` response
-/// would reshuffle between calls with nothing having changed.
+/// built from it would reshuffle between calls with nothing having changed.
 #[ test ]
-fn tab06_summaries_are_ordered_by_session_id()
+fn tab06_session_ids_are_ordered()
 {
   let dir = tempfile::tempdir().expect( "cannot create temp dir" );
   let mut table = SessionTable::new();
@@ -239,33 +243,10 @@ fn tab06_summaries_are_ordered_by_session_id()
     insert( &mut table, hosted( id, dir.path() ) );
   }
 
-  let ids : Vec< String > = table.summaries().into_iter().map( | s | s.session_id ).collect();
-  assert_eq!( ids, vec![ "conv-a", "conv-b", "conv-c" ], "summaries are not sorted" );
-
-  drain( &mut table );
-}
-
-/// tab07: a summary reports what the session actually is.
-#[ test ]
-fn tab07_summary_matches_the_hosted_session()
-{
-  let dir = tempfile::tempdir().expect( "cannot create temp dir" );
-  let cwd : PathBuf = dir.path().to_path_buf();
-  let mut table = SessionTable::new();
-  insert( &mut table, hosted( "conv-1", &cwd ) );
-
-  let live_pid = table.get( "conv-1" ).expect( "not found" ).pid();
-  let summaries = table.summaries();
-  let summary = summaries.first().expect( "no summary produced" );
-
-  assert_eq!( summary.session_id, "conv-1" );
-  assert_eq!( summary.pid, live_pid );
-  assert_eq!( summary.cwd, cwd );
-  assert!( !summary.busy );
-  assert!(
-    Path::new( &format!( "/proc/{}", summary.pid ) ).exists(),
-    "summary reports pid {} but no such process exists",
-    summary.pid,
+  assert_eq!(
+    table.session_ids(),
+    vec![ "conv-a".to_string(), "conv-b".to_string(), "conv-c".to_string() ],
+    "session_ids is not sorted",
   );
 
   drain( &mut table );
@@ -308,8 +289,7 @@ fn tab09_mutation_through_get_mut_is_visible()
 
   table.get_mut( "conv-1" ).expect( "not found" ).set_busy( true );
 
-  let summaries = table.summaries();
-  assert!( summaries.first().expect( "no summary produced" ).busy, "the busy flag did not stick" );
+  assert!( table.get( "conv-1" ).expect( "not found" ).busy(), "the busy flag did not stick" );
 
   drain( &mut table );
 }
@@ -324,14 +304,13 @@ fn tab09_mutation_through_get_mut_is_visible()
 fn tab10_output_round_trips_through_the_cursor()
 {
   let dir = tempfile::tempdir().expect( "cannot create temp dir" );
-  let session = hosted( "conv-1", dir.path() );
+  let mut session = hosted( "conv-1", dir.path() );
 
   session.write( b"round trip\r" ).expect( "write failed" );
-  let seen = read_until( &session, "round trip" );
+  let seen = read_until( &mut session, "round trip" );
 
   assert!( seen.contains( "round trip" ), "payload never came back: {seen:?}" );
 
-  let mut session = session;
   session.shutdown().expect( "shutdown failed" );
 }
 
@@ -387,12 +366,13 @@ fn tab12_read_after_shutdown_reports_ended()
 fn tab13_second_read_without_output_is_empty()
 {
   let dir = tempfile::tempdir().expect( "cannot create temp dir" );
-  let session = hosted( "conv-1", dir.path() );
+  let mut session = hosted( "conv-1", dir.path() );
 
   session.write( b"once\r" ).expect( "write failed" );
-  read_until( &session, "once" );
+  read_until( &mut session, "once" );
 
-  let settled = session.read_from( session.read_from( 0 ).cursor );
+  let first_cursor = session.read_from( 0 ).cursor;
+  let settled = session.read_from( first_cursor );
   let again = session.read_from( settled.cursor );
 
   assert_eq!( again.text, "", "a read with no new output replayed old output" );

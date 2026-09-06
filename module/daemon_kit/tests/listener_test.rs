@@ -13,8 +13,10 @@
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/006_serving_clients.md` — the socket's lifecycle
-//! - `docs/feature/001_single_instance.md` — what the lock guarantees
+//! - `claude_daemon_core/docs/feature/006_serving_clients.md` — the socket's
+//!   lifecycle
+//! - `claude_daemon_core/docs/feature/001_single_instance.md` — what the lock
+//!   guarantees
 //!
 //! ## Coverage
 //!
@@ -33,7 +35,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{ UnixListener, UnixStream };
 use std::path::Path;
 
-use claude_daemon_core::{ acquire, Error, InstanceLock, Listener };
+use daemon_kit::{ acquire, Error, InstanceLock, Listener };
 
 /// Take the instance lock inside `dir`, as a daemon would before binding.
 fn lock_in( dir : &Path ) -> InstanceLock

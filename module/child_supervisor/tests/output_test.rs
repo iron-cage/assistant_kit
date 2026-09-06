@@ -12,7 +12,7 @@
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/004_session_output.md` — buffering, cursors, and eviction
+//! - `docs/feature/002_session_output.md` — buffering, cursors, and eviction
 //!
 //! ## Coverage
 //!
@@ -28,8 +28,10 @@
 //! | out08 | `mark_ended` | Reported on every subsequent read |
 //! | out09 | A single push larger than capacity | Only the tail is retained |
 //! | out10 | Reading after eviction | `missed` counts exactly what was lost |
+//! | out11 | `OutputSlice` on the wire | Field names as documented |
 
-use claude_daemon_core::OutputBuffer;
+use child_supervisor::{ OutputBuffer, OutputSlice };
+use serde_json::json;
 
 /// `U+2713 CHECK MARK` — three bytes, so it can be cut two different ways.
 const CHECK : &[ u8 ] = &[ 0xE2, 0x9C, 0x93 ];
@@ -215,4 +217,32 @@ fn out10_missed_counts_exactly_what_was_evicted()
   assert_eq!( buffer.read_from( 4 ).missed, 2, "a reader at cursor four lost two" );
   assert_eq!( buffer.read_from( 6 ).missed, 0, "a reader at the window's edge lost nothing" );
   assert_eq!( buffer.read_from( 6 ).text, "6789" );
+}
+
+/// out11: a client reads these field names, not whatever the struct is called.
+///
+/// `missed` is on the wire rather than inferred by the client, because only the
+/// buffer knows how much it evicted — a renamed field breaks every client
+/// silently, since the Rust side still compiles.
+#[ test ]
+fn out11_output_slice_shape()
+{
+  let slice = OutputSlice
+  {
+    text : "hello".into(),
+    cursor : 5,
+    missed : 2,
+    ended : false,
+  };
+
+  assert_eq!(
+    serde_json::to_value( &slice ).expect( "serialize failed" ),
+    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
+  );
+
+  let back : OutputSlice = serde_json::from_value(
+    json!( { "text" : "hello", "cursor" : 5, "missed" : 2, "ended" : false } ),
+  )
+  .expect( "slice failed to parse" );
+  assert_eq!( back, slice );
 }
