@@ -481,9 +481,11 @@ fn render_summary_uses_structured_output_for_new_sdk_envelope()
 /// corruption was invisible at the gate-correctness level.
 ///
 /// # Fix Applied
-/// One line inserted between the gate and the `subtype` rebind in `render_summary()`:
-/// `let msg_type = if subtype.is_some() && msg_type != "result" { String::new() } else { msg_type };`
-/// Clears `msg_type` when the new SDK path is taken (subtype present, no top-level "type":"result").
+/// Originally a blanking line inserted between the gate and the `subtype` rebind, clearing
+/// `msg_type` whenever the new SDK path was taken. Retired by BUG-549: `msg_type` is now read
+/// with `extract_str_shallow` (depth-aware), which already returns `None` (-> blank) when no
+/// top-level "type" exists — the blanking line became a no-op for this envelope's branch and
+/// was actively wrong for the branch where a top-level "type":"result" exists after `usage`.
 ///
 /// # Prevention
 /// After any gate fix that admits a new envelope format, scan ALL downstream uses of the same
@@ -492,6 +494,8 @@ fn render_summary_uses_structured_output_for_new_sdk_envelope()
 /// # Pitfall
 /// `extract_str` is depth-unaware: any field that appears nested (e.g., `iterations[].type`)
 /// will produce wrong values when the top-level field is absent and a nested one appears first.
+/// Superseded by BUG-549's depth-aware read — this test now pins the same correct-blank
+/// outcome as a side effect of the read itself, not of a separate compensating clear.
 // test_kind: bug_reproducer(BUG-440)
 #[ test ]
 fn render_summary_does_not_display_type_message_for_new_sdk_envelope()
@@ -578,6 +582,63 @@ fn render_summary_uses_usage_totals_when_iterations_precedes_scalars()
     s.contains( "cache_read_input_tokens:\u{1b}[0m \u{1b}[33m9003\u{1b}[0m" ),
     "cache_read_input_tokens must show the usage-level total (9003), not iterations[0]'s \
      value (333). Got:\n{s}"
+  );
+}
+
+// Identical to NEW_SDK_ENVELOPE but with a genuine top-level `"type":"result"` appended at
+// the end — serialized AFTER `usage.iterations[].type = "message"`, so a depth-unaware
+// first-occurrence search finds the nested field first even though a real top-level "type"
+// exists (the branch BUG-436's report left open and BUG-440 assumed away).
+const NEW_SDK_ENVELOPE_TOP_LEVEL_TYPE_AFTER_USAGE : &str = r#"{"subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[{"input_tokens":1,"output_tokens":2,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"type":"message"}]},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"type":"result"}"#;
+
+/// BUG-549 regression: `render_summary()`'s `type:` line must reflect a genuine top-level
+/// `"type":"result"` field even when it is serialized AFTER `usage.iterations[].type`.
+///
+/// # Root Cause
+/// `extract_str(json,"type")` (depth-unaware `s.find()`) finds `usage.iterations[].type =
+/// "message"` first whenever the SDK serializes `usage` before the top-level `"type"` key —
+/// JSON object field order is unspecified (RFC 8259 §4). BUG-440's blanking line then
+/// converted that wrong "message" read to an empty string, which happens to be correct when
+/// no top-level "type" exists at all, but silently discards a real "result" value when one
+/// does exist and is merely byte-preceded by the nested field.
+///
+/// # Why Not Caught
+/// BUG-436's fixture (`NEW_SDK_ENVELOPE`) has no top-level `"type"` at all — it tests only
+/// the branch where blanking is correct. No fixture constructed an envelope carrying both
+/// `subtype` and a trailing top-level `"type":"result"`, because BUG-436's own report left
+/// that branch's existence as an explicitly open question rather than a confirmed absence.
+///
+/// # Fix Applied
+/// `render_summary()`'s `msg_type` read switched from `extract_str` to `extract_str_shallow`
+/// (the depth-0-bounded search BUG-439 introduced for `usage.*`, extended here to the one
+/// extraction outside `usage` that remained depth-unaware). The BUG-440 blanking line is
+/// removed — a depth-aware read needs no compensation.
+///
+/// # Prevention
+/// Any extraction feeding a value that is later trusted verbatim (not just gated on) must be
+/// depth-aware if a same-named key can appear nested anywhere in the envelope, regardless of
+/// whether a fixture demonstrating the shadowing case is known to exist yet.
+///
+/// # Pitfall
+/// A compensating transform (blank/clear/default) for a depth-unaware read is correct only
+/// under the branch it was built to compensate for — it silently discards real data under any
+/// other branch. Fixing the read removes the need to reason about which branch holds.
+// test_kind: bug_reproducer(BUG-549)
+#[ test ]
+fn render_summary_shows_result_type_when_top_level_type_follows_usage_iterations()
+{
+  let result = render_summary( NEW_SDK_ENVELOPE_TOP_LEVEL_TYPE_AFTER_USAGE, None );
+  assert!( result.is_some(), "render_summary must return Some; got None" );
+  let s = result.unwrap();
+  assert!(
+    s.contains( "type:\u{1b}[0m \u{1b}[32mresult\u{1b}[0m" ),
+    "type: line must show 'result' from the genuine top-level \"type\":\"result\" field, \
+     not blank (BUG-440's former compensating blank) and not \"message\" (the shadowing \
+     nested usage.iterations[].type). Got:\n{s}"
+  );
+  assert!(
+    !s.contains( "type: message" ) && !s.contains( "\u{1b}[32mmessage\u{1b}[0m" ),
+    "type: line must not show the nested iterations[].type value. Got:\n{s}"
   );
 }
 

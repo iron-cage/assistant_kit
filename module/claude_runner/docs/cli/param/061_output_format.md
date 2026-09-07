@@ -75,7 +75,7 @@ Complete field table for the JSON object emitted by `claude --output-format json
 | 32 | `permission_denials` | top-level | count | `permission_denials: N` |
 | — | `result` | top-level | string | text body after `---` separator (always rendered, not filterable) |
 
-**`modelUsage` note:** The `modelUsage` object is keyed by model name (e.g., `"claude-opus-4-8"`). When multiple models are used (fallback), the first model's stats are rendered. Fields 23–31 flatten the nested per-model object into `model_*` prefixed header lines.
+**`modelUsage` note:** The `modelUsage` object is keyed by model name (e.g., `"claude-opus-4-8"`). Fields 23–31 flatten the nested per-model object into `model_*` prefixed header lines: field 23 (`model`, the name) and fields 30–31 (`model_context_window`, `model_max_output_tokens`) are taken from the first entry only — per-model capabilities, not additive across a fallback; fields 24–29 are summed across every entry in the object (BUG-477). **Accumulation window not yet documented:** whether the `usage`-sourced fields (11–14, 19–22) and the `model_*` fields (24–29) share the same window (per-invocation) or differ (e.g. session-cumulative) is not yet established here — see BUG-550.
 
 ### Referenced Parameter Groups
 

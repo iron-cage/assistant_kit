@@ -524,15 +524,21 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   //   extract_str(json,"type") finds iterations[].type = "message" first.
   // Pitfall: extract_str uses s.find() — "type" gate catches nested iterations[].type.
   let subtype  = extract_str( json, "subtype" );
-  let msg_type = extract_str( json, "type" ).unwrap_or_default();
+  // Fix(BUG-549): depth-aware read of the top-level "type" — the one extraction BUG-439's
+  //   *_shallow migration skipped. Correct under both branches of BUG-436's disjunction above:
+  //   None (-> blank) when no top-level "type" exists, "result" when one exists but is
+  //   byte-preceded by usage.iterations[].type. Retires the former Fix(BUG-440) blanking line,
+  //   which was only correct under the first of those two branches. `find_key_shallow` treats
+  //   its input's own start as depth 0, so the envelope's own leading '{' must be stripped
+  //   first — passing `json` unstripped would put every top-level field at depth 1 (inside
+  //   that brace) and never match at depth 0.
+  // Root cause: extract_str uses depth-unaware s.find(); a nested iterations[].type shadows
+  //   the top-level key whenever the SDK serializes usage before it (order is unspecified).
+  // Pitfall: a value compensating for a depth-unaware read is only ever correct under one
+  //   branch of the ambiguity it compensates for — a depth-aware read needs no compensation.
+  let msg_type = extract_str_shallow( json.strip_prefix( '{' ).unwrap_or( json ), "type" )
+    .unwrap_or_default();
   if subtype.is_none() && msg_type != "result" { return None; }
-  // Fix(BUG-440): new SDK format has no top-level "type"; extract_str found iterations[].type.
-  //   Clear msg_type so the "type:" display line is not shown with a wrong nested value.
-  // Root cause: same depth-blindness as BUG-436; msg_type = extract_str(json,"type") runs
-  //   before the gate, retaining iterations[].type = "message" when new SDK path is taken.
-  // Pitfall: extract_str uses s.find() — depth-unaware; clears whenever subtype is present
-  //   but no top-level "type":"result" was found.
-  let msg_type = if subtype.is_some() && msg_type != "result" { String::new() } else { msg_type };
   let subtype    = subtype.unwrap_or_default();
   let session_id = extract_str( json, "session_id" ).unwrap_or_default();
   let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
