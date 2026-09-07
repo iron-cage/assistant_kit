@@ -53,9 +53,11 @@ Class A is the only class that supports correlation without external context:
 
 **Class A is where the taxonomy grows.** `attachment` entered the class in 2.1.197 and `progress` left it after 2.1.81. Both transitions occurred strictly inside the store's version span, so both are genuine lifecycle signals rather than sampling artifacts.
 
+**Captured examples in this docs tree are not literally complete lines.** Individual instance docs across `envelope/` and `system_event/` label their JSON samples "full line" or "Captured example," but every one observed omits `sessionId`, `cwd`, `version`, and `gitBranch` even when documenting a confirmed Class A kind — consistent with deliberate redaction of machine- and repo-identifying detail before committing examples, not evidence those fields are actually absent. Treat the Field Contract table above, not any individual example's visible keys, as the presence authority.
+
 **Membership does not imply parseability.** [`claude_storage_core`](../../../../module/claude_storage_core/src/entry.rs) accepts only `user` and `assistant`; the other three Class A kinds satisfy the full common-field contract and are still rejected at the type check. Class A is a statement about fields, not about consumer support.
 
-**Two levels of further dispatch live inside this class.** `attachment` resolves 23 ways and `system` 10 ways — see [`../attachment/`](../attachment/readme.md) and [`../system_event/`](../system_event/readme.md). A consumer that dispatches on `type` alone has resolved Class A only partially.
+**Two levels of further dispatch live inside this class.** `attachment` resolves 24 ways and `system` 10 ways — see [`../attachment/`](../attachment/readme.md) and [`../system_event/`](../system_event/readme.md). A consumer that dispatches on `type` alone has resolved Class A only partially.
 
 ### Cross-References
 

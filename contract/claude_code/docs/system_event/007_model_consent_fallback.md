@@ -27,15 +27,19 @@ Captured example — full line:
 
 ```json
 {
-  "parentUuid": "12886219-b8e2-4a7f-8b15-fcdd7ac23d21",
+  "parentUuid": "75a5b496-b43d-4e1e-8972-c02774fbf34e",
   "isSidechain": false,
   "type": "system",
   "subtype": "model_consent_fallback",
-  "content": "Switched to Opus 4.8 (1M context) for this session · Fable 5 requires usage credits · /…",
+  "content": "Switched to Opus 4.8 (1M context) for this session · Fable 5 requires usage credits · /model to change",
   "level": "warning",
   "choice": "cancelled",
   "originalModel": "claude-fable-5",
-  "fallbackModel": "claude-opus-4-8[1m]"
+  "fallbackModel": "claude-opus-4-8[1m]",
+  "persistedAsDefault": false,
+  "isMeta": false,
+  "timestamp": "2026-08-09T10:21:17.713Z",
+  "uuid": "866044b2-6a9e-49a3-b1a5-b9e61fa78748"
 }
 ```
 

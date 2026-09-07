@@ -16,7 +16,7 @@
 | 005 | [Session Registration](005_session_registration.md) | Learning the conversation id of a session just spawned | ✅ |
 | 006 | [Serving Clients](006_serving_clients.md) | The socket, one request per connection, and what each means | ✅ |
 | 008 | [Turn State](008_turn_state.md) | Whether a turn is in flight, and the guarantee `idle` needs | ✅ |
-| 009 | [Session Resume](009_session_resume.md) | Attaching a spawn to a conversation that already exists | 📋 |
+| 009 | [Session Resume](009_session_resume.md) | Attaching a spawn to a conversation that already exists | ✅ |
 | 010 | [Session Reaping](010_session_reaping.md) | Releasing idle sessions, and ending a daemon with none left | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |
 

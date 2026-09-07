@@ -106,7 +106,7 @@ fn spawn_claude( cwd : &Path, resume : Option< &str > ) -> Result< PtySession >
 }
 ```
 
-### What Is Not Yet Settled
+### What Had To Be Settled Empirically
 
 - **Behaviour on a terminal — settled.** Observed against a real `claude` (HS-0): `--resume
   <id>` brings up a usable interactive session immediately, with no picker and no keystroke
@@ -119,18 +119,14 @@ fn spawn_claude( cwd : &Path, resume : Option< &str > ) -> Result< PtySession >
   hosted." That rejected alternative would need daemon-side memory — exactly the thing
   [Where the Decision Lives](#where-the-decision-lives) already ruled out for the resume
   question generally, for the same reaping-window reason.
-- **Whether a resumed session re-registers, and how fast — still open.** [005_session_registration.md](005_session_registration.md)'s
-  wait is unchanged: `Daemon::spawn` polls for the spawned pid exactly as it does for a fresh
-  conversation, on the same `registration_timeout`, relying on nothing more than "resume
-  reuses the original id" (verified against `claude --help`, load-bearing above). Whether a
-  *resumed* Claude Code process republishes a registry record at all, and within the normal
-  window, is a fact about the real tool this crate cannot observe from a test fixture —
-  `tests/serve_test.rs`'s `srv16`/`srv17` cover the daemon's own logic against a fixture
-  spawner that always re-registers promptly, which only proves the daemon behaves correctly
-  *if* the real tool does too. Confirm empirically with the `### Verification` block below;
-  if the real answer turns out to be "no, or much slower," the fix is a resume-shaped branch
-  on the registration wait, not a redesign — the mechanism this document describes stays the
-  same either way.
+- **Whether a resumed session re-registers, and how fast — settled.** Observed against a real
+  daemon (HS-7): the `### Verification` round trip below — `clr chat`, capture the session id,
+  `clr daemon stop && clr daemon start` (releasing every session), then `clr chat` again in the
+  same directory — came back with the *same* session id and correctly recalled a word planted
+  before the restart, on the first response with no extended wait. A resumed Claude Code
+  process does republish a registry record within the normal `registration_timeout`, so
+  `Daemon::spawn` needs no resume-shaped branch on the registration wait: `tests/serve_test.rs`'s
+  `srv16`/`srv17` fixture-spawner coverage generalizes to the real tool as originally hoped.
 
 ### Verification
 

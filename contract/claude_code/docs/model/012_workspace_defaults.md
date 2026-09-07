@@ -12,18 +12,18 @@
 | Role | Crate | Constant / Call Site | Value | Resolves To |
 |------|-------|----------------------|-------|-------------|
 | Isolated task execution | `claude_runner_core` | `ISOLATED_DEFAULT_MODEL` | `"opus"` (CLI alias) | `claude-opus-5` (current, since v2.1.219 — was `claude-opus-4-8`) |
-| OAuth token refresh ping | `claude_runner_core` | `REFRESH_DEFAULT_MODEL` | `"sonnet"` (CLI alias) | `claude-sonnet-5` (current) |
+| OAuth token refresh ping | `claude_runner_core` | `REFRESH_DEFAULT_MODEL` | `"claude-sonnet-5"` (pinned full ID, not an alias) | `claude-sonnet-5` (fixed — no runtime resolution) |
 | Rate-limit header probe | `claude_quota` | body of `fetch_rate_limits()` | `"claude-haiku-4-5-20251001"` (full API ID) | — (sent directly to API) |
 
 ### Rationale
 
 **Isolated task execution** (`ISOLATED_DEFAULT_MODEL`): Uses the `"opus"` CLI alias so the subprocess always resolves to the latest available Opus without requiring a code change. Isolated runs handle high-complexity user tasks — reasoning, code generation, analysis — where capability is primary. The alias is a CLI feature: the `claude` binary resolves it to the current Opus model ID before making API calls.
 
-**OAuth token refresh ping** (`REFRESH_DEFAULT_MODEL`): Refresh invocations send a trivial `"."` prompt to force an OAuth token exchange. The `"sonnet"` alias tracks the latest Sonnet automatically. Sonnet is fast and quota-efficient; Opus would waste allowance on a no-op request.
+**OAuth token refresh ping** (`REFRESH_DEFAULT_MODEL`): Refresh invocations send a trivial `"."` prompt to force an OAuth token exchange. The constant is pinned to the full ID `"claude-sonnet-5"`, not an alias — it does not track future Sonnet releases automatically and must be updated by hand (see Update Policy below). Sonnet is fast and quota-efficient; Opus would waste allowance on a no-op request.
 
 **Rate-limit probe** (body model in `fetch_rate_limits()`): Sends `max_tokens: 1` directly to the Anthropic API — not via the `claude` CLI. CLI aliases (`haiku`) are not valid API model IDs; the full dated ID `"claude-haiku-4-5-20251001"` must be used. Output is discarded. Haiku is the cheapest valid model for this purpose. Updated only if Haiku is retired.
 
-**Alias vs full ID rule**: `ISOLATED_DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` use CLI aliases because they are passed as `--model <value>` to the `claude` binary subprocess. The rate-limit probe uses a full API ID because it is sent as the `"model"` field in a JSON API request body, where CLI aliases are not accepted.
+**Alias vs full ID rule**: `ISOLATED_DEFAULT_MODEL` uses the CLI alias `"opus"` because it is passed as `--model opus` to the `claude` binary subprocess via `IsolatedModel::Default`, letting the binary resolve to whatever is currently the latest Opus. `REFRESH_DEFAULT_MODEL` is also passed to the `claude` binary — via `IsolatedModel::Specific` — but holds a full pinned ID (`"claude-sonnet-5"`) instead: being CLI-bound does not by itself imply alias use, it is a per-constant choice, and this one favors a stable, explicit pin over auto-tracking. The rate-limit probe uses a full API ID because it is sent as the `"model"` field in a JSON API request body, where CLI aliases are not accepted regardless of the choice above.
 
 ### Update Policy
 
@@ -35,19 +35,19 @@ Update model defaults when:
 
 **Update sequence**: create new model profile file in `model/` → update `readme.md` Overview Table → this file (role assignment) → source constants (see below).
 
-**Aliases decouple the source from the docs — and that is the failure mode.** Because `ISOLATED_DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` hold aliases, an Anthropic-side promotion silently changes what they resolve to with no source edit, no compile error, and no test failure. Nothing in the workspace signals that the `Resolves To` column above has gone stale. That is exactly what happened between v2.1.219 (2026-07-24) and this revision: the table still named `claude-opus-4-8` after the `opus` alias had already moved to `claude-opus-5`.
+**The alias/pin split has two distinct failure modes.** `ISOLATED_DEFAULT_MODEL` holds the alias `"opus"`: an Anthropic-side promotion silently changes what it resolves to with no source edit, no compile error, and no test failure. Nothing in the workspace signals that the `Resolves To` column above has gone stale. That is exactly what happened between v2.1.219 (2026-07-24) and this revision: the table still named `claude-opus-4-8` after the `opus` alias had already moved to `claude-opus-5`. `REFRESH_DEFAULT_MODEL` carries the opposite risk instead: pinned to `"claude-sonnet-5"`, it never drifts silently, but nothing forces a source edit when a newer Sonnet ships — it will keep targeting an aging pinned model indefinitely unless someone updates it by hand.
 
-The only mechanism that catches this is a deliberate re-check. Two ways, both cheap:
+The only mechanism that catches the alias-drift risk is a deliberate re-check. Two ways, both cheap:
 
 ```bash
-# 1. Ask the binary what the alias resolves to right now:
+# 1. Ask the binary what the "opus" alias resolves to right now:
 claude --model opus -p 'reply with only your model id' </dev/null
 
 # 2. Scan the changelog for alias-tier promotions since the date on this file:
 grep -rln 'default Opus model\|default Sonnet model' contract/claude_code/docs/version/
 ```
 
-Re-run both whenever a new Claude Code version is installed. The rate-limit probe is exempt — it pins a full dated ID (`claude-haiku-4-5-20251001`) and therefore cannot drift.
+Re-run both whenever a new Claude Code version is installed. `REFRESH_DEFAULT_MODEL` and the rate-limit probe are both exempt from command 1 — they pin full IDs (`claude-sonnet-5`, `claude-haiku-4-5-20251001`) with no alias to resolve, so they cannot drift silently. Command 2's changelog scan still applies to `REFRESH_DEFAULT_MODEL`: it is the only way to notice a new Sonnet worth manually adopting, since no alias will pick it up on its own.
 
 ### Source Constant Locations
 

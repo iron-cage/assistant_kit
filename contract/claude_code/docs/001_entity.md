@@ -9,7 +9,7 @@
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
 | `envelope` | Session-log top-level line kinds: one instance per `type` discriminator, with payload fields, structural class, and version lifecycle | [envelope/readme.md](envelope/readme.md) | 19 |
-| `attachment` | Harness context-injection payloads: one instance per `attachment.type`, the second dispatch level | [attachment/readme.md](attachment/readme.md) | 23 |
+| `attachment` | Harness context-injection payloads: one instance per `attachment.type`, the second dispatch level | [attachment/readme.md](attachment/readme.md) | 24 (+1 gap) |
 | `system_event` | Session lifecycle, telemetry, and error events: one instance per `system.subtype`, the third dispatch level | [system_event/readme.md](system_event/readme.md) | 10 |
 | `envelope_class` | Common-field presence contract: three classes partitioning all 19 top-level kinds by which common fields they guarantee | [envelope_class/readme.md](envelope_class/readme.md) | 3 |
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
@@ -24,7 +24,7 @@
 | `version` | Claude Code release changelog: one doc instance per published release version | [version/readme.md](version/readme.md) | 116 |
 | `pattern` | Reusable design-pattern documentation: official version-pinning landscape | [pattern/readme.md](pattern/readme.md) | 1 |
 
-**Total doc instances**: 485, as of 2026-08-27 (38 behavior + 3 storage + 4 filesystem + 10 jsonl + 19 envelope + 23 attachment + 10 system_event + 3 envelope_class + 3 settings + 7 format + 3 taxonomy + 159 param + 43 tool + 11 endpoint + 19 subcommand + 0 fault + 13 model + 116 version + 1 pattern). Plus one unnumbered auxiliary index, `endpoint/account_field_index.md`, which is a cross-endpoint field dictionary rather than an instance and is excluded from the count.
+**Total doc instances**: 486 — 485 as of the 2026-08-27 snapshot (38 behavior + 3 storage + 4 filesystem + 10 jsonl + 19 envelope + 23 attachment + 10 system_event + 3 envelope_class + 3 settings + 7 format + 3 taxonomy + 159 param + 43 tool + 11 endpoint + 19 subcommand + 0 fault + 13 model + 116 version + 1 pattern), plus 1 added afterward via independent local evidence rather than the original scan ([`attachment/024_budget_usd.md`](attachment/024_budget_usd.md)). Plus one unnumbered auxiliary index, `endpoint/account_field_index.md`, which is a cross-endpoint field dictionary rather than an instance and is excluded from the count.
 
 One collection holds no numbered instances: `fault` is **index-only by design** — its readme is itself the complete fault table, and its rows link out to `docs/error/` in the workspace root rather than to local instances; a zero here is correct, not a gap.
 
@@ -35,9 +35,9 @@ cd contract/claude_code/docs
 for d in */; do printf '%-12s %3d\n' "${d%/}" "$(ls "$d" | grep -cE '^[0-9]{3}_')"; done
 ```
 
-That loop counts strictly-numbered files and totals **484**; `behavior` reports
+That loop counts strictly-numbered files and totals **485**; `behavior` reports
 37 rather than the 38 above, because `016h_b16h_tools_system_prompt.md` carries a
-suffixed number. Adding it back gives the 485 stated. `grep -P` is not available
+suffixed number. Adding it back gives the 486 stated. `grep -P` is not available
 on every platform, which is why the expression above uses POSIX classes.
 
 ## Master Doc Instances Table
@@ -141,7 +141,7 @@ on every platform, which is why the expression above uses POSIX classes.
 | 018 | Fork Context Ref | [envelope/018_fork_context_ref.md](envelope/018_fork_context_ref.md) |
 | 019 | Frame Link | [envelope/019_frame_link.md](envelope/019_frame_link.md) |
 
-### attachment/ (23 instances)
+### attachment/ (24 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -168,6 +168,7 @@ on every platform, which is why the expression above uses POSIX classes.
 | 021 | Plan Mode Reentry | [attachment/021_plan_mode_reentry.md](attachment/021_plan_mode_reentry.md) |
 | 022 | Hook Additional Context | [attachment/022_hook_additional_context.md](attachment/022_hook_additional_context.md) |
 | 023 | Context Tip | [attachment/023_context_tip.md](attachment/023_context_tip.md) |
+| 024 | Budget USD *(gap, added post-scan)* | [attachment/024_budget_usd.md](attachment/024_budget_usd.md) |
 
 ### system_event/ (10 instances)
 

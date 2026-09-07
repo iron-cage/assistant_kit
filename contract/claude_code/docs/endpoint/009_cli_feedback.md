@@ -24,6 +24,10 @@ HTTP 403 "Access Forbidden" for standard Max OAuth tokens. Feedback submission l
 
 **Status**: Request body schema and success response format are unknown — no successful response has been observed.
 
+### Response
+
+No successful response has been observed — see Observed Behavior above.
+
 ### Error Codes
 
 | HTTP | Meaning |

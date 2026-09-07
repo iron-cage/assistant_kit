@@ -30,6 +30,10 @@ user:file_upload user:inference user:mcp_servers user:profile user:sessions:clau
 
 **Obtaining the required scope**: The `org:create_api_key` scope must be requested during the initial OAuth login flow in the Claude desktop app (or equivalent). It is not grantable after the fact via token refresh.
 
+### Response
+
+No successful response has been observed — every standard OAuth token lacks the `org:create_api_key` scope this endpoint requires, so the request is rejected with HTTP 403 before a response body is produced. See Observed Error Response below.
+
 ### Error Codes
 
 | HTTP | Meaning |

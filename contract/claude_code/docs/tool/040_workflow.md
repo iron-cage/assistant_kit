@@ -23,9 +23,19 @@ Requires `CLAUDE_CODE_DISABLE_WORKFLOWS` to not be set.
 
 ### Parameters
 
+❌ **`workflow: string` refuted** — the doc previously claimed a single, oversimplified required `workflow` parameter. Confirmed wrong: v2.1.220's actual schema has no field named `workflow` at all; it takes a `script`/`scriptPath`/`name` triad (at least one required, per the schema's own `.refine()`) plus four more optional fields:
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `workflow` | string | yes | Workflow definition or identifier |
+| `script` | string | one of script/scriptPath/name | Self-contained workflow script (max ~512KB), starting with `export const meta = {name, description, phases}`, using `agent()`/`parallel()`/`pipeline()`/`phase()`/`log()`. |
+| `scriptPath` | string | one of script/scriptPath/name | Path to a workflow script file on disk (e.g. a script Written earlier, or returned from a prior invocation). Takes precedence over `script` and `name`. |
+| `name` | string | one of script/scriptPath/name | Name of a predefined workflow (built-in or from `.claude/workflows/`). Resolves to a self-contained script. |
+| `args` | any | ❌ | Input value exposed to the script as the global `args`, verbatim — used to parameterize a named workflow. |
+| `resumeFromRunId` | string | ❌ | Run ID (pattern `^wf_[a-z0-9-]{6,}$`) of a prior Workflow invocation to resume from. Completed `agent()` calls with an unchanged `(prompt, opts)` return cached results instantly; only edited/new calls re-run. Same-session only. |
+| `title` | string | ❌ | Ignored — set the workflow title in the script's `meta` block instead. |
+| `description` | string | ❌ | Ignored — set the workflow description in the script's `meta` block instead. |
+
+**Verify:** `grep -ac -F "resumeFromRunId" ~/.local/share/claude/versions/2.1.220` → 17; the exact `.describe()` text for every field above (including the `—`-escaped "Ignored — set the workflow title/description..." pair, which a naive literal-em-dash grep will miss) is present verbatim in that same binary.
 
 ### Since
 
