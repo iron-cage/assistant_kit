@@ -32,5 +32,5 @@ The concrete semver string resolved at the time of the last `cm .version.install
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [050_preferred_version_spec.md](050_preferred_version_spec.md) | Version alias spec (companion) |
-| doc | [../subcommand/005_install.md](../subcommand/005_install.md) | Install subcommand (writes this) |
+| doc | [../settings/003_version_lock.md](../settings/003_version_lock.md) | Actual reader/writer: this repo's own `cm .version.install`/`.version.guard` — verified absent from the `claude` binary itself, so the real `claude install` subcommand does not write this key |
 | doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

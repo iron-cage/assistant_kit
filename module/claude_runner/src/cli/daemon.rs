@@ -44,8 +44,8 @@ use std::time::{ Instant, SystemTime, UNIX_EPOCH };
 
 use claude_daemon_core::
 {
-  acquire, client, BackgroundReporting, Daemon, DaemonPaths, Error, Listener, Request, Result,
-  BG_TASKS_REPORT_RUNNING_ENV,
+  acquire, client, spawn_waker, BackgroundReporting, Daemon, DaemonPaths, Error, Listener,
+  Request, Result, BG_TASKS_REPORT_RUNNING_ENV, DEFAULT_IDLE_TIMEOUT, DEFAULT_LINGER, DEFAULT_TICK,
 };
 use claude_pty_core::{ PtySession, SessionConfig };
 
@@ -70,6 +70,22 @@ const POLL : Duration = Duration::from_millis( 50 );
 
 /// How much of the daemon log to show when startup fails.
 const LOG_TAIL_LINES : usize = 20;
+
+/// Read `var` as whole seconds, falling back to `default` when unset or
+/// unparseable.
+///
+/// The `CLR_*_SECS` tier, not `claude_runner`'s `CliArgs`/TOML config: both of
+/// those apply only inside `dispatch_run()`, which `daemon start` never
+/// reaches. Read directly here rather than through that machinery, the same
+/// way `claude_topic_core::identity` reads `CLR_TOPIC_HOME` directly. See
+/// `claude_daemon_core/docs/feature/010_session_reaping.md`.
+fn duration_env( var : &str, default : Duration ) -> Duration
+{
+  std::env::var( var )
+    .ok()
+    .and_then( | value | value.parse().ok() )
+    .map_or( default, Duration::from_secs )
+}
 
 /// `clr daemon [start|status|stop|log]`.
 ///
@@ -140,6 +156,36 @@ pub( crate ) fn probe( socket : &Path ) -> Option< String >
   let response = client::request_within( socket, &Request::Ping, PROBE_TIMEOUT ).ok()?;
   let claude_daemon_core::Response::Ok { result, .. } = response else { return None };
   Some( result[ "version" ].as_str().unwrap_or( "unknown" ).to_string() )
+}
+
+/// Pids the daemon currently hosts, for `clr ps`'s 🏠 flag.
+///
+/// Empty whenever the question cannot be answered — no daemon running, or one
+/// that answered the ping and then failed to list — because `clr ps` decorating
+/// with less information is preferable to `clr ps` failing over a question it
+/// did not ask. Never starts a daemon: a `ps` invocation is a look, not a
+/// request for one to exist.
+#[ must_use ]
+pub( crate ) fn hosted_pids() -> std::collections::HashSet< u32 >
+{
+  let Some( paths ) = claude_daemon_core::DaemonPaths::new() else { return std::collections::HashSet::new() };
+  let socket = paths.socket_file();
+  if probe( &socket ).is_none()
+  {
+    return std::collections::HashSet::new();
+  }
+
+  client::call( &socket, &Request::ListSessions )
+    .ok()
+    .map( | sessions |
+    {
+      sessions.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map( | session | session[ "pid" ].as_u64().and_then( | pid | u32::try_from( pid ).ok() ) )
+        .collect::< std::collections::HashSet< u32 > >()
+    } )
+    .unwrap_or_default()
 }
 
 /// `clr daemon status`.
@@ -379,7 +425,11 @@ pub( crate ) fn run_daemon_serve() -> !
     std::process::exit( 1 )
   }
 
-  let lock = match acquire( &paths.lock_file() )
+  // `acquire` is a pure re-export of `daemon_kit::acquire`, so it answers in
+  // `daemon_kit::Error` rather than this crate's own — `map_err` folds it
+  // through the existing `From< daemon_kit::Error >` conversion so the match
+  // below can stay written against this crate's `Error::AlreadyRunning`.
+  let lock = match acquire( &paths.lock_file() ).map_err( Error::from )
   {
     Ok( lock ) => lock,
     // Somebody else won the race. Whoever started this one wanted a daemon
@@ -413,8 +463,15 @@ pub( crate ) fn run_daemon_serve() -> !
     .with_background_reporting( BackgroundReporting::Enabled )
     // Read-only, and empty until something has measured a baseline into it — a
     // context summary reports the overhead split as null until then.
-    .with_baselines( paths.runtime_dir() );
+    .with_baselines( paths.runtime_dir() )
+    .with_idle_timeout( duration_env( "CLR_IDLE_TIMEOUT_SECS", DEFAULT_IDLE_TIMEOUT ) )
+    .with_linger( duration_env( "CLR_LINGER_SECS", DEFAULT_LINGER ) );
   log_line( &format!( "listening on {} (pid {})", socket.display(), std::process::id() ) );
+
+  // A synthetic client: sleeps, connects, hangs up — purely so `accept` below
+  // returns on a floor rate even when no real client has anything to ask, and
+  // `daemon.reap()` gets to run. See `claude_daemon_core/docs/feature/010_session_reaping.md`.
+  let _waker = spawn_waker( socket, duration_env( "CLR_TICK_SECS", DEFAULT_TICK ) );
 
   loop
   {
@@ -424,8 +481,15 @@ pub( crate ) fn run_daemon_serve() -> !
     {
       log_line( &format!( "connection error: {error}" ) );
     }
+    // Next to the stop check so ANY connection drives it — real or the waker's.
+    daemon.reap();
     if daemon.stop_requested()
     {
+      break;
+    }
+    if daemon.should_exit()
+    {
+      log_line( "idle timeout elapsed with no sessions hosted; exiting" );
       break;
     }
   }
@@ -458,11 +522,23 @@ pub( crate ) fn run_daemon_serve() -> !
 /// over". Without it a session waiting on a background task reports `idle` too,
 /// and there is no way to tell the two apart after the fact — so it is set here,
 /// at the only place that starts one, and declared to [`Daemon`] below.
-fn spawn_claude( cwd : &Path ) -> Result< PtySession >
+///
+/// `resume` is `claude_daemon_core`'s to decide, never this function's — it only
+/// translates `Some( id )` into the flag. Never a bare `--resume`: with no value
+/// it opens an interactive picker, and a session parked on a picker never
+/// registers (confirmed against a real `claude` — see
+/// `claude_daemon_core/docs/feature/009_session_resume.md`).
+fn spawn_claude( cwd : &Path, resume : Option< &str > ) -> Result< PtySession >
 {
-  let config = SessionConfig::new( "claude" )
+  let mut config = SessionConfig::new( "claude" )
     .cwd( cwd )
     .env( BG_TASKS_REPORT_RUNNING_ENV, "1" );
+
+  if let Some( session_id ) = resume
+  {
+    config = config.arg( "--resume" ).arg( session_id );
+  }
+
   PtySession::spawn( &config ).map_err( Error::Pty )
 }
 

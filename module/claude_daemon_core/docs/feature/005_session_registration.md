@@ -4,7 +4,7 @@
 
 - **Purpose**: Learn the conversation id of a session the daemon has just spawned, so it can be filed under the handle clients will use.
 - **In Scope**: `await_session_id`, `registration::lookup`, `REGISTRATION_TIMEOUT`, `Error::NoRegistration`.
-- **Out of Scope**: Parsing registry files (→ `claude_session_core`), spawning the process (→ `claude_pty_core`), what the id is then used for (→ [003_session_table.md](003_session_table.md)).
+- **Out of Scope**: Parsing registry files (→ `claude_session_core`), spawning the process (→ `claude_pty_core`), what the id is then used for (→ [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md)).
 
 ### Why This Is a Wait, Not a Return Value
 

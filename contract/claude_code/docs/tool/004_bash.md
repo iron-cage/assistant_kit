@@ -8,7 +8,19 @@ Shell
 
 ### Description
 
-Executes bash commands and returns stdout/stderr output. Working directory persists between calls but shell state does not. Default timeout is 120000ms (2 minutes), configurable up to 600000ms (10 minutes). Supports background execution via `run_in_background` parameter. Shell environment is initialized from the user's profile.
+Executes bash commands and returns stdout/stderr output. Working directory persists between calls but shell state does not. Default timeout is 120000ms (2 minutes), configurable up to 600000ms (10 minutes) — these are the literal hardcoded fallback constants (`120000`/`600000`) inside the same functions that back `BASH_DEFAULT_TIMEOUT_MS`/`BASH_MAX_TIMEOUT_MS` (params #96/#98); the timeout description text is built from those two function calls, not a static string. Supports background execution via `run_in_background` parameter. Shell environment is initialized from the user's profile.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `command` | string | ✅ | The command to execute. |
+| `description` | string | ❌ | Clear, concise description of what the command does, in active voice. |
+| `timeout` | number | ❌ | Optional timeout in milliseconds. Capped at `BASH_MAX_TIMEOUT_MS` (default 600000ms/10 min); falls back to `BASH_DEFAULT_TIMEOUT_MS` (default 120000ms/2 min) when omitted. |
+| `run_in_background` | boolean | ❌ | Run the command in the background instead of blocking. |
+| `dangerouslyDisableSandbox` | boolean | ❌ | ⚠️ Previously undocumented. Overrides sandbox mode to run this command unsandboxed. Gated — ignored entirely when the sandbox config's own `allowUnsandboxedCommands` is `false` (default `true`). Also auto-set by the REPL's own sandbox-violation auto-retry path. |
+
+**Verify:** `grep -ac -F "Set this to true to dangerously override sandbox mode" ~/.local/share/claude/versions/2.1.220` → 4.
 
 ### Since
 
@@ -19,8 +31,8 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../param/013_bash_timeout.md](../param/013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — runner-level default timeout |
-| doc | [../param/012_bash_max_timeout.md](../param/012_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — runner-level max timeout |
+| doc | [../param/013_bash_timeout.md](../param/013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — ❌ refuted; not read by the binary |
+| doc | [../param/012_bash_max_timeout.md](../param/012_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — ❌ refuted; not read by the binary |
 | doc | [../param/096_bash_default_timeout_ms.md](../param/096_bash_default_timeout_ms.md) | `BASH_DEFAULT_TIMEOUT_MS` — binary-level default timeout |
 | doc | [../param/097_bash_max_output_length.md](../param/097_bash_max_output_length.md) | `BASH_MAX_OUTPUT_LENGTH` — output cap before file save |
 | doc | [../param/098_bash_max_timeout_ms.md](../param/098_bash_max_timeout_ms.md) | `BASH_MAX_TIMEOUT_MS` — binary-level max timeout cap |

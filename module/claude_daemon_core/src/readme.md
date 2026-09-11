@@ -8,15 +8,14 @@ Core library implementation for `claude_daemon_core`.
 |------|----------------|
 | `lib.rs` | Crate root, module wiring, public re-exports |
 | `baseline.rs` | Measuring and caching a conversation's fixed token floor |
-| `client.rs` | Issuing one request to a running daemon |
+| `client.rs` | Issuing one request to a running daemon — thin wrapper over `daemon_kit::client` |
 | `context.rs` | Rendering a session's context summary from its transcript |
 | `error.rs` | Hand-rolled error type and crate `Result` alias |
-| `ipc.rs` | Size-capped line framing for the socket protocol |
-| `listener.rs` | Socket binding, stale-socket removal, cleanup on drop |
-| `lock.rs` | Advisory `flock` single-instance enforcement |
-| `output.rs` | Bounded, cursor-addressed session output and its pump thread |
 | `paths.rs` | Lock, socket, and registry directory resolution |
-| `protocol.rs` | Request and response wire types |
+| `protocol.rs` | Request wire type and the Claude-specific `SessionSummary`; `Response` re-exported from `daemon_kit` |
 | `registration.rs` | Waiting for a spawned process to publish its conversation id |
-| `serve.rs` | Request dispatch and one-request-per-connection serving |
-| `table.rs` | Hosted-session table keyed by conversation id |
+| `serve.rs` | Request dispatch and one-request-per-connection serving — composes `daemon_kit` and `child_supervisor` |
+
+Single-instance locking, socket binding, IPC framing, and the client, plus
+hosted-session bookkeeping and output buffering, moved to the generic
+`daemon_kit` and `child_supervisor` crates — see their own `src/readme.md`.

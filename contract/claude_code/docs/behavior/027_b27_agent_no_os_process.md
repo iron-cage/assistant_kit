@@ -19,7 +19,7 @@ Three-level process model:
 2. **API inference thread** — the Agent subagent. Runs as an API conversation within the parent Level 1 process. Has no OS PID. Invisible to `pgrep`, `ps`, or any OS-level process enumeration tool.
 3. **Transient bash subprocess** — short-lived `rtk` wrapper processes spawned by the Level 1 claude process when executing Bash tool calls. Both parent and subagent Bash calls are spawned by the same Level 1 parent.
 
-Consequence: there is no OS-level mechanism to enumerate or monitor running Agent subagents. The only re-entry point is the `resume` parameter with a known agent ID returned at dispatch time.
+Consequence: there is no OS-level mechanism to enumerate or monitor running Agent subagents. The only re-entry point is `SendMessage({to: agentId})` with a known agent ID returned at dispatch time — the Agent tool itself has no `resume` parameter (removed v2.1.77; see [../tool/007_agent.md](../tool/007_agent.md)).
 
 Contrast with skill invocations: skills invoked via the Skill tool spawn new `claude --print --output-format json` OS processes, which ARE visible in `pgrep`. Agent tool subagents and Skill tool invocations use different execution models.
 

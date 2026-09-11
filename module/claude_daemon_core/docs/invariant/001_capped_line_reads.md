@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Guarantee that a peer which never sends a newline cannot exhaust the daemon's memory.
-- **Governs**: `read_capped_line` in `src/ipc.rs`, and every path that reads a protocol line.
+- **Governs**: `read_capped_line` in `daemon_kit/src/ipc.rs`, and every path that reads a protocol line.
 - **In Scope**: All reads from a client socket.
 - **Out of Scope**: The size of a *response* the daemon produces; output is bounded by what it has to say, not by a peer.
 
@@ -30,7 +30,7 @@ Consolidation changed the blast radius, not the behavior. With one daemon hostin
 ### Verification
 
 ```bash
-cargo test -p claude_daemon_core --test ipc_test
+cargo test -p daemon_kit --test ipc_test
 ```
 
 Directly — a peer that opens the socket and never sends a newline should be refused, not tolerated:
@@ -42,13 +42,13 @@ head -c 2097152 /dev/zero | tr '\0' 'x' \
   | nc -U "$HOME/.claude/-daemon/daemon.sock"
 ```
 
-`tests/ipc_test.rs` feeds a reader that produces bytes without a newline and asserts `Error::LineTooLong` rather than growth.
+`daemon_kit/tests/ipc_test.rs` feeds a reader that produces bytes without a newline and asserts `Error::LineTooLong` rather than growth.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/ipc.rs` | `read_capped_line` and `MAX_IPC_LINE_BYTES` |
+| source | `daemon_kit/src/ipc.rs` | `read_capped_line` and `MAX_IPC_LINE_BYTES` |
 | doc | [feature/002_wire_protocol.md](../feature/002_wire_protocol.md) | The framing this bounds |
 | doc | [api/001_daemon_surface.md](../api/001_daemon_surface.md) | Signature contract |
-| test | `tests/ipc_test.rs` | Cap enforcement, CRLF trimming, EOF handling |
+| test | `daemon_kit/tests/ipc_test.rs` | Cap enforcement, CRLF trimming, EOF handling |

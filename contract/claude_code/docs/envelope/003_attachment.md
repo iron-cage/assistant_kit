@@ -61,7 +61,7 @@ Long string values are elided with `…` and deep structures with `"…"`; field
 
 ### Notes
 
-**The envelope is nearly contentless on its own.** Its entire payload is the nested `attachment` object, which carries its own `type` discriminator. Dispatching on the top-level `type` alone under-resolves this kind 23 ways — see [`../attachment/`](../attachment/readme.md).
+**The envelope is nearly contentless on its own.** Its entire payload is the nested `attachment` object, which carries its own `type` discriminator. Dispatching on the top-level `type` alone under-resolves this kind 24 ways — see [`../attachment/`](../attachment/readme.md).
 
 **This is the newest envelope in the taxonomy.** It appears only in the two most recent versions present in the store, which is a genuine introduction signal rather than a sampling floor.
 
@@ -77,4 +77,4 @@ Observed 2.1.197 – 2.1.220 (2 distinct versions). The range starts strictly in
 |------|------|----------------|
 | envelope | [readme.md](readme.md) | Envelope master index and evidence base |
 | envelope_class | [`../envelope_class/001_full_envelope.md`](../envelope_class/001_full_envelope.md) | Class A field contract this kind satisfies |
-| attachment | [`../attachment/readme.md`](../attachment/readme.md) | All 23 payload kinds carried by this envelope |
+| attachment | [`../attachment/readme.md`](../attachment/readme.md) | All 24 payload kinds carried by this envelope |

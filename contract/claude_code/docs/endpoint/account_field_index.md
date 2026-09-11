@@ -222,4 +222,4 @@ Which endpoint exposes each concept domain:
 | doc | [003_v1_messages.md](003_v1_messages.md) | Full 003 rate-limit header schema |
 | doc | [004_oauth_token.md](004_oauth_token.md) | Full 004 token refresh schema |
 | doc | [005_claude_cli_roles.md](005_claude_cli_roles.md) | Full 005 roles response schema |
-| source | `../../../../module/claude_quota/src/lib.rs` | `fetch_oauth_usage`, `fetch_oauth_account`, `fetch_rate_limits` — transport implementations |
+| source | `../../../../module/claude_quota/src/lib.rs` | `fetch_oauth_usage`, `fetch_oauth_account`, `fetch_rate_limits`, `fetch_claude_cli_roles` — transport implementations |

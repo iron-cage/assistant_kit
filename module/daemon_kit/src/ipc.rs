@@ -2,11 +2,10 @@
 //!
 //! # Why capped
 //!
-//! `claude_runner/src/cli/query.rs` reads its socket with a bare
-//! `BufRead::read_line`, which grows its buffer until a newline arrives. A peer
-//! that never sends one — broken, wedged, or hostile — drives the daemon to
-//! allocate without bound. Since one daemon now hosts every session, that failure
-//! is no longer isolated to a single session's helper process.
+//! An unbounded `BufRead::read_line` grows its buffer until a newline arrives. A
+//! peer that never sends one — broken, wedged, or hostile — drives the daemon to
+//! allocate without bound. With one daemon hosting many clients, that failure is
+//! no longer isolated to a single client's own connection.
 //!
 //! [`read_capped_line`] refuses at [`MAX_IPC_LINE_BYTES`] instead.
 
@@ -15,9 +14,6 @@ use std::io::BufRead;
 use crate::error::{ Error, Result };
 
 /// Largest single protocol line accepted, in bytes.
-///
-/// A `Send` request carrying a large paste is the biggest legitimate message;
-/// 1 MiB is far above that and far below anything that threatens the process.
 pub const MAX_IPC_LINE_BYTES : usize = 1024 * 1024;
 
 /// Read one newline-terminated line, refusing anything over

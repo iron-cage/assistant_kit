@@ -13,6 +13,7 @@
 | `cli/parity/` | Cross-command behavioral parity comparison docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |
 | `cli/user_story/` | User story catalog for runner use cases | [cli/user_story/readme.md](cli/user_story/readme.md) | 33 |
+| `decision/` | Design decision rationale for the `--flag value` CLI redesign | [decision/readme.md](decision/readme.md) | 14 |
 | `feature/` | Behavioral requirements for the runner | [feature/readme.md](feature/readme.md) | 9 |
 | `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 15 |
 | `variable/` | Output variable definitions for the six CLAUDE_* paths | [variable/readme.md](variable/readme.md) | 6 |
@@ -36,6 +37,20 @@
 | algorithm | 002 | Git Root Detection | [algorithm/002_git_root_detection.md](algorithm/002_git_root_detection.md) |
 | algorithm | 003 | Session File Selection | [algorithm/003_session_file_selection.md](algorithm/003_session_file_selection.md) |
 | api | 001 | Public API | [api/001_public_api.md](api/001_public_api.md) |
+| decision | 002 | Verbose vs Quiet | [decision/002_verbose_vs_quiet.md](decision/002_verbose_vs_quiet.md) |
+| decision | 003 | Print Mode Requires Content | [decision/003_print_mode_requires_content.md](decision/003_print_mode_requires_content.md) |
+| decision | 004 | Positional Args Joined | [decision/004_positional_args_joined.md](decision/004_positional_args_joined.md) |
+| decision | 005 | Unknown Flags Rejected | [decision/005_unknown_flags_rejected.md](decision/005_unknown_flags_rejected.md) |
+| decision | 006 | Duplicate Flags Last Wins | [decision/006_duplicate_flags_last_wins.md](decision/006_duplicate_flags_last_wins.md) |
+| decision | 007 | Hand-Rolled Parser | [decision/007_hand_rolled_parser.md](decision/007_hand_rolled_parser.md) |
+| decision | 008 | Three-Layer CLI Docs | [decision/008_three_layer_cli_docs.md](decision/008_three_layer_cli_docs.md) |
+| decision | 009 | Session Continuation By Default | [decision/009_session_continuation_default.md](decision/009_session_continuation_default.md) |
+| decision | 010 | Binary Named clr | [decision/010_binary_named_clr.md](decision/010_binary_named_clr.md) |
+| decision | 011 | Print By Default | [decision/011_print_by_default.md](decision/011_print_by_default.md) |
+| decision | 012 | Expose --system-prompt | [decision/012_expose_system_prompt.md](decision/012_expose_system_prompt.md) |
+| decision | 013 | Commands Are Bare Words | [decision/013_commands_are_bare_words.md](decision/013_commands_are_bare_words.md) |
+| decision | 014 | Dedicated refresh Command | [decision/014_dedicated_refresh_command.md](decision/014_dedicated_refresh_command.md) |
+| decision | 015 | render_summary() Gate Field | [decision/015_render_summary_gate.md](decision/015_render_summary_gate.md) |
 | feature | 001 | Runner Tool | [feature/001_runner_tool.md](feature/001_runner_tool.md) |
 | feature | 002 | Journaling Integration | [feature/002_journaling_integration.md](feature/002_journaling_integration.md) |
 | feature | 003 | Retry Hierarchy | [feature/003_retry_hierarchy.md](feature/003_retry_hierarchy.md) |

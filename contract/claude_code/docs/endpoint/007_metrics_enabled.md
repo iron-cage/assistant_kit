@@ -27,6 +27,10 @@ Hypothesis: The endpoint requires either:
 
 **Status**: Response body schema and success response format are unknown — no successful response has been observed.
 
+### Response
+
+No successful response has been observed — see Observed Behavior above and Observed Error Response below.
+
 ### Error Codes
 
 | HTTP | Meaning |

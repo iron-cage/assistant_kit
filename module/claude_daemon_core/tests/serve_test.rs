@@ -18,7 +18,8 @@
 //!
 //! - `docs/feature/006_serving_clients.md` — dispatch, framing, and the client
 //! - `docs/feature/002_wire_protocol.md` — the request and response shapes
-//! - `docs/feature/004_session_output.md` — what `send` and `read` are built on
+//! - `../../child_supervisor/docs/feature/002_session_output.md` — what `send`
+//!   and `read` are built on
 //!
 //! ## Coverage
 //!
@@ -38,6 +39,14 @@
 //! | srv12 | `spawn` whose child never registers | The request fails *and* the child is dead |
 //! | srv13 | The return that submits a prompt | Sent well after the text, not in the same burst |
 //! | srv14 | `context_summary`, hosted and absent | Read from the recorded `cwd`; an unhosted id refused |
+//! | srv15 | A hosted child that exits on its own | `list_sessions` drops it, and the pid is actually reaped |
+//! | srv16 | `spawn` when `cwd` holds several prior transcripts | The most-recently-modified one is resumed |
+//! | srv17 | `spawn` when `cwd` holds no prior transcript | The spawner is told `None`; a fresh conversation starts |
+//! | srv18 | A dead child, with no client ever asking | `spawn_waker`'s own connections drive the reap |
+//! | srv19 | A session untouched for `idle_timeout` | Released on its own |
+//! | srv20 | A session the registry reports busy | Survives past `idle_timeout` |
+//! | srv21 | The table stays empty for `linger`; a spawn lands first | The daemon exits only once nothing resets the clock |
+//! | srv22 | Several sessions idle at once | At most one is released per tick |
 
 use core::sync::atomic::{ AtomicBool, Ordering };
 use core::time::Duration;
@@ -65,7 +74,7 @@ const POLL : Duration = Duration::from_millis( 25 );
 const QUIET_READS : u32 = 3;
 
 /// Boxed so the daemon's type can be named — the spawner is a closure otherwise.
-type Spawner = Box< dyn FnMut( &Path ) -> Result< PtySession > + Send >;
+type Spawner = Box< dyn FnMut( &Path, Option< &str > ) -> Result< PtySession > + Send >;
 
 /// A daemon, its socket, and the thread serving it.
 struct Harness
@@ -94,10 +103,30 @@ impl Harness
 
   /// [`Harness::start`], with the spawner and registration timeout chosen by the
   /// caller — for the tests about a spawn that does not go well.
+  ///
+  /// Idle reaping and linger exit are both off (`Duration::ZERO`): only the
+  /// tests about those specifically should have to think about them, and a
+  /// slow CI run must never brush against either default on a test that isn't
+  /// exercising them. Those tests use [`Harness::start_with_reaping`] instead.
   fn start_with
   (
     make_spawner : impl FnOnce( PathBuf ) -> Spawner,
     registration_timeout : Duration,
+  ) -> Self
+  {
+    Self::start_with_reaping( make_spawner, registration_timeout, Duration::ZERO, Duration::ZERO )
+  }
+
+  /// [`Harness::start_with`], additionally overriding `idle_timeout` and
+  /// `linger` — for the tests about reaping itself, per
+  /// `docs/feature/010_session_reaping.md`, which cannot wait out either
+  /// thirty-minute-scale default.
+  fn start_with_reaping
+  (
+    make_spawner : impl FnOnce( PathBuf ) -> Spawner,
+    registration_timeout : Duration,
+    idle_timeout : Duration,
+    linger : Duration,
   ) -> Self
   {
     let dir = tempfile::tempdir().expect( "tempdir failed" );
@@ -109,19 +138,24 @@ impl Harness
     let listener = Listener::bind( &socket, &lock ).expect( "bind failed" );
 
     let mut daemon = Daemon::new( sessions_dir.clone(), make_spawner( sessions_dir ) )
-      .with_registration_timeout( registration_timeout );
+      .with_registration_timeout( registration_timeout )
+      .with_idle_timeout( idle_timeout )
+      .with_linger( linger );
 
     let stop = Arc::new( AtomicBool::new( false ) );
     let flag = Arc::clone( &stop );
     let server = std::thread::spawn( move ||
     {
-      // Deliberately the same shape a real main loop has: serve, then ask
-      // whether that request was the one asking the daemon to stop. The extra
-      // `flag` is the test's own way out, since nothing else would end this.
+      // Deliberately the same shape a real main loop has: serve, reap, then ask
+      // whether that request was the one asking the daemon to stop or the
+      // table has been empty long enough to leave on its own. The extra
+      // `flag` is the test's own additional way out, since a harness with
+      // both defaults at zero would otherwise never end on its own.
       while !flag.load( Ordering::Relaxed )
       {
         claude_daemon_core::serve_once( &listener, &mut daemon ).expect( "serving failed" );
-        if daemon.stop_requested()
+        daemon.reap();
+        if daemon.stop_requested() || daemon.should_exit()
         {
           break;
         }
@@ -203,17 +237,26 @@ impl Harness
 /// Registering synchronously is the fast end of what really happens: Claude Code
 /// publishes its conversation id shortly after start, and the slower case —
 /// including never — is `registration_test.rs`.
+///
+/// When handed `Some( id )` it registers *as* `id` rather than minting a fresh
+/// one — the one fact about a real `claude --resume` this crate relies on
+/// without having to observe it: `--fork-session` exists precisely to opt out of
+/// reuse, so reuse is the default (`docs/feature/009_session_resume.md`).
 fn spawner( sessions_dir : PathBuf ) -> Spawner
 {
   let mut minted = 0_u32;
-  Box::new( move | cwd : &Path |
+  Box::new( move | cwd : &Path, resume : Option< &str > |
   {
     let config = SessionConfig::new( "cat" ).cwd( cwd );
     let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
-    minted += 1;
+    let session_id = resume.map_or_else
+    (
+      || { minted += 1; format!( "conv-{minted}" ) },
+      str::to_string,
+    );
     let record = format!
     (
-      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      "{{ \"pid\": {}, \"sessionId\": \"{session_id}\", \"cwd\": \"{}\" }}",
       pty.pid(),
       cwd.display(),
     );
@@ -231,6 +274,97 @@ fn spawn_session( harness : &Harness ) -> String
     .as_str()
     .expect( "spawn reported no session_id" )
     .to_string()
+}
+
+/// A spawner that starts a process which exits on its own almost immediately,
+/// standing in for a `claude` that crashed or was killed outside the daemon.
+///
+/// `Request::Spawn` answers only a session id, never a pid — the one place a
+/// test can learn the pid the daemon is tracking is the spawner itself, so this
+/// reports it out of band through `pid_out` rather than through the wire
+/// protocol, which owes no test any more than a real client gets.
+fn short_lived_spawner( sessions_dir : PathBuf, pid_out : Arc< Mutex< Option< u32 > > > ) -> Spawner
+{
+  let mut minted = 0_u32;
+  Box::new( move | cwd : &Path, _resume : Option< &str > |
+  {
+    let config = SessionConfig::new( "true" ).cwd( cwd );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    minted += 1;
+    *pid_out.lock().expect( "pid_out mutex poisoned" ) = Some( pty.pid() );
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+      .expect( "writing the registry record failed" );
+    Ok( pty )
+  } )
+}
+
+/// A spawner that starts a process which exits on its own after a short,
+/// deliberate delay rather than almost immediately.
+///
+/// `srv18` needs the child provably still alive at the moment the request
+/// that spawned it returns — and with it, that request's own trailing
+/// `reap` — so that a later reap catching it dead can only be credited to a
+/// connection made after the delay, never to a race with that first one.
+fn delayed_exit_spawner( sessions_dir : PathBuf, pid_out : Arc< Mutex< Option< u32 > > > ) -> Spawner
+{
+  let mut minted = 0_u32;
+  Box::new( move | cwd : &Path, _resume : Option< &str > |
+  {
+    let config = SessionConfig::new( "sh" ).arg( "-c" ).arg( "sleep 0.2" ).cwd( cwd );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    minted += 1;
+    *pid_out.lock().expect( "pid_out mutex poisoned" ) = Some( pty.pid() );
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"conv-{minted}\", \"cwd\": \"{}\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+      .expect( "writing the registry record failed" );
+    Ok( pty )
+  } )
+}
+
+/// A spawner like [`spawner`], additionally writing an explicit `status` into
+/// the registry record and reporting that record's exact path out of band —
+/// so a test can rewrite `status` later and know precisely which file to
+/// touch. None of the other spawners in this file ever set `status`, so
+/// `claude_session_core::registry` treats every session they start as `idle`
+/// by default; `srv20` needs to drive both values deliberately.
+fn status_reporting_spawner
+(
+  sessions_dir : PathBuf,
+  record_path_out : Arc< Mutex< Option< PathBuf > > >,
+) -> Spawner
+{
+  let mut minted = 0_u32;
+  Box::new( move | cwd : &Path, resume : Option< &str > |
+  {
+    let config = SessionConfig::new( "cat" ).cwd( cwd );
+    let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+    let session_id = resume.map_or_else
+    (
+      || { minted += 1; format!( "conv-{minted}" ) },
+      str::to_string,
+    );
+    let record = format!
+    (
+      "{{ \"pid\": {}, \"sessionId\": \"{session_id}\", \"cwd\": \"{}\", \"status\": \"idle\" }}",
+      pty.pid(),
+      cwd.display(),
+    );
+    let record_path = sessions_dir.join( format!( "{}.json", pty.pid() ) );
+    std::fs::write( &record_path, record ).expect( "writing the registry record failed" );
+    *record_path_out.lock().expect( "record_path_out mutex poisoned" ) = Some( record_path );
+    Ok( pty )
+  } )
 }
 
 /// srv01: the daemon answers a liveness probe with its version.
@@ -258,6 +392,10 @@ fn srv02_list_sessions_starts_empty()
 }
 
 /// srv03: a spawned session is named and immediately addressable.
+///
+/// Also the coverage for `Daemon::summaries()`'s field mapping end to end: every
+/// field `child_supervisor::HostedSession` exposes (`session_id`, cwd, pid, busy)
+/// must survive the trip from the table through to the wire response.
 #[ test ]
 fn srv03_spawn_registers_a_session()
 {
@@ -271,6 +409,7 @@ fn srv03_spawn_registers_a_session()
   assert_eq!( sessions[ 0 ][ "session_id" ], session_id.as_str() );
   assert_eq!( sessions[ 0 ][ "cwd" ], "/tmp" );
   assert!( sessions[ 0 ][ "pid" ].as_u64().is_some_and( | pid | pid > 0 ) );
+  assert_eq!( sessions[ 0 ][ "busy" ], false, "a freshly spawned session should not be busy" );
   harness.finish();
 }
 
@@ -487,7 +626,7 @@ fn srv12_an_unregistered_child_is_killed()
   (
     move | _sessions_dir |
     {
-      Box::new( move | cwd : &Path |
+      Box::new( move | cwd : &Path, _resume : Option< &str > |
       {
         // Deliberately not `cat`, and this is the whole test. `cat` reads its
         // terminal, so closing the master end kills it for free — and a test
@@ -659,6 +798,409 @@ fn srv14_context_summary_resolves_through_the_table()
     ),
     Response::Ok { result, .. } => panic!( "an unhosted session summarized: {result}" ),
   }
+
+  harness.finish();
+}
+
+/// srv15: a child that dies on its own is dropped by `list_sessions`, and its
+/// pid is actually reaped rather than merely forgotten.
+///
+/// Nothing tells the daemon when a hosted process exits — the table only finds
+/// out when something asks. `list_sessions` is that something: it already runs
+/// `refresh_turns` on every call, and `refresh_turns` is where dead children are
+/// swept, per `docs/feature/010_session_reaping.md`'s adjacent-defect note. This
+/// pins the two sides of that: the session leaves the list, and the pid is
+/// actually waited on rather than left a zombie under a table that no longer
+/// remembers it.
+#[ test ]
+fn srv15_list_sessions_reaps_a_dead_child()
+{
+  let pid_out : Arc< Mutex< Option< u32 > > > = Arc::new( Mutex::new( None ) );
+  let captured = Arc::clone( &pid_out );
+  let harness = Harness::start_with
+  (
+    move | sessions_dir | short_lived_spawner( sessions_dir, captured ),
+    Duration::from_secs( 5 ),
+  );
+
+  let session_id = spawn_session( &harness );
+  let pid = pid_out.lock().expect( "pid_out mutex poisoned" )
+    .expect( "the spawner never recorded a pid" );
+
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  loop
+  {
+    let listed = harness.call( &Request::ListSessions );
+    let sessions = listed.as_array().expect( "list_sessions is not an array" );
+    if sessions.iter().all( | s | s[ "session_id" ] != session_id.as_str() )
+    {
+      break;
+    }
+    assert!( Instant::now() < deadline, "the dead session was never dropped from list_sessions" );
+    std::thread::sleep( POLL );
+  }
+
+  assert!
+  (
+    !Path::new( &format!( "/proc/{pid}" ) ).exists(),
+    "session left the table but pid {pid} is still alive — it was forgotten, not reaped",
+  );
+
+  harness.finish();
+}
+
+/// srv16: several prior transcripts in `cwd` — the most recently modified one is
+/// resumed, unconditionally.
+///
+/// Settles `docs/feature/009_session_resume.md`'s "which transcript wins" TBD at
+/// the wiring level: this crate does not implement its own selection rule, it
+/// calls `claude_storage_core::most_recent_session_id`, the same primitive an
+/// interactive `claude -c` agrees with. Two transcripts are planted with an
+/// observable mtime gap so the choice cannot be an accident of directory order.
+#[ test ]
+fn srv16_spawn_resumes_the_most_recently_modified_transcript()
+{
+  let home = tempfile::tempdir().expect( "tempdir failed" );
+  std::env::set_var( "CLAUDE_HOME", home.path() );
+
+  let cwd = PathBuf::from( "/tmp" );
+  let encoded = claude_storage_core::encode_path( &cwd ).expect( "/tmp should encode" );
+  let project_dir = home.path().join( "projects" ).join( encoded );
+  std::fs::create_dir_all( &project_dir ).expect( "creating the project dir failed" );
+
+  std::fs::write( project_dir.join( "older-conversation.jsonl" ), "{}\n" )
+    .expect( "writing the older transcript failed" );
+  // The only thing distinguishing the two on disk. A filesystem's mtime
+  // resolution is coarse enough on some setups that no gap risks a flaky tie.
+  std::thread::sleep( Duration::from_millis( 50 ) );
+  std::fs::write( project_dir.join( "newer-conversation.jsonl" ), "{}\n" )
+    .expect( "writing the newer transcript failed" );
+
+  let seen_resume : Arc< Mutex< Option< Option< String > > > > = Arc::new( Mutex::new( None ) );
+  let recorder = Arc::clone( &seen_resume );
+
+  let harness = Harness::start_with
+  (
+    move | sessions_dir |
+    {
+      Box::new( move | cwd : &Path, resume : Option< &str > |
+      {
+        *recorder.lock().expect( "poisoned" ) = Some( resume.map( str::to_string ) );
+        let config = SessionConfig::new( "cat" ).cwd( cwd );
+        let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+        let session_id = resume.map_or_else( || "conv-fresh".to_string(), str::to_string );
+        let record = format!
+        (
+          "{{ \"pid\": {}, \"sessionId\": \"{session_id}\", \"cwd\": \"{}\" }}",
+          pty.pid(),
+          cwd.display(),
+        );
+        std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+          .expect( "writing the registry record failed" );
+        Ok( pty )
+      } )
+    },
+    Duration::from_secs( 5 ),
+  );
+
+  let result = harness.call( &Request::Spawn { cwd : cwd.clone(), prompt : None } );
+  let session_id = result[ "session_id" ].as_str().expect( "spawn reported no session_id" ).to_string();
+
+  assert_eq!
+  (
+    seen_resume.lock().expect( "poisoned" ).clone(),
+    Some( Some( "newer-conversation".to_string() ) ),
+    "the spawner was not told to resume the most recently modified transcript",
+  );
+  assert_eq!
+  (
+    session_id, "newer-conversation",
+    "the daemon did not host the session under the resumed id",
+  );
+
+  harness.finish();
+}
+
+/// srv17: no prior transcript in `cwd` — the spawner is told `None`, and a fresh
+/// conversation starts exactly as it did before this feature existed.
+///
+/// The negative case `srv16` needs to mean anything: without it, a spawner that
+/// ignored `resume` entirely and a spawner that resumed unconditionally would
+/// both pass `srv16` given a directory that always has history.
+#[ test ]
+fn srv17_spawn_with_no_prior_transcript_passes_none()
+{
+  let home = tempfile::tempdir().expect( "tempdir failed" );
+  std::env::set_var( "CLAUDE_HOME", home.path() );
+  // No `projects/` directory at all — `most_recent_session_id` must report
+  // `None` for a missing directory, not error, the same as a fresh install.
+
+  let seen_resume : Arc< Mutex< Option< Option< String > > > > = Arc::new( Mutex::new( None ) );
+  let recorder = Arc::clone( &seen_resume );
+
+  let harness = Harness::start_with
+  (
+    move | sessions_dir |
+    {
+      Box::new( move | cwd : &Path, resume : Option< &str > |
+      {
+        *recorder.lock().expect( "poisoned" ) = Some( resume.map( str::to_string ) );
+        let config = SessionConfig::new( "cat" ).cwd( cwd );
+        let pty = PtySession::spawn( &config ).map_err( Error::Pty )?;
+        let record = format!
+        (
+          "{{ \"pid\": {}, \"sessionId\": \"conv-fresh\", \"cwd\": \"{}\" }}",
+          pty.pid(),
+          cwd.display(),
+        );
+        std::fs::write( sessions_dir.join( format!( "{}.json", pty.pid() ) ), record )
+          .expect( "writing the registry record failed" );
+        Ok( pty )
+      } )
+    },
+    Duration::from_secs( 5 ),
+  );
+
+  harness.call( &Request::Spawn { cwd : PathBuf::from( "/tmp" ), prompt : None } );
+
+  assert_eq!
+  (
+    seen_resume.lock().expect( "poisoned" ).clone(),
+    Some( None ),
+    "a directory with no prior transcript must not be told to resume anything",
+  );
+
+  harness.finish();
+}
+
+/// srv18: nothing ever asks about sessions, yet a dead child is still
+/// reaped — `spawn_waker`'s own scheduled connections drive
+/// [`Daemon::reap`] on their own, per `docs/feature/010_session_reaping.md`.
+///
+/// `srv15` pins the sweep itself, triggered by a `list_sessions` call. That
+/// leaves the daemon's actual clock unexercised: nothing there shows the
+/// sweep still runs when no client ever asks anything. This spawns a child
+/// that stays alive past the spawning request's own trailing reap, then
+/// sends no further requests at all — only the waker connects from that
+/// point on. If the pid still disappears, only the waker's schedule can be
+/// responsible.
+#[ test ]
+fn srv18_waker_reaps_a_dead_child_with_no_client_request()
+{
+  let pid_out : Arc< Mutex< Option< u32 > > > = Arc::new( Mutex::new( None ) );
+  let captured = Arc::clone( &pid_out );
+  let harness = Harness::start_with
+  (
+    move | sessions_dir | delayed_exit_spawner( sessions_dir, captured ),
+    Duration::from_secs( 5 ),
+  );
+
+  let _session_id = spawn_session( &harness );
+  let pid = pid_out.lock().expect( "pid_out mutex poisoned" )
+    .expect( "the spawner never recorded a pid" );
+  assert!
+  (
+    Path::new( &format!( "/proc/{pid}" ) ).exists(),
+    "pid {pid} was already gone by the time its own spawning request returned — \
+     the delay is too short to prove anything about a later connection",
+  );
+
+  // The last request this test ever sends. Everything from here is the
+  // waker dialing in on its own schedule, never a client asking about state.
+  let _waker = claude_daemon_core::spawn_waker( harness.socket.clone(), Duration::from_millis( 30 ) );
+
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  while Path::new( &format!( "/proc/{pid}" ) ).exists()
+  {
+    assert!( Instant::now() < deadline, "the waker never drove pid {pid} to be reaped" );
+    std::thread::sleep( POLL );
+  }
+
+  harness.finish();
+}
+
+/// srv19: a session nobody touches for `idle_timeout`, and that the registry
+/// never reports busy, is released on its own — no client ever asks for it to
+/// be. See `docs/feature/010_session_reaping.md`.
+#[ test ]
+fn srv19_idle_timeout_reaps_an_untouched_session()
+{
+  let idle_timeout = Duration::from_millis( 150 );
+  let harness = Harness::start_with_reaping
+  (
+    spawner,
+    Duration::from_secs( 5 ),
+    idle_timeout,
+    Duration::ZERO,
+  );
+
+  let session_id = spawn_session( &harness );
+
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  loop
+  {
+    let listed = harness.call( &Request::ListSessions );
+    let sessions = listed.as_array().expect( "list_sessions is not an array" );
+    if sessions.iter().all( | s | s[ "session_id" ] != session_id.as_str() )
+    {
+      break;
+    }
+    assert!( Instant::now() < deadline, "the idle session was never reaped" );
+    std::thread::sleep( POLL );
+  }
+
+  harness.finish();
+}
+
+/// srv20: a session the registry reports busy survives well past
+/// `idle_timeout` — [`Daemon::reap`] only ever considers a session that is
+/// both untouched *and* not busy. See `docs/feature/010_session_reaping.md`.
+///
+/// Drives the registry directly rather than through a real `claude`: write
+/// `idle`, let one poll seed [`claude_session_core::turn::TurnWatcher`]'s
+/// edge detector (its first-ever observation never reports a transition),
+/// then rewrite `busy` and poll again so the `Idle` -> `Busy` edge is the one
+/// actually observed.
+#[ test ]
+fn srv20_a_busy_session_survives_past_idle_timeout()
+{
+  let record_path : Arc< Mutex< Option< PathBuf > > > = Arc::new( Mutex::new( None ) );
+  let captured = Arc::clone( &record_path );
+  let idle_timeout = Duration::from_millis( 150 );
+  let harness = Harness::start_with_reaping
+  (
+    move | sessions_dir | status_reporting_spawner( sessions_dir, captured ),
+    Duration::from_secs( 5 ),
+    idle_timeout,
+    Duration::ZERO,
+  );
+
+  let session_id = spawn_session( &harness );
+  let record_path = record_path.lock().expect( "poisoned" ).clone()
+    .expect( "the spawner never reported a record path" );
+
+  // Seeds the watcher at `Idle`; a first-ever observation never reports a
+  // transition regardless of what status it sees.
+  harness.call( &Request::ListSessions );
+
+  let record = std::fs::read_to_string( &record_path ).expect( "reading the registry record failed" );
+  std::fs::write( &record_path, record.replace( "\"idle\"", "\"busy\"" ) )
+    .expect( "writing the busy status failed" );
+
+  // Now the transition lands: `Idle` -> `Busy` reports `Started`, which marks
+  // the session busy and — per `refresh_turns` — starts touching it on every
+  // tick after, for as long as the registry keeps reporting it busy.
+  harness.call( &Request::ListSessions );
+
+  // Long enough that a session ignoring `busy` would already be gone.
+  std::thread::sleep( idle_timeout * 3 );
+  let listed = harness.call( &Request::ListSessions );
+
+  let sessions = listed.as_array().expect( "list_sessions is not an array" );
+  assert!
+  (
+    sessions.iter().any( | s | s[ "session_id" ] == session_id.as_str() ),
+    "a busy session was reaped despite exceeding idle_timeout: {listed}",
+  );
+
+  harness.finish();
+}
+
+/// srv21: the table staying continuously empty for `linger` ends the daemon
+/// on its own, and a spawn landing before any tick observes the empty table
+/// resets that clock rather than letting it carry over from an earlier empty
+/// spell. See `docs/feature/010_session_reaping.md`.
+///
+/// Both halves in one test because they are the same clock: without the
+/// reset half, a `should_exit` that fired on *cumulative* rather than
+/// *continuous* empty time would still pass a test that only ever emptied
+/// the table once.
+#[ test ]
+fn srv21_linger_ends_the_daemon_once_empty_and_a_spawn_resets_it()
+{
+  let linger = Duration::from_millis( 200 );
+  let harness = Harness::start_with_reaping
+  (
+    spawner,
+    Duration::from_secs( 5 ),
+    Duration::ZERO,
+    linger,
+  );
+
+  let first = spawn_session( &harness );
+  harness.call( &Request::Shutdown { session_id : first } );
+
+  // Well past `linger`, but nothing has connected since the shutdown to give
+  // the daemon a tick to notice — no waker is running yet, so the respawn
+  // below is the very first chance it gets, and by then the clock must
+  // already have been reset.
+  std::thread::sleep( linger * 2 );
+  let second = spawn_session( &harness );
+  assert!
+  (
+    !harness.server.is_finished(),
+    "the daemon exited despite a spawn landing before any tick observed the table empty",
+  );
+
+  harness.call( &Request::Shutdown { session_id : second } );
+
+  // Only the waker drives ticks from here — proving the eventual exit is
+  // `should_exit`'s own doing, never a `stop_requested` this test never sets.
+  let _waker = claude_daemon_core::spawn_waker( harness.socket.clone(), Duration::from_millis( 20 ) );
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  while !harness.server.is_finished()
+  {
+    assert!( Instant::now() < deadline, "the daemon never exited once linger elapsed with an empty table" );
+    std::thread::sleep( POLL );
+  }
+
+  let daemon = harness.finish();
+  assert!( daemon.sessions().is_empty(), "the daemon exited while still hosting a session" );
+}
+
+/// srv22: idle reaping releases at most one session per tick, even when
+/// several qualify at once. `docs/feature/010_session_reaping.md` bounds the
+/// throughput deliberately, so that [`HostedSession::shutdown`]'s own grace
+/// period never stacks into a multi-session pause.
+#[ test ]
+fn srv22_idle_reaping_releases_at_most_one_session_per_tick()
+{
+  let idle_timeout = Duration::from_secs( 2 );
+  let harness = Harness::start_with_reaping
+  (
+    spawner,
+    Duration::from_secs( 5 ),
+    idle_timeout,
+    Duration::ZERO,
+  );
+
+  let hosted : Vec< String > = ( 0 .. 3 ).map( | _ | spawn_session( &harness ) ).collect();
+  assert_eq!( hosted.len(), 3, "premise: three sessions hosted" );
+
+  // Measured from the last one spawned, so all three are past `idle_timeout`
+  // by the time the wait ends, not only the first.
+  std::thread::sleep( idle_timeout + Duration::from_millis( 500 ) );
+
+  let mut counts = Vec::new();
+  let deadline = Instant::now() + TEST_TIMEOUT;
+  loop
+  {
+    let listed = harness.call( &Request::ListSessions );
+    let remaining = listed.as_array().expect( "list_sessions is not an array" ).len();
+    counts.push( remaining );
+    if remaining == 0
+    {
+      break;
+    }
+    assert!( Instant::now() < deadline, "idle sessions never fully drained: {counts:?}" );
+    std::thread::sleep( POLL );
+  }
+
+  assert_eq!
+  (
+    counts, vec![ 3, 2, 1, 0 ],
+    "reaping did not release exactly one idle session per tick: {counts:?}",
+  );
 
   harness.finish();
 }

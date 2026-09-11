@@ -4,7 +4,7 @@
 
 - **Purpose**: Turn a terminal's raw output stream into text a person can read, without pretending to be a terminal emulator.
 - **In Scope**: `render::to_plain_text`, `render::MAX_ESCAPE_PARAM_CHARS`, and the boundary between what is modelled and what is merely removed.
-- **Out of Scope**: Obtaining the stream in the first place — allocating a terminal and spawning onto it (→ [`claude_pty_core`](../../../claude_pty_core/docs/feature/readme.md)), retaining and addressing a hosted session's output (→ [`claude_daemon_core`](../../../claude_daemon_core/docs/feature/004_session_output.md)).
+- **Out of Scope**: Obtaining the stream in the first place — allocating a terminal and spawning onto it (→ [`claude_pty_core`](../../../claude_pty_core/docs/feature/readme.md)), retaining and addressing a hosted session's output (→ [`child_supervisor`](../../../child_supervisor/docs/feature/002_session_output.md)).
 
 ### Why This Exists
 
@@ -87,5 +87,5 @@ clr chat "say hello"          # the same bytes, rendered
 | source | `src/render.rs` | `to_plain_text` and the scanner |
 | doc | [invariant/002_line_renderer_boundary.md](../invariant/002_line_renderer_boundary.md) | Why the boundary is a guarantee |
 | doc | [api/001_terminal_surface.md](../api/001_terminal_surface.md) | Full signature contract |
-| doc | [`claude_daemon_core` feature/004](../../../claude_daemon_core/docs/feature/004_session_output.md) | Where the motivating raw stream comes from |
+| doc | [`child_supervisor` feature/002](../../../child_supervisor/docs/feature/002_session_output.md) | Where the motivating raw stream comes from |
 | test | `tests/render_test.rs` | Escape removal, cursor motion, trimming, and the parameter cap |

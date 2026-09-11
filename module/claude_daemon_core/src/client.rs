@@ -8,14 +8,15 @@
 //! That also removes a whole class of bug from the caller's side. There is no
 //! stale socket to reconnect, no half-consumed response to resynchronise, and no
 //! state to get wrong across a daemon restart — each call stands alone.
+//!
+//! Thin wrapper over [`daemon_kit::client`]: the framing, timeout, and
+//! connect-write-read mechanics are generic over the request type and live
+//! there; this crate supplies [`Request`].
 
 use core::time::Duration;
-use std::io::Write;
-use std::os::unix::net::UnixStream;
 use std::path::Path;
 
-use crate::error::{ Error, Result };
-use crate::ipc::read_capped_line;
+use crate::error::Result;
 use crate::protocol::{ Request, Response };
 
 /// How long a request waits for the daemon before giving up.
@@ -25,7 +26,7 @@ use crate::protocol::{ Request, Response };
 /// abandon spawns that were about to succeed. Everything else answers in
 /// milliseconds, so the margin costs nothing in practice and only matters when
 /// the daemon has genuinely stopped answering.
-pub const DEFAULT_TIMEOUT : Duration = Duration::from_secs( 60 );
+pub const DEFAULT_TIMEOUT : Duration = daemon_kit::client::DEFAULT_TIMEOUT;
 
 /// Send `request` to the daemon at `socket_path` and return its answer.
 ///
@@ -34,15 +35,15 @@ pub const DEFAULT_TIMEOUT : Duration = Duration::from_secs( 60 );
 ///
 /// # Errors
 ///
-/// - [`Error::Io`] — the daemon is not listening, or the exchange timed out.
-/// - [`Error::LineTooLong`] / [`Error::NonUtf8Line`] — the reply was not a
-///   well-formed protocol line.
-/// - [`Error::Malformed`] — the reply parsed as JSON but not as a [`Response`],
-///   or the daemon hung up without sending one.
+/// - [`crate::Error::Io`] — the daemon is not listening, or the exchange timed out.
+/// - [`crate::Error::LineTooLong`] / [`crate::Error::NonUtf8Line`] — the reply was
+///   not a well-formed protocol line.
+/// - [`crate::Error::Malformed`] — the reply parsed as JSON but not as a
+///   [`Response`], or the daemon hung up without sending one.
 #[ inline ]
 pub fn request( socket_path : &Path, request : &Request ) -> Result< Response >
 {
-  request_within( socket_path, request, DEFAULT_TIMEOUT )
+  daemon_kit::client::request( socket_path, request ).map_err( Into::into )
 }
 
 /// [`request`], with an explicit timeout.
@@ -58,27 +59,7 @@ pub fn request( socket_path : &Path, request : &Request ) -> Result< Response >
 pub fn request_within( socket_path : &Path, request : &Request, timeout : Duration )
 -> Result< Response >
 {
-  let stream = UnixStream::connect( socket_path ).map_err( Error::Io )?;
-  // Both directions: a daemon that accepted the connection and then wedged
-  // would otherwise block the write just as easily as the read.
-  stream.set_read_timeout( Some( timeout ) ).map_err( Error::Io )?;
-  stream.set_write_timeout( Some( timeout ) ).map_err( Error::Io )?;
-
-  let mut line = serde_json::to_vec( request ).map_err( | source |
-  {
-    Error::Io( std::io::Error::other( source ) )
-  } )?;
-  line.push( b'\n' );
-
-  let mut writer = &stream;
-  writer.write_all( &line ).map_err( Error::Io )?;
-  writer.flush().map_err( Error::Io )?;
-
-  let mut reader = std::io::BufReader::new( &stream );
-  let reply = read_capped_line( &mut reader )?
-    .ok_or_else( || Error::Malformed( "daemon closed the connection without answering".into() ) )?;
-
-  serde_json::from_str( &reply ).map_err( | source | Error::Malformed( source.to_string() ) )
+  daemon_kit::client::request_within( socket_path, request, timeout ).map_err( Into::into )
 }
 
 /// Send `request` and unwrap a successful result, turning a failure answer into
@@ -90,15 +71,10 @@ pub fn request_within( socket_path : &Path, request : &Request, timeout : Durati
 ///
 /// # Errors
 ///
-/// As [`request`], plus [`Error::Remote`] when the daemon answered with a
+/// As [`request`], plus [`crate::Error::Remote`] when the daemon answered with a
 /// failure.
 #[ inline ]
 pub fn call( socket_path : &Path, request : &Request ) -> Result< serde_json::Value >
 {
-  // Path-qualified: the parameter shadows the function's own name here.
-  match self::request( socket_path, request )?
-  {
-    Response::Ok { result, .. } => Ok( result ),
-    Response::Err { error, .. } => Err( Error::Remote( error ) ),
-  }
+  daemon_kit::client::call( socket_path, request ).map_err( Into::into )
 }

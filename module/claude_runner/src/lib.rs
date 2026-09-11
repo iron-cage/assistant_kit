@@ -74,6 +74,12 @@ pub use cli::{ gate_max_attempts_from, gate_poll_secs_from, gate_stale_secs_from
 #[ allow( unused_imports ) ]
 pub use cli::TOOLS;
 
+// find_by_cwd is used by tests/interactive_handoff_unit_test.rs — same rationale as above.
+#[ cfg( feature = "enabled" ) ]
+#[ doc( hidden ) ]
+#[ allow( unused_imports ) ]
+pub use cli::find_by_cwd;
+
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
 ///

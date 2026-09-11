@@ -14,6 +14,7 @@ use claude_runner_core::ps_table::
 #[ cfg( target_os = "linux" ) ]
 use claude_runner_core::ps_table::ram_label;
 use data_fmt::{ RowBuilder, Heading };
+use super::daemon::hosted_pids;
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
 // first) then CLI tokens (which overwrite env values — CLI-wins).
@@ -209,6 +210,7 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     ancient_secs : config.ancient_secs,
     high_ram_mb  : config.high_ram_mb,
     prior_pids,
+    hosted_pids  : hosted_pids(),
   };
   let active_result = render_active_sessions_table( &procs, &opts );
   let queued_table   = build_queued_table();

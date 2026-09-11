@@ -57,4 +57,4 @@ Every `rtk`/bash subprocess spawned by a Bash tool call inherits the **complete 
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [027_b27_agent_no_os_process.md](027_b27_agent_no_os_process.md) | Agent subagents not OS processes — context for why env propagates from one parent |
 | behavior | [028_b28_bash_rtk_subprocess.md](028_b28_bash_rtk_subprocess.md) | rtk subprocess identity — the process that holds these env vars |
-| param | [../param/013_bash_timeout.md](../param/013_bash_timeout.md) | CLAUDE_CODE_BASH_TIMEOUT — runner-level default timeout |
+| param | [../param/013_bash_timeout.md](../param/013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — ❌ refuted; not read by the binary. The differently-spelled `CLAUDE_BASH_TIMEOUT` (no `_CODE_` infix) observed in this doc's own evidence (E54/E56) is a distinct variable of unconfirmed origin, not this fabricated name |

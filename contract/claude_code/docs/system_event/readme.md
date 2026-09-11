@@ -53,7 +53,7 @@ Every count, share, and presence rate in this collection derives from a full sca
 | Snapshot date | 2026-08-27 |
 | Claude Code versions represented | 2.0.56 – 2.1.220 (20 distinct) |
 
-Field types and presence rates come from a second, independent full pass over the same store. The store is live and append-only, so absolute counts drift upward between passes; ratios and the presence/absence contract do not.
+Field types and presence rates come from a second, independent full pass over the same store. The store is live and append-only, so absolute counts drift upward between passes; ratios and the presence/absence contract do not — except for ratios reflecting external API health at snapshot time (e.g., [005](005_api_error.md)'s share of store, [006](006_bridge_status.md)'s frequency), which can drift meaningfully between passes since they track Anthropic API conditions rather than a fixed usage pattern; see [`../envelope/readme.md`](../envelope/readme.md)'s Evidence Base for a live-measured example (`isApiErrorMessage` presence drifted ~24% relative in days).
 
 **Store-range caveat**: the oldest data in this store is 2.0.56, so a kind observed across the full range has a `Since` floor of 2.0.56 — an artifact of the sample, not a claim about when the kind was introduced. Only a range starting or ending *strictly inside* 2.0.56 – 2.1.220 carries a real lifecycle signal.
 

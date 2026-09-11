@@ -21,6 +21,8 @@ members = [
   "module/claude_pty_core",
   "module/claude_terminal_core",
   "module/claude_session_core",
+  "module/daemon_kit",
+  "module/child_supervisor",
   "module/claude_daemon_core",
   "module/claude_profile_core",
   "module/claude_version_core",
@@ -165,6 +167,16 @@ default-features = false
 
 [workspace.dependencies.claude_session_core]
 path = "module/claude_session_core"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.daemon_kit]
+path = "module/daemon_kit"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.child_supervisor]
+path = "module/child_supervisor"
 version = "=0.1.0"
 default-features = false
 

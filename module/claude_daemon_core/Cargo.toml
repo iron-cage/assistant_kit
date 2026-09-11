@@ -17,10 +17,12 @@ categories = [ "development-tools", "os::unix-apis" ]
 workspace = true
 
 [dependencies]
+child_supervisor = { workspace = true }
+claude_core = { workspace = true }
 claude_pty_core = { workspace = true }
 claude_session_core = { workspace = true }
 claude_storage_core = { workspace = true }
-claude_core = { workspace = true }
+daemon_kit = { workspace = true }
 serde = { workspace = true, features = [ "std", "derive" ] }
 serde_json = { workspace = true }
 

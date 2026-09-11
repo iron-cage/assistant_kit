@@ -37,6 +37,14 @@ Three commands in this family terminate something, and the distinctions matter:
 | [`claude rm <id>`](018_rm.md) | One background session, plus its worktree | No — deleted | Yes |
 | [`claude daemon stop`](014_daemon.md) | The supervisor, and its sessions unless `--keep-workers` | — | — |
 
+Undocumented alias: `claude kill <id>` produces byte-identical `--help` output
+to `claude stop <id>` (same usage line, same description line) — but unlike
+the documented `plugin`/`plugins` and `update`/`upgrade` aliases, its usage
+line does **not** join the two names with `|`; it prints the bare `Usage:
+claude stop <id>`, indistinguishable from `stop`'s own canonical line. See
+[readme.md](readme.md) § Detecting a Subcommand for why this defeats the
+pipe-splitting alias heuristic.
+
 ### Since
 
 Unverified. No changelog entry in the `version/` collection records this
@@ -47,6 +55,7 @@ subcommand's introduction. Present in v2.1.220.
 ```bash
 claude stop --help              # → Usage: claude stop <id>
 claude --help | grep -cw stop   # → 0 (confirms it is hidden)
+claude kill --help              # → Usage: claude stop <id> (byte-identical to stop, no |kill)
 ```
 
 ### Cross-References

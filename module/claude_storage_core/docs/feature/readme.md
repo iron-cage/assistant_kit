@@ -17,4 +17,5 @@
 | 004 | [Continuation Detection](004_continuation_detection.md) | CWD→encoded path→UUID detection; `SessionId` type; mtime-based selection | ✅ |
 | 005 | [Token-Usage Rollup](005_token_usage_rollup.md) | Flexible grouped/filtered/sorted/projected token-usage reporting | ✅ |
 | 006 | [Transcript Answer](006_transcript_answer.md) | One turn's assistant text, read out of a transcript still being written | ✅ |
+| 007 | [Startup Projection](007_startup_projection.md) | What a session started in a directory would begin with, read from disk | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

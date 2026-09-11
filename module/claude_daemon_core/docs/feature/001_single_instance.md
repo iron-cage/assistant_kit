@@ -4,7 +4,7 @@
 
 - **Purpose**: Guarantee that at most one daemon owns the hosted sessions at a time, and that a crashed daemon never blocks its own replacement.
 - **In Scope**: `acquire`, `InstanceLock`, `DaemonPaths`, `Error::AlreadyRunning`.
-- **Out of Scope**: What the daemon does once it holds the lock (→ [003_session_table.md](003_session_table.md)), the socket protocol (→ [002_wire_protocol.md](002_wire_protocol.md)).
+- **Out of Scope**: What the daemon does once it holds the lock (→ [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md)), the socket protocol (→ [002_wire_protocol.md](002_wire_protocol.md)), the generic lock/listener mechanism itself, which now lives in `daemon_kit` (→ [`daemon_kit/src/readme.md`](../../../daemon_kit/src/readme.md) — this doc still covers the feature as this crate delivers it).
 
 ### Behavior
 
@@ -49,17 +49,17 @@ The runtime directory is hyphen-prefixed, so the workspace's global `-*` ignore 
 fuser -v "$HOME/.claude/-daemon/instance.lock" 2>&1
 
 # The second acquire fails rather than blocking:
-cargo test -p claude_daemon_core --test lock_test
+cargo test -p daemon_kit --test lock_test
 ```
 
-`tests/lock_test.rs` acquires a lock in a temporary directory, asserts a second `acquire` on the same path returns `AlreadyRunning`, then drops the first and asserts the second now succeeds.
+`daemon_kit/tests/lock_test.rs` acquires a lock in a temporary directory, asserts a second `acquire` on the same path returns `AlreadyRunning`, then drops the first and asserts the second now succeeds.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/lock.rs` | `acquire` and `InstanceLock` |
+| source | `daemon_kit/src/lock.rs` | `acquire` and `InstanceLock` — the generic mechanism this feature relies on |
 | source | `src/paths.rs` | `DaemonPaths` |
 | doc | [002_wire_protocol.md](002_wire_protocol.md) | What listens on the socket path |
 | doc | [api/001_daemon_surface.md](../api/001_daemon_surface.md) | Full signature contract |
-| test | `tests/lock_test.rs` | Exclusion, release-on-drop, and path resolution |
+| test | `daemon_kit/tests/lock_test.rs` | Exclusion, release-on-drop, and path resolution |

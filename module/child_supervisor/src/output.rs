@@ -15,9 +15,8 @@
 //!
 //! A session left running for a week produces more output than the daemon should
 //! hold. [`OutputBuffer`] keeps the newest [`OutputBuffer::capacity`] bytes and
-//! discards from the front — the same reasoning as
-//! [`MAX_IPC_LINE_BYTES`](crate::ipc::MAX_IPC_LINE_BYTES): one session must not be
-//! able to exhaust a process that hosts every session.
+//! discards from the front — the same reasoning as a capped protocol line: one
+//! session must not be able to exhaust a process that hosts every session.
 //!
 //! Eviction is *reported*, not hidden. [`OutputSlice::missed`] counts the bytes a
 //! reader arrived too late for, so a client can print "output truncated" instead

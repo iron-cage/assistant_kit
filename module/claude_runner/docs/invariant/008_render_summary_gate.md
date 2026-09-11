@@ -29,7 +29,7 @@ Missing optional fields (`session_id`, `usage`, `total_cost_usd`, and any other 
 
 **Compound gate (BUG-436 fix):** The `None`-vs-`Some` return decision requires `subtype.is_some() || msg_type == "result"`. The old single-field gate (`"type":"result"` only) fails for new Claude SDK envelopes where `usage.iterations[].type = "message"` appears earlier in the serialized JSON — `extract_str` (depth-unaware `s.find()`) returns `"message"` for the nested field, causing `render_summary()` to incorrectly return `None`. The `"subtype"` field is emitted only at the top level of CLR result envelopes.
 
-**Anti-pattern:** Gating on optional fields (e.g. `session_id`) using Rust's `?` operator on an `Option` restores the raw-JSON fallback symptom for any CLR binary version that omits that field. This is the structural root of BUG-309 (field name `"id"` absent) and BUG-310 (field name `"session_id"` absent from 7-field minimal envelopes). See D15 in `../feature/006_cli_design.md`.
+**Anti-pattern:** Gating on optional fields (e.g. `session_id`) using Rust's `?` operator on an `Option` restores the raw-JSON fallback symptom for any CLR binary version that omits that field. This is the structural root of BUG-309 (field name `"id"` absent) and BUG-310 (field name `"session_id"` absent from 7-field minimal envelopes). See D15 in `../decision/015_render_summary_gate.md`.
 
 ### Enforcement Mechanism
 
@@ -99,4 +99,4 @@ If `render_summary()` gates on an optional field using `?`:
 | BUG-437 | Same compound gate fix for `extract_session_id()` — BUG-320 session mismatch detection silently disabled for all new SDK envelopes |
 | BUG-438 | Same compound gate fix for `extract_structured_output()` — `--json-schema` output silently fell back to raw JSON for new SDK envelopes |
 | BUG-440 | `msg_type` display fix for new SDK path: clear `msg_type` when `subtype` is present but no top-level `"type":"result"` found, so the rendered `type:` field is not populated with a wrong nested value |
-| D15 | Design decision in `docs/feature/006_cli_design.md` documenting the invariant-field gate rationale |
+| D15 | Design decision in `docs/decision/015_render_summary_gate.md` documenting the invariant-field gate rationale |

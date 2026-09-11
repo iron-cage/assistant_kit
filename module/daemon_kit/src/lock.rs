@@ -1,7 +1,8 @@
 //! Single-instance enforcement via an advisory `flock`.
 //!
-//! Exactly one daemon may run: it owns every hosted PTY, and a second instance
-//! would bind the same socket path and split the session table in two.
+//! Exactly one daemon may run: it owns every resource the daemon built on this
+//! crate is meant to serialize access to, and a second instance would bind the
+//! same socket path and split that state in two.
 //!
 //! # Why `flock` and not a PID file
 //!

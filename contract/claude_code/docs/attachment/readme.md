@@ -4,7 +4,7 @@
 
 - **Purpose**: Enumerate every `attachment.type` payload kind — the second dispatch level of the session log, and the channel through which Claude Code records what it injected into each turn's context.
 - **Responsibility**: Master file for the `attachment` collection — one instance per payload kind, with its fields, presence rates, and contribution to context reconstruction.
-- **In Scope**: All 23 observed `attachment.type` values; per-kind payload field tables with types and presence rates; observed frequency.
+- **In Scope**: All 24 observed `attachment.type` values (23 from the full scan below, plus 1 gap found via independent spot-check — see 024); per-kind payload field tables with types and presence rates; observed frequency where available.
 - **Out of Scope**: The `attachment` envelope itself (→ [`../envelope/003_attachment.md`](../envelope/003_attachment.md)); `system.subtype` values (→ [`../system_event/`](../system_event/readme.md)); the Class A field contract (→ [`../envelope_class/001_full_envelope.md`](../envelope_class/001_full_envelope.md)).
 
 **Discriminator**: `attachment.type`, on lines where the top-level `type` is `"attachment"`.
@@ -36,8 +36,9 @@
 | [021](021_plan_mode_reentry.md) | Plan Mode Reentry | `plan_mode_reentry` | 15 | 0.0037% | Plan mode re-entered |
 | [022](022_hook_additional_context.md) | Hook Additional Context | `hook_additional_context` | 7 | 0.0017% | Context contributed by a user hook |
 | [023](023_context_tip.md) | Context Tip | `context_tip` | 1 | 0.0002% | One-off contextual tip |
+| [024](024_budget_usd.md) | Budget USD | `budget_usd` | — | — | ❌ Gap: dollar-denominated spend cap, absent from this scan entirely (see file) |
 
-Instances are numbered by descending observed frequency. Counts sum to exactly 407,370, matching the `attachment` envelope total in [`../envelope/003_attachment.md`](../envelope/003_attachment.md).
+Instances 001-023 are numbered by descending observed frequency; their counts sum to exactly 407,370, matching the `attachment` envelope total in [`../envelope/003_attachment.md`](../envelope/003_attachment.md). **024 is an out-of-band addition**, found via independent local spot-check after the fact rather than the scan below — its Lines/Share are left blank rather than estimated from a 7-line local sample (see [024_budget_usd.md](024_budget_usd.md)).
 
 ### The Context-Reconstruction Channel
 
@@ -77,6 +78,8 @@ Every count, share, and presence rate in this collection derives from a full sca
 | Claude Code versions represented | 2.0.56 – 2.1.220 (20 distinct) |
 
 Field types and presence rates come from a second, independent full pass over the same store. The store is live and append-only, so absolute counts drift upward between passes; ratios and the presence/absence contract do not.
+
+**024 postdates both passes above.** `budget_usd` ([024_budget_usd.md](024_budget_usd.md)) was found afterward via a targeted local grep/jq sweep of the same kind of store (17,390 files visible at check time), not a repeat of the full scan — 7 occurrences, all dated 2026-08-28 (one day after the snapshot date below), all `version: "2.1.220"`. Treat its field shapes as confirmed and its frequency/dating as provisional.
 
 **Store-range caveat**: the oldest data in this store is 2.0.56, so a kind observed across the full range has a `Since` floor of 2.0.56 — an artifact of the sample, not a claim about when the kind was introduced. Only a range starting or ending *strictly inside* 2.0.56 – 2.1.220 carries a real lifecycle signal.
 

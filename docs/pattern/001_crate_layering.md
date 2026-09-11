@@ -9,7 +9,7 @@
 
 ### Problem
 
-A workspace with 26 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 28 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -27,6 +27,8 @@ Layer 1: claude_assets_core · claude_profile_core † · claude_version_core ·
 Layer 0: claude_core                                                  (zero workspace deps — ClaudePaths + process utilities)
          claude_session_core                                            (live-session registry; deps only on Layer * claude_storage_core)
          claude_context_report_core ‡                                   (context report model; deps only on Layer * claude_storage_core + json_redact)
+         daemon_kit                                                     (zero workspace deps — generic single-instance daemon skeleton)
+         child_supervisor                                               (PTY-child bookkeeping; deps only on Layer * claude_pty_core)
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
@@ -48,6 +50,8 @@ Layer 0: claude_core                                                  (zero work
 | 0 | `claude_core` | lib | — |
 | 0 | `claude_session_core` | lib | — |
 | 0 | `claude_context_report_core` ‡ | lib (planned) | — |
+| 0 | `daemon_kit` | lib | — |
+| 0 | `child_supervisor` | lib | — |
 | * | `claude_storage_core` | lib | — |
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
@@ -89,12 +93,14 @@ Layer 0: claude_core                                                  (zero work
 
 A crate whose *only* workspace dependencies are Layer `*` primitives belongs at **Layer 0**, not Layer 1. Layer `*` sits outside the numbered hierarchy, so depending on it consumes no layer budget — such a crate is as close to the root as `claude_core`, which has no workspace deps at all.
 
-Two crates hold this position:
+Four crates hold this position:
 
 | Crate | Layer `*` deps | Consumed by |
 |-------|----------------|-------------|
 | `claude_session_core` | `claude_storage_core` | `claude_daemon_core` (Layer 1) |
 | `claude_context_report_core` ‡ | `claude_storage_core`, `json_redact` | `claude_daemon_core` (Layer 1), `claude_runner` (Layer 2) |
+| `daemon_kit` | none (zero workspace deps) | `claude_daemon_core` (Layer 1) |
+| `child_supervisor` | `claude_pty_core` | `claude_daemon_core` (Layer 1) |
 
 **The placement is load-bearing, not cosmetic.** Both crates have a Layer 1 consumer. Placing either at Layer 1 — the intuitive spot for "domain logic over a primitive" — would make that edge a same-layer dependency, which the Layer Invariant forbids and `cl1_no_same_layer_deps` fails. The alternative would be a second sanctioned exception, buying with a permanent hole in the invariant what the correct layer assignment gives for free.
 
@@ -110,7 +116,7 @@ The Layer Invariant admits exactly one exception, registered in `ALLOWED_SAME_LA
 
 It creates no build cycle precisely because it is optional: the dependency is absent unless a consumer asks for `enabled`. Adding any further same-layer edge requires both a new `ALLOWED_SAME_LAYER_DEPS` entry with a justification comment and a corresponding row here — the test is the enforcement point, this table is its documentation counterpart.
 
-**The daemon stack introduces no exception.** `claude_daemon_core` (Layer 1) depends on `claude_session_core`, which is Layer 0 — its only workspace dependency is Layer `*`'s `claude_storage_core`, so it sits alongside `claude_core` rather than in Layer 1. `claude_pty_core` has zero workspace dependencies and is Layer `*`. Every daemon-stack edge therefore flows strictly downward and is verified by `cl2_deps_flow_downward_only`.
+**The daemon stack introduces no exception.** `claude_daemon_core` (Layer 1) depends on `claude_session_core`, which is Layer 0 — its only workspace dependency is Layer `*`'s `claude_storage_core`, so it sits alongside `claude_core` rather than in Layer 1. `claude_pty_core` has zero workspace dependencies and is Layer `*`. The same reasoning places `daemon_kit` (zero workspace deps) and `child_supervisor` (its only workspace dep is Layer `*`'s `claude_pty_core`) at Layer 0 rather than Layer 1, even though both exist solely to be split out of, and depended on by, `claude_daemon_core` — single-consumer status doesn't change the by-dependency-shape test. Every daemon-stack edge therefore flows strictly downward and is verified by `cl2_deps_flow_downward_only`.
 
 ### Applicability
 

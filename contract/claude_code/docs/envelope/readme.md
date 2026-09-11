@@ -17,7 +17,7 @@
 |----|------|--------|:-----:|------:|------:|----------------|
 | [001](001_assistant.md) | Assistant | `assistant` | A | 2,314,741 | 45.84% | Model turn — the API response message plus provenance and error accounting |
 | [002](002_user.md) | User | `user` | A | 1,371,543 | 27.16% | User turn or tool result — two distinct things sharing one envelope |
-| [003](003_attachment.md) | Attachment | `attachment` | A | 407,370 | 8.07% | Harness context injection — envelope for 23 distinct payload kinds |
+| [003](003_attachment.md) | Attachment | `attachment` | A | 407,370 | 8.07% | Harness context injection — envelope for 24 distinct payload kinds |
 | [004](004_last_prompt.md) | Last Prompt | `last-prompt` | B | 262,195 | 5.19% | Resume marker — the last prompt text and the leaf it attached to |
 | [005](005_mode.md) | Mode | `mode` | B | 245,422 | 4.86% | Session mode transition |
 | [006](006_ai_title.md) | AI Title | `ai-title` | B | 152,720 | 3.02% | Auto-generated conversation title |
@@ -44,10 +44,10 @@ A consumer must dispatch up to three levels deep. This collection covers the fir
 | Level | Discriminator | Distinct kinds | Collection |
 |-------|---------------|---------------:|------------|
 | Top-level envelope | `type` | 19 | **this collection** |
-| Attachment payload | `attachment.type` when `type == "attachment"` | 23 | [`../attachment/`](../attachment/readme.md) |
+| Attachment payload | `attachment.type` when `type == "attachment"` | 24 | [`../attachment/`](../attachment/readme.md) |
 | System event | `subtype` when `type == "system"` | 10 | [`../system_event/`](../system_event/readme.md) |
 
-19 + 23 + 10 = **52 distinct event kinds** in total.
+19 + 24 + 10 = **53 distinct event kinds** in total (23 of the attachment kinds from the 2026-08-27 scan, plus 1 gap found via independent spot-check — see [`../attachment/readme.md`](../attachment/readme.md)).
 
 ### Evidence Base
 
@@ -62,6 +62,8 @@ Every count, share, and presence rate in this collection derives from a full sca
 | Claude Code versions represented | 2.0.56 – 2.1.220 (20 distinct) |
 
 Field types and presence rates come from a second, independent full pass over the same store. The store is live and append-only, so absolute counts drift upward between passes; ratios and the presence/absence contract do not.
+
+**Exception — environment-dependent ratios.** The above holds for structural/behavioral ratios: a live re-check of [002](002_user.md)'s `toolUseResult` presence measured 61.6% against the 60.4% stated, a ~1-point drift consistent with sampling noise. It does not hold for ratios reflecting external API health at snapshot time: a live re-check of [001](001_assistant.md)'s `isApiErrorMessage` presence measured ~0.45% against the 0.59% stated — a ~24% relative swing in days. Treat error/failure-rate percentages in this collection (and in [`../system_event/`](../system_event/readme.md), which shares this evidence base) as a point-in-time observation of API conditions, not a stable baseline.
 
 **Store-range caveat**: the oldest data in this store is 2.0.56, so a kind observed across the full range has a `Since` floor of 2.0.56 — an artifact of the sample, not a claim about when the kind was introduced. Only a range starting or ending *strictly inside* 2.0.56 – 2.1.220 carries a real lifecycle signal.
 

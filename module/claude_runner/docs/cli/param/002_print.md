@@ -21,7 +21,7 @@ output=$(clr "List files" --model sonnet)
 
 **Note:** Requested print mode (`-p`/`--print`, `CLR_PRINT`, or JSON config) with no
 message, `--file`, or piped stdin content exits with error code 1 (see
-[Design Decisions D3](../../001_design_decisions.md)).
+[Design Decision D3](../../decision/003_print_mode_requires_content.md)).
 
 ### Referenced Type
 

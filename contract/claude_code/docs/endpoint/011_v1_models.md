@@ -13,7 +13,7 @@
 
 **Method**: GET
 
-**Auth note**: Anthropic's public docs show `X-Api-Key` for this endpoint. Workspace callers use OAuth bearer tokens — the same pattern as endpoint 003 (`POST /v1/messages`). OAuth compatibility inferred from shared bearer token mechanism; verify via live test before implementing a workspace caller.
+**Auth note**: Anthropic's public docs show `X-Api-Key` for this endpoint. Workspace callers use OAuth bearer tokens instead — the same pattern as endpoint 003 (`POST /v1/messages`). OAuth compatibility is confirmed: `claude_quota::fetch_models` implements this call and is live-consumed by the `.models` command.
 
 **Headers**:
 
@@ -72,6 +72,10 @@
 | `thinking.types.adaptive.supported` | boolean | Supports adaptive (always-on) thinking |
 | `thinking.types.enabled.supported` | boolean | Supports explicit extended thinking |
 
+**Unpopulated by the workspace parser — probably present in the raw response, not absent from it.** `claude_quota::parse_models_response` — implemented and live-tested against this endpoint — populates only `id`, `display_name`, and `created_at` from each `data[]` item; its own rustdoc attributes the gap to the API itself, stating `max_input_tokens`, `max_tokens`, and `capabilities` are left `None`/empty "because the listing endpoint does not return those fields." No test or fixture anywhere in the workspace exercises this parser against a captured response body, so that causal claim was never verified.
+
+Live-binary evidence contradicts it. The `claude` CLI's own bundled reference material (`strings $(which claude)`, "Claude Model Catalog" doc) shows a literal example response for this same endpoint family (`GET /v1/models/{id}`, via `client.models.retrieve()`/`client.models.list()`) with `max_input_tokens`, `max_tokens`, and a fully-populated `capabilities` tree present, plus explicit prose: "The API returns the full capability tree for every model." That reference documents the `X-Api-Key` auth path (same as Anthropic's public docs, cited below), not the OAuth bearer-token path workspace callers use, so it doesn't directly settle the OAuth case — but nothing suggests the identical endpoint would omit fields based solely on auth method. The more parsimonious explanation: the fields are present over OAuth too, and `parse_models_response`'s hand-rolled scanner (`after_key()` + brace-balancing, not a full JSON parser) was simply never written to extract them — a parser limitation the rustdoc mischaracterizes as an API limitation. The ModelInfo/ModelCapabilities schema above is corroborated by two independent Anthropic-authored sources (public docs and this bundled reference), strengthening confidence it is accurate. Capability and context-window data for workspace purposes instead comes from the static `STATIC_MODELS` catalog (→ [`../model/readme.md`](../model/readme.md)), not this endpoint's live response.
+
 ### Error Codes
 
 | HTTP | Meaning | Action |
@@ -90,3 +94,4 @@
 | doc | [../model/012_workspace_defaults.md](../model/012_workspace_defaults.md) | Role-to-model assignment for workspace callers |
 | doc | [003_v1_messages.md](003_v1_messages.md) | POST /v1/messages — same OAuth bearer token pattern |
 | doc | [004_oauth_token.md](004_oauth_token.md) | OAuth token refresh — provides the bearer token |
+| source | `../../../../module/claude_quota/src/lib.rs` | `fetch_models`, `parse_models_response`, `MODELS_URL`, `ModelInfo`, `STATIC_MODELS` |

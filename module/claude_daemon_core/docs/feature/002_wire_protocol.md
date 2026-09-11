@@ -74,7 +74,7 @@ What `read` returns:
 | `missed` | `u64` | Bytes evicted before the requested cursor reached them |
 | `ended` | `bool` | Whether the session's output has ended |
 
-Reads are non-destructive: two clients watching one session each hold their own cursor and neither takes the other's output. Buffering, eviction, and how a character split across a read boundary is handled are [004_session_output.md](004_session_output.md).
+Reads are non-destructive: two clients watching one session each hold their own cursor and neither takes the other's output. Buffering, eviction, and how a character split across a read boundary is handled are [`child_supervisor/docs/feature/002_session_output.md`](../../../child_supervisor/docs/feature/002_session_output.md).
 
 ### What This Generalizes
 
@@ -86,8 +86,13 @@ Reads are non-destructive: two clients watching one session each hold their own 
 ### Verification
 
 ```bash
-# Round-trip every request and response variant through serde:
+# Round-trip Request and SessionSummary through serde:
 cargo test -p claude_daemon_core --test protocol_test
+
+# Round-trip Response and OutputSlice through serde — these moved with their
+# generic implementations, see Cross-References below:
+cargo test -p daemon_kit --test response_test
+cargo test -p child_supervisor --test output_test
 
 # By hand, against a running daemon:
 printf '{"method":"ping"}\n' | nc -U "$HOME/.claude/-daemon/daemon.sock"
@@ -97,12 +102,15 @@ printf '{"method":"ping"}\n' | nc -U "$HOME/.claude/-daemon/daemon.sock"
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/protocol.rs` | `Request`, `Response`, `SessionSummary` |
-| source | `src/output.rs` | `OutputSlice` |
-| source | `src/ipc.rs` | `read_capped_line` |
-| doc | [004_session_output.md](004_session_output.md) | What sits behind `read` |
+| source | `src/protocol.rs` | `Request`, `SessionSummary` |
+| source | `daemon_kit/src/response.rs` | `Response`, `OkTrue`, `OkFalse` |
+| source | `child_supervisor/src/output.rs` | `OutputSlice` |
+| source | `daemon_kit/src/ipc.rs` | `read_capped_line` |
+| doc | [`child_supervisor/docs/feature/002_session_output.md`](../../../child_supervisor/docs/feature/002_session_output.md) | What sits behind `read` |
 | doc | [invariant/001_capped_line_reads.md](../invariant/001_capped_line_reads.md) | Why reads are capped |
 | doc | [invariant/002_conversation_id_key.md](../invariant/002_conversation_id_key.md) | Why sessions are named by conversation id |
 | doc | [api/001_daemon_surface.md](../api/001_daemon_surface.md) | Full signature contract |
-| test | `tests/protocol_test.rs` | Round-trips and the `ok` discriminant shape |
-| test | `tests/ipc_test.rs` | Framing, the cap, and trailing-`\r` handling |
+| test | `tests/protocol_test.rs` | `Request`/`SessionSummary` round-trips and the `ok` discriminant shape |
+| test | `daemon_kit/tests/response_test.rs` | `Response` round-trips |
+| test | `child_supervisor/tests/output_test.rs` | `OutputSlice` round-trips |
+| test | `daemon_kit/tests/ipc_test.rs` | Framing, the cap, and trailing-`\r` handling |

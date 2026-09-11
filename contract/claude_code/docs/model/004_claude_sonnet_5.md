@@ -26,15 +26,15 @@
 
 ### Workspace Usage
 
-**`REFRESH_DEFAULT_MODEL`** — the `"sonnet"` CLI alias resolves to this model at runtime in `module/claude_runner_core/src/isolated.rs`.
+**`REFRESH_DEFAULT_MODEL`** — pinned directly to this model's full ID in `module/claude_runner_core/src/isolated.rs`, not a CLI alias. It is passed via `IsolatedModel::Specific`, the same pinned-ID path used for any exact model selection — contrast `ISOLATED_DEFAULT_MODEL`, which genuinely is the `"opus"` alias resolved via `IsolatedModel::Default`.
 
 Rationale: credential refresh invocations send a trivial `"."` prompt to force an OAuth token exchange. Sonnet 5 is fast and quota-efficient. Using Opus would waste allowance on a no-op request where output is discarded.
 
 ```
-REFRESH_DEFAULT_MODEL = "sonnet"   // CLI alias; resolves to "claude-sonnet-5" currently
+REFRESH_DEFAULT_MODEL = "claude-sonnet-5"   // pinned full ID — not an alias
 ```
 
-The `"sonnet"` alias auto-tracks the latest Sonnet — no code change needed when a new Sonnet is released. The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` is updated whenever Anthropic promotes a new model to the `sonnet` alias. See `012_workspace_defaults.md` for update policy.
+The constant does **not** auto-track future Sonnet releases: the source's own rustdoc states "Update this constant when the target model changes." It briefly held the alias `"sonnet"` for about 2.5 hours during same-day development on 2026-07-02 (commit `804bc4d4`, reverted in `5cd1d9bb`) — this file described that transient state and was never reconciled against the revert until now. See `012_workspace_defaults.md` for update policy.
 
 ### Cross-References
 

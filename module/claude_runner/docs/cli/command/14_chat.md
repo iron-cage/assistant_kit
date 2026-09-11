@@ -149,6 +149,16 @@ and unfixable from here, but it is fixable in one step, so the message says whic
 The child itself does not survive the failure — the daemon kills it before reporting, or
 it would hold a terminal forever with nobody able to address it.
 
+**A spawn refused outright is retried once, through `ensure_running`.** `ensure_running`
+can confirm a daemon moments before `spawn` reaches it, and the daemon can die in that gap
+from any cause — including its own idle self-exit, see
+[`010_session_reaping.md`](../../../../claude_daemon_core/docs/feature/010_session_reaping.md)
+— leaving a stale socket behind. A live socket one instant and a stale one the next is not
+a broken daemon, just this one already gone. Only a connection actively refused counts;
+anything else about the failure is reported as today. `ensure_running` starts a fresh
+daemon and `spawn` is retried against it once — only a second failure reaches the error
+message below.
+
 **The prompt is sent separately from the spawn**, even though `spawn` accepts one inline.
 The daemon delivers an inline prompt the instant registration completes, which is earlier
 than the interface is ready to be typed into.
@@ -159,7 +169,7 @@ than the interface is ready to be typed into.
 - `Error: unknown option "<token>" for 'clr chat'` — followed by a pointer to help.
 - `Error: --timeout wants a whole number of seconds, got "<value>"`.
 - `Error: <reason>` from `ensure_running`, followed by the daemon log path.
-- `Error: the session would not start: <reason>` — the `spawn` request failed. When the reason is `never registered a conversation id`, a hint follows: run `claude` once in this environment and answer any first-run prompts.
+- `Error: the session would not start: <reason>` — the `spawn` request failed, and a retry through `ensure_running` either did not apply (the failure was not a refused connection) or failed too. When the reason is `never registered a conversation id`, a hint follows: run `claude` once in this environment and answer any first-run prompts.
 - `Error: the daemon started a session but did not name it` — `spawn` succeeded with an empty conversation id.
 - `Error: the session would not take the message: <reason>` — the `send` request failed.
 

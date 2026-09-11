@@ -8,7 +8,7 @@ Pure library for the single-instance session daemon and its IPC protocol.
 |------|----------------|
 | `Cargo.toml` | Crate manifest and dependency configuration |
 | `src/` | Core library implementation |
-| `tests/` | Test suite for protocol round-trips, IPC framing, session output, and instance locking |
+| `tests/` | Test suite for the Claude-specific remainder: request dispatch, context, baseline, registration |
 | `docs/` | Behavioral requirements: features, invariants, api, data structures |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
@@ -42,7 +42,9 @@ Clients talk to it over a Unix domain socket, one JSON object per line.
   it — and the summary says `null` rather than guessing until one exists
 - **Composes, does not absorb**: PTY mechanics live in `claude_pty_core`,
   liveness and turn detection in `claude_session_core`, transcript reading in
-  `claude_storage_core`
+  `claude_storage_core`, the generic daemon skeleton (lock, socket, framing,
+  client) in `daemon_kit`, and hosted-session bookkeeping (table, output) in
+  `child_supervisor`
 
 ## architecture
 

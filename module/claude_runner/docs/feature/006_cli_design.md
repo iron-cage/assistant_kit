@@ -27,47 +27,26 @@
 
 ### Design Decisions
 
+Full rationale for each decision — alternatives considered, consequences, and bug history — lives in [`../decision/`](../decision/readme.md), one file per decision. This table is a feature-level index into that collection.
+
 | ID | Decision | Category |
 |----|----------|----------|
-| D2 | `--verbose` vs `--quiet` (supersedes `--verbosity`) | Parameter Conventions |
-| D3 | Requested print mode requires a message, `--file`, or stdin content | Behavior |
-| D4 | Positional args joined as message | Syntax |
-| D5 | Unknown flags rejected | Parsing |
-| D6 | Duplicate value-flags: last wins | Parameter Conventions |
-| D7 | Hand-rolled parser over clap/unilang | Parsing |
-| D9 | Session continuation by default | Behavior |
-| D10 | Binary named `clr`, crate named `claude_runner` | Naming |
-| D11 | Print by default when message given, stdin is non-TTY, or file/stdin content is present; `--interactive` to opt into TTY | Behavior |
-| D12 | Expose `--system-prompt` (replace) despite capability loss | Parameter Conventions |
-| D13 | Commands are bare words, not `--` flags | Syntax |
-| D14 | Dedicated `refresh` command vs reusing `isolated` | Behavior |
-| D15 | `render_summary()` gates on invariant field `type=="result"`, not optional fields | Pipeline |
+| [D2](../decision/002_verbose_vs_quiet.md) | `--verbose` vs `--quiet` (supersedes `--verbosity`) | Parameter Conventions |
+| [D3](../decision/003_print_mode_requires_content.md) | Requested print mode requires a message, `--file`, or stdin content | Behavior |
+| [D4](../decision/004_positional_args_joined.md) | Positional args joined as message | Syntax |
+| [D5](../decision/005_unknown_flags_rejected.md) | Unknown flags rejected | Parsing |
+| [D6](../decision/006_duplicate_flags_last_wins.md) | Duplicate value-flags: last wins | Parameter Conventions |
+| [D7](../decision/007_hand_rolled_parser.md) | Hand-rolled parser over clap/unilang | Parsing |
+| [D8](../decision/008_three_layer_cli_docs.md) | Three-layer docs/cli/ replaces 42-file structure | Documentation |
+| [D9](../decision/009_session_continuation_default.md) | Session continuation by default | Behavior |
+| [D10](../decision/010_binary_named_clr.md) | Binary named `clr`, crate named `claude_runner` | Naming |
+| [D11](../decision/011_print_by_default.md) | Print by default when message given, stdin is non-TTY, or file/stdin content is present; `--interactive` to opt into TTY | Behavior |
+| [D12](../decision/012_expose_system_prompt.md) | Expose `--system-prompt` (replace) despite capability loss | Parameter Conventions |
+| [D13](../decision/013_commands_are_bare_words.md) | Commands are bare words, not `--` flags | Syntax |
+| [D14](../decision/014_dedicated_refresh_command.md) | Dedicated `refresh` command vs reusing `isolated` | Behavior |
+| [D15](../decision/015_render_summary_gate.md) | `render_summary()` gates on invariant field `type=="result"`, not optional fields | Pipeline |
 
-Decisions by concern area: **Syntax**: D4, D13 | **Parsing**: D5, D7 | **Parameter Conventions**: D2, D6, D12 | **Behavior**: D3, D9, D11, D14 | **Naming**: D10 | **Pipeline**: D15
-
-**D9 — Session continuation by default:** Behavioral specification: [invariant/001_default_flags.md](../invariant/001_default_flags.md).
-
-`clr` adds value over the raw `claude` binary by managing session continuity automatically. Most invocations are continuations of ongoing work. Users who want a genuinely fresh start opt in explicitly with `--new-session`. This also decouples `clr` from external session orchestration. Consequence: `-c`/`--continue` was removed from the public flag list (redundant); `--new-session` was added as the only way to disable default continuation. Net: 11 flags → 11 flags.
-
-**Fixed (BUG-214, 2026-05-28; reopened and re-fixed 2026-06-03):** The "most invocations are continuations" assumption was false on first use. When no prior session existed in storage, `-c` caused the claude binary to exit immediately with "No conversation found to continue". Fixed by adding `session_exists()` guard in `build_claude_command()`: `-c` is now injected only when session storage is non-empty. Initial fix used `$HOME/.claude/` (always non-empty — contains credentials and config). Re-fix uses `claude_storage_core::continuation::check_continuation()` which checks the correct project-specific path `$HOME/.claude/projects/{encoded(cwd)}/`.
-
-**D12 — Expose `--system-prompt` (replace) despite capability loss:** Both `--system-prompt` (replace) and `--append-system-prompt` (extend) are exposed, even though `--system-prompt` strips Claude Code's behavioral guardrails.
-
-Specialized single-purpose agents need complete control. A coding assistant locked to Rust, a JSON-only responder, a domain-specific tool — these require a clean prompt slate, not additions on top of general-purpose coding instructions. The flag is not a mistake; it's a deliberate escape hatch.
-
-What actually survives replacement: Tool definitions (~12,000 tokens: Bash, Read, Write, Edit, Glob, Grep, WebFetch, etc.) are injected into the assembled system prompt before the replacement is applied. Tools remain fully operational. What is lost is the behavioral layer: coding guidelines, git safety rules, CLAUDE.md-handling instructions, output style. Claude gets raw tool access with no behavioral scaffolding.
-
-`--append-system-prompt` is documented as the default recommendation. `--system-prompt` is documented as an explicit opt-in for full-control scenarios, with the capability table in `command/01_run.md` (Notes) making the tradeoffs visible.
-
-**Note on CLI vs SDK distinction:** This behavior applies to the CLI `--system-prompt` flag. The Agent SDK `systemPrompt:` parameter has different semantics — tools may not be automatically preserved without using `preset: "claude_code"`. The CLI always preserves tool definitions regardless of replacement.
-
-**D15 — `render_summary()` gates on invariant field `type=="result"`, not optional fields:** `render_summary()` uses `"type":"result"` as its primary gate condition. Optional fields such as `session_id` are extracted with `.unwrap_or_default()` when absent.
-
-The `claude --output-format json` envelope schema varies by binary version. At least one observed version emits a minimal 7-field envelope without `session_id`: `{"type":"result","subtype":"success","is_error":false,"duration_ms":N,"duration_api_ms":N,"num_turns":N,"result":"..."}`. Gating on any optional field causes `render_summary()` to return `None` for that variant, silently restoring the raw-JSON fallback symptom that summary rendering was intended to fix (BUG-310; structural recurrence of BUG-309 which gated on `"id"`).
-
-**Pitfall:** BUG-309's fix replaced the `"id"` gate with `"session_id"` — same `?`-gate mechanism, different optional field. This inherited the same structural fragility. Any future change to the gate field must use a field guaranteed present in ALL CLR result envelopes across all claude binary versions.
-
-**Invariant field:** `"type":"result"` is present in every CLR result envelope observed across all tested claude binary versions. It is the only reliable gate. Consequence: `render_summary()` returns `None` only for non-CLR-result JSON (envelope lacks `"type":"result"`) or non-JSON input — not for CLR envelopes that omit optional fields like `session_id`, `usage`, or `total_cost_usd`.
+Decisions by concern area: **Syntax**: D4, D13 | **Parsing**: D5, D7 | **Parameter Conventions**: D2, D6, D12 | **Behavior**: D3, D9, D11, D14 | **Naming**: D10 | **Pipeline**: D15 | **Documentation**: D8
 
 ### Sources
 
@@ -82,7 +61,7 @@ The `claude --output-format json` envelope schema varies by binary version. At l
 
 | File | Notes |
 |------|-------|
-| [../001_design_decisions.md](../001_design_decisions.md) | Original informal design-rationale notes; retained as reference |
+| [`../decision/`](../decision/readme.md) | Full decision rationale, one file per decision — this feature doc's Design Decisions table is a summary index into that collection |
 
 ### Tests
 

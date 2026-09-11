@@ -6,8 +6,10 @@ The claude_storage_core test suite covers the core storage library: JSON parsing
 encoding/decoding, session filtering, content search, export, token-usage rollup, session-family
 discovery, per-conversation cost accounting, topic→UUIDv5 session-ID derivation, canonical
 path resolution, the wider session-event schema covering every JSONL line kind, the context
-state folded from that event stream, and reading one turn's assistant answer out of a
-transcript that is still being written. Every test is
+state folded from that event stream, reading one turn's assistant answer out of a
+transcript that is still being written, and projecting what a session started in a directory
+would begin with — skills, agents, commands, settings, MCP config — read from disk before any
+session exists. Every test is
 hermetic: storage-facing tests build their own `TempDir` tree — shared builders live in
 `storage_fixture/` — and environment-facing tests override `HOME`/`CLAUDE_HOME` to a temp
 directory, so no test reads the developer's real `~/.claude/`.
@@ -33,6 +35,7 @@ tests/
 ├── cost_report_test.rs                    # Unit tests for cost::cost_report() and aggregate_reports()
 ├── topic_session_tests.rs                 # Golden-vector tests for the topic→UUIDv5 session rule
 ├── transcript_answer_test.rs              # Reading one turn's assistant answer out of a live transcript
+├── startup_test.rs                        # StartupProjection — skills/agents/commands/settings/MCP read from disk
 ├── canonical_tests.rs                     # Unit tests for physical_abs canonical path resolution
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── entries_count_stats_line_read_failure_bug.rs # Bug Reproducer (BUG-508): entries()/count_entries()/stats() hard-failed whole file on one non-UTF-8 line
@@ -73,6 +76,7 @@ tests/
 | `cost_report_test.rs` | Unit tests for `cost::cost_report()`/`aggregate_reports()`: per-model attribution, TTL split, compactions, dedup |
 | `topic_session_tests.rs` | Golden-vector tests for the topic→UUIDv5 session rule |
 | `transcript_answer_test.rs` | Unit tests (CA-1–CA-8) for `transcript_path()`/`transcript_mark()`/`transcript_answer_since()`: assistant text blocks past the mark, thinking/tool blocks excluded, non-conversation lines neither counted nor printed, and the grace period for a transcript still being flushed |
+| `startup_test.rs` | Unit tests (SP-1–SP-15) for `StartupProjection::resolve_in()`/`resolve()`: skills/agents/commands per scope, symlinked skill directories, marker-gated skill detection, settings-file existence and ordering, MCP config gating, project-root ancestor walk, cross-scope clash reporting, deterministic roster sort, and a fresh install with no `claude_home` at all |
 | `canonical_tests.rs` | Unit tests for `physical_abs()` canonical path resolution |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `entries_count_stats_line_read_failure_bug.rs` | Lock in per-line skip for `entries()`/`count_entries()`/`stats()` on a non-UTF-8 line; regression guard for BUG-508 |

@@ -290,6 +290,7 @@ pub( crate ) fn print_ps_help() -> !
   println!();
   println!( "SESSION FLAGS (auto-inserted Flags column when ≥1 flag fires):" );
   println!( "  👈  This session    Parent of clr ps is a claude process" );
+  println!( "  🏠  Daemon-hosted    pid is present in the session daemon's list_sessions response" );
   println!( "  🆕  New since last check  PID absent from the previous clr ps snapshot" );
   println!( "  🖨   Print mode      Session cmdline contains --print or -p" );
   println!( "  🔌  Query mode      Control-session signature: --input-format/--output-format stream-json + --verbose" );

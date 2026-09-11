@@ -2,8 +2,10 @@
 //!
 //! ## Specification References
 //!
-//! - `docs/feature/002_wire_protocol.md` — the framing contract
-//! - `docs/invariant/001_capped_line_reads.md` — why the cap exists
+//! - `claude_daemon_core/docs/feature/002_wire_protocol.md` — the framing
+//!   contract
+//! - `claude_daemon_core/docs/invariant/001_capped_line_reads.md` — why the cap
+//!   exists
 //!
 //! ## Coverage
 //!
@@ -23,7 +25,7 @@
 
 use std::io::{ BufReader, Cursor };
 
-use claude_daemon_core::{ read_capped_line, Error, MAX_IPC_LINE_BYTES };
+use daemon_kit::{ read_capped_line, Error, MAX_IPC_LINE_BYTES };
 
 /// A reader that hands out at most `chunk` bytes per `fill_buf`.
 ///
@@ -36,7 +38,7 @@ fn chunked( bytes : Vec< u8 >, chunk : usize ) -> BufReader< Cursor< Vec< u8 > >
 }
 
 /// Read one line from `text` through a single-shot cursor.
-fn read_one( text : &str ) -> claude_daemon_core::Result< Option< String > >
+fn read_one( text : &str ) -> daemon_kit::Result< Option< String > >
 {
   read_capped_line( &mut Cursor::new( text.as_bytes().to_vec() ) )
 }

@@ -24,6 +24,8 @@
 | claude_terminal_core | Layer * standalone primitive: interprets a terminal output stream as readable plain text (zero deps) |
 | claude_session_core | Layer 0 primitive: observes live Claude Code sessions via registry scan and turn detection |
 | claude_context_report_core | Docs-only (not a workspace member): planned Layer 0 context report model spec |
+| daemon_kit | Layer * standalone primitive: generic single-instance Unix-socket daemon skeleton (lock, listener, IPC framing, client, dispatch loop) |
+| child_supervisor | Layer * standalone primitive: generic PTY-child bookkeeping (output draining, session table) |
 | claude_daemon_core | Layer 1 domain logic: single-instance session daemon, wire protocol, and IPC framing |
 | claude_topic_core | Layer 1 domain logic: topic identity, enumeration, selection, pool naming, and locking |
 | claude_journal_charts | Layer 1 domain logic: journal Command events aggregated into daily-usage SVG chart |

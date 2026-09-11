@@ -4,7 +4,7 @@
 
 - **Purpose**: Report, per hosted session, whether a turn is currently in flight — accurately enough that a client can use it to decide an answer has finished.
 - **In Scope**: `Daemon::with_background_reporting`, the refresh performed while answering `list_sessions`, and `SessionSummary::busy`.
-- **Out of Scope**: How the status is detected from the registry (→ `claude_session_core`'s turn feature), how a client combines this with output silence (→ `claude_runner/docs/cli/command/14_chat.md`), the session table itself (→ [003_session_table.md](003_session_table.md)).
+- **Out of Scope**: How the status is detected from the registry (→ `claude_session_core`'s turn feature), how a client combines this with output silence (→ `claude_runner/docs/cli/command/14_chat.md`), the session table itself (→ [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md)).
 
 ### Why This Exists
 
@@ -100,8 +100,8 @@ clr sessions                          # STATE reads idle
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/serve.rs` | `Daemon::refresh_turns`, `with_background_reporting` |
-| source | `src/table.rs` | `HostedSession::busy` / `set_busy` |
-| doc | [003_session_table.md](003_session_table.md) | The table the flag lives in |
+| source | `child_supervisor/src/table.rs` | `HostedSession::busy` / `set_busy` |
+| doc | [`child_supervisor/docs/feature/001_session_table.md`](../../../child_supervisor/docs/feature/001_session_table.md) | The table the flag lives in |
 | doc | [006_serving_clients.md](006_serving_clients.md) | The `list_sessions` request that reports it |
 | doc | [api/001_daemon_surface.md](../api/001_daemon_surface.md) | Full signature contract |
 | test | `tests/serve_test.rs` | Dispatch against a real socket and real children |

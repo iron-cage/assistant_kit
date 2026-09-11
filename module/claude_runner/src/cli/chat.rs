@@ -58,7 +58,7 @@ use core::time::Duration;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use claude_daemon_core::{ client, OutputSlice, Request, SessionSummary };
+use claude_daemon_core::{ client, DaemonPaths, Error, OutputSlice, Request, SessionSummary };
 use claude_storage_core::{ transcript_answer_since, transcript_mark, transcript_path };
 use claude_terminal_core::to_plain_text;
 
@@ -122,7 +122,7 @@ pub( crate ) fn dispatch_chat( tokens : &[ String ] ) -> !
     std::process::exit( 1 )
   }
 
-  let ( session_id, cwd ) = resolve_session( &socket, &args );
+  let ( session_id, cwd ) = resolve_session( &paths, &socket, &args );
 
   // Both marks are taken before the write, and for the same reason: everything
   // past them is this turn. One marks the terminal, the other the transcript.
@@ -250,7 +250,7 @@ fn expect_value< 'token >( value : Option< &'token String >, flag : &str ) -> &'
 /// Returns the session's own working directory alongside its id, because that
 /// directory is half of the transcript's address and `--session` can name a
 /// session somewhere else entirely.
-fn resolve_session( socket : &std::path::Path, args : &ChatArgs ) -> ( String, PathBuf )
+fn resolve_session( paths : &DaemonPaths, socket : &std::path::Path, args : &ChatArgs ) -> ( String, PathBuf )
 {
   let sessions = list_sessions( socket );
 
@@ -267,41 +267,81 @@ fn resolve_session( socket : &std::path::Path, args : &ChatArgs ) -> ( String, P
     return ( id.clone(), cwd );
   }
 
-  let here = args.dir.canonicalize().unwrap_or_else( | _ | args.dir.clone() );
-  let existing = sessions.iter().find( | session |
-  {
-    session.cwd.canonicalize().unwrap_or_else( | _ | session.cwd.clone() ) == here
-  } );
-
-  if let Some( session ) = existing
+  if let Some( session ) = find_by_cwd( &sessions, &args.dir )
   {
     return ( session.session_id.clone(), session.cwd.clone() );
   }
 
-  let session_id = spawn_session( socket, &here );
+  let here = args.dir.canonicalize().unwrap_or_else( | _ | args.dir.clone() );
+  let session_id = spawn_session( paths, socket, &here );
   ( session_id, here )
 }
 
 /// Ask the daemon what it is hosting.
-fn list_sessions( socket : &std::path::Path ) -> Vec< SessionSummary >
+pub( super ) fn list_sessions( socket : &std::path::Path ) -> Vec< SessionSummary >
 {
   let Ok( listed ) = client::call( socket, &Request::ListSessions ) else { return Vec::new() };
   serde_json::from_value( listed ).unwrap_or_default()
 }
 
+/// Find the hosted session, if any, whose working directory matches `dir`.
+///
+/// Canonicalises both sides before comparing. This is "the same rule `clr chat`
+/// resolves by" that `docs/feature/008_interactive_handoff.md` deliberately
+/// reuses for its own pre-spawn match, so the two commands can never disagree
+/// about what "this directory's session" means.
+#[ inline ]
+#[ must_use ]
+pub fn find_by_cwd< 'sessions >(
+  sessions : &'sessions [ SessionSummary ],
+  dir      : &std::path::Path,
+) -> Option< &'sessions SessionSummary >
+{
+  let here = dir.canonicalize().unwrap_or_else( | _ | dir.to_path_buf() );
+  sessions.iter().find( | session |
+    session.cwd.canonicalize().unwrap_or_else( | _ | session.cwd.clone() ) == here
+  )
+}
+
+/// True when `result` failed only because nothing was listening on the socket.
+///
+/// The shape a stale socket leaves behind: the file is still there, so the
+/// failure is a refused connection rather than one that never found a path to
+/// connect to at all.
+fn is_connection_refused( result : &claude_daemon_core::Result< serde_json::Value > ) -> bool
+{
+  matches!(
+    result,
+    Err( Error::Io( io_error ) ) if io_error.kind() == std::io::ErrorKind::ConnectionRefused
+  )
+}
+
 /// Start a session in `cwd` and let it finish drawing itself.
-fn spawn_session( socket : &std::path::Path, cwd : &std::path::Path ) -> String
+///
+/// Retries once through [`ensure_running`] on a refused connection: that call
+/// can have confirmed a daemon moments before this one, and the daemon's own
+/// idle self-exit can have ended it in the gap between the two — a live socket
+/// one instant and a stale one the next is not a broken daemon, just this one
+/// already gone. `ensure_running` starts a fresh one and this retries against
+/// it; only a second failure is reported.
+fn spawn_session( paths : &DaemonPaths, socket : &std::path::Path, cwd : &std::path::Path ) -> String
 {
   eprintln!( "Starting a session in {} …", cwd.display() );
 
-  let spawned = client::call( socket, &Request::Spawn
+  let request = Request::Spawn
   {
     cwd : cwd.to_path_buf(),
     // Sent separately afterwards, not here. The daemon delivers an inline prompt
     // the instant registration completes, which is earlier than the interface is
     // ready to be typed into.
     prompt : None,
-  } );
+  };
+
+  let mut spawned = client::call( socket, &request );
+  if is_connection_refused( &spawned ) && ensure_running( paths ).is_ok()
+  {
+    spawned = client::call( socket, &request );
+  }
 
   let session_id = match spawned
   {
