@@ -8,7 +8,11 @@
 use crate::output::format_duration_secs;
 use crate::account::{ TagFilter, eligible };
 use super::sort::sort_indices;
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy, WEEKLY_EXHAUSTION_THRESHOLD, H_EXHAUSTED_THRESHOLD };
+use super::types::
+{
+  AccountQuota, SortStrategy, PreferStrategy,
+  WEEKLY_EXHAUSTION_THRESHOLD, H_EXHAUSTED_THRESHOLD, ROTATION_HEADROOM_THRESHOLD,
+};
 use super::format::{ five_hour_left, seven_day_left, renewal_secs, next_event_raw };
 
 // ── Next-account recommendation ───────────────────────────────────────────────
@@ -36,7 +40,12 @@ where F : Fn( &AccountQuota ) -> bool
     //   ownership) and could be recommended as next despite being permanently unusable.
     // Pitfall: account=None is ambiguous (API fetch failed); only gate when billing_type
     //   is definitively "none" with account data present.
-    if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { continue; }
+    // Fix(BUG-557): shared predicate, not the re-derived literal — see `status_emoji`. The
+    //   original pitfall above still holds and is now enforced inside the predicate; what
+    //   changed is that a *persisted* verdict is no longer ambiguous the way `account=None`
+    //   is. Left as the literal, rotation could elect an account it knows is dead.
+    //   `is_dead_account()` keeps this gate `result`-independent (BUG-317).
+    if aq.is_dead_account() { continue; }
     if aq.result.is_err() { continue; }
     // Fix(audit-h-exhaustion-drift): use the canonical rounded five_hour_left() against
     //   H_EXHAUSTED_THRESHOLD instead of raw `utilization >= 85.0`.
@@ -65,6 +74,41 @@ where F : Fn( &AccountQuota ) -> bool
   None
 }
 
+// Fix(BUG-558): the weekly gate every strategy applied was `> WEEKLY_EXHAUSTION_THRESHOLD`
+//   — a 3% floor. An account 2 points above it with the fleet's earliest 7d reset won
+//   `renew` outright, and rotation landed on an account with nine minutes of life left.
+// Root cause: the *exclusion* boundary ("is this account spent?") was doing duty as the
+//   *selection* bar ("is this account worth switching to?"). Those are different questions
+//   and the floor only ever answered the first.
+// Pitfall: two passes, not one raised threshold. The second pass is what keeps a
+//   fully-depleted fleet rotating at all — collapsing this to a single
+//   `> ROTATION_HEADROOM_THRESHOLD` gate would make `rotate::1` report BUG-529's
+//   "no eligible account to rotate to" (038/AC-03) whenever every account sat below 15%,
+//   turning a degraded-but-working fleet into a hard failure.
+/// First eligible account preferring comfortable weekly headroom, falling back to the
+/// bare exhaustion floor.
+///
+/// Pass 1 demands `seven_day_left > ROTATION_HEADROOM_THRESHOLD`; pass 2 repeats the
+/// search at `> WEEKLY_EXHAUSTION_THRESHOLD` and runs only when pass 1 found nothing.
+/// Both passes walk the same pre-sorted index slice, so the caller's strategy ordering is
+/// preserved exactly — headroom filters the candidate set, it never reorders it.
+fn find_preferring_headroom(
+  accounts          : &[ AccountQuota ],
+  sorted            : &[ usize ],
+  now_secs          : u64,
+  selected_provider : &str,
+  tag_filter        : &TagFilter,
+  gate_ownership    : bool,
+) -> Option< usize >
+{
+  let owned_ok = | aq : &AccountQuota | !gate_ownership || aq.is_owned;
+  let find = | floor : f64 | find_first_eligible(
+    accounts, sorted, now_secs, selected_provider, tag_filter,
+    | aq | seven_day_left( aq ) > floor && owned_ok( aq ),
+  );
+  find( ROTATION_HEADROOM_THRESHOLD ).or_else( || find( WEEKLY_EXHAUSTION_THRESHOLD ) )
+}
+
 /// Find the recommended next account for a given `SortStrategy`.
 ///
 /// All strategies sort via `sort_indices()` then pick the first eligible
@@ -88,7 +132,7 @@ pub fn find_next_for_strategy(
     SortStrategy::Name =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Name, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, selected_provider, tag_filter, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_preferring_headroom( accounts, &sorted, now_secs, selected_provider, tag_filter, gate_ownership )
     }
     SortStrategy::Renew =>
     {
@@ -106,12 +150,12 @@ pub fn find_next_for_strategy(
       // Pitfall: a weekly-exhausted account's imminent reset does not make it a useful target —
       //   skip it regardless of renewal timing.
       let sorted = sort_indices( accounts, SortStrategy::Renew, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, selected_provider, tag_filter, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_preferring_headroom( accounts, &sorted, now_secs, selected_provider, tag_filter, gate_ownership )
     }
     SortStrategy::Renews =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Renews, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, selected_provider, tag_filter, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
+      find_preferring_headroom( accounts, &sorted, now_secs, selected_provider, tag_filter, gate_ownership )
     }
   }
 }

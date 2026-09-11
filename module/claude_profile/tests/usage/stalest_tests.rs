@@ -410,3 +410,151 @@ fn fetch_none_subset_fetches_every_account()
     );
   }
 }
+
+// ── BUG-559: refresh-slot starvation ─────────────────────────────────────────
+
+/// Write a per-host volatile cache file directly, with optional `last_error_at`.
+///
+/// Targets `cache/{any}/{name}.json` — `read_volatile_candidates` scans every subtree
+/// under `cache/`, so the subdirectory name is irrelevant to the read path and a fixed
+/// literal keeps the fixture independent of this host's own slug.
+fn write_volatile_cache( store : &std::path::Path, name : &str, fetched_at : &str, last_error_at : Option< &str > )
+{
+  let dir = store.join( "cache" ).join( "fixturehost_fixtureuser" );
+  std::fs::create_dir_all( &dir ).unwrap();
+  let mut obj = serde_json::json!(
+  {
+    "fetched_at" : fetched_at,
+    "five_hour"  : { "utilization" : 30.0 }
+  } );
+  if let Some( at ) = last_error_at
+  {
+    let o = obj.as_object_mut().unwrap();
+    o.insert( "last_error".into(), serde_json::Value::String( "no subscription".into() ) );
+    o.insert( "last_error_at".into(), serde_json::Value::String( at.to_string() ) );
+  }
+  std::fs::write( dir.join( format!( "{name}.json" ) ), serde_json::to_string_pretty( &obj ).unwrap() ).unwrap();
+  std::fs::write(
+    store.join( format!( "{name}.credentials.json" ) ),
+    r#"{"accessToken":"tok","expiresAt":1}"#,
+  ).unwrap();
+}
+
+/// bug_reproducer(BUG-559): a redirect-backend account must never consume a refresh
+/// slot — it has no Anthropic quota to fetch, so the slot produces nothing, forever.
+///
+/// **Root Cause**: staleness was "time since last success". A redirect-backend account
+/// can never write a quota cache, so it ranked `u64::MAX` on every tick and won slot 1
+/// permanently, while genuinely stale Anthropic accounts behind it were never reached.
+///
+/// **Why Not Caught**: T02 asserts precisely the opposite for the general case — a
+/// missing cache *should* rank oldest — and that remains correct. The defect only exists
+/// for accounts structurally incapable of ever producing a cache, a class that did not
+/// exist when the reducer was written (Feature 071 predates neither, but the two were
+/// never considered together).
+///
+/// **Fix Applied**: filter non-anthropic `inference_provider` out of the ranking entirely,
+/// before ages are computed.
+///
+/// **Prevention**: the fleet where this was observed ran `stalest::2` with exactly one
+/// redirect seat and one dead account — net zero live accounts refreshed per tick. Any
+/// change to the ranking key must keep this test and its BUG-557 sibling passing together;
+/// either exclusion alone still starves the fleet.
+///
+/// **Pitfall**: an empty `inference_provider` means "anthropic", never a wildcard — the
+/// same convention Gate 10 enforces. Filtering on `!= "anthropic"` without the empty case
+/// would exclude the entire ordinary fleet and select nothing at all.
+#[ test ]
+fn bug_559_redirect_backend_account_never_consumes_a_refresh_slot()
+{
+  let store = tempfile::tempdir().unwrap();
+  let mut redirect = mk_account( "kimi" );
+  redirect.inference_provider = "moonshot".to_string();
+  // No cache for either: the redirect seat can never have one, and the anthropic account
+  // is written cacheless so both would tie at u64::MAX under the pre-fix ranking — making
+  // the tie-break by list position, which `kimi` wins, the thing under test.
+  std::fs::write( store.path().join( "kimi.credentials.json" ), r#"{"accessToken":"tok","expiresAt":1}"# ).unwrap();
+  std::fs::write( store.path().join( "live@acme.com.credentials.json" ), r#"{"accessToken":"tok","expiresAt":1}"# ).unwrap();
+  let accounts = vec![ redirect, mk_account( "live@acme.com" ) ];
+
+  let selected = select_stalest( &accounts, store.path(), 1, 0, now_secs() );
+
+  assert_eq!(
+    selected, HashSet::from( [ "live@acme.com".to_string() ] ),
+    "BUG-559: the sole refresh slot must go to the account that can actually use it",
+  );
+}
+
+/// bug_reproducer(BUG-559): staleness must rank on the last fetch *attempt*, so an
+/// account that fails every time takes its turn instead of monopolising the fetch set.
+///
+/// **Root Cause**: `write_quota_cache` is reachable only on success, so a permanently
+/// dead account's `fetched_at` never advanced. Its age grew without bound, it stayed the
+/// stalest live candidate forever, and it won a slot on every single tick — while the
+/// accounts actually in use went days without a refresh.
+///
+/// **Why Not Caught**: every prior test drives accounts whose fetches succeed, where
+/// "last success" and "last attempt" are the same instant and the bug is invisible.
+///
+/// **Fix Applied**: rank on `max(fetched_at, last_error_at)`, with `last_error_at`
+/// persisted by BUG-557's `write_quota_cache_error`.
+///
+/// **Prevention**: this is a *re-definition*, deliberately not an exclusion. Excluding
+/// dead accounts would strand them — nothing would ever re-fetch one, so an account that
+/// resubscribed could never be discovered alive again.
+///
+/// **Pitfall**: `max`, not "prefer `last_error_at`". A stale error timestamp on an account
+/// that has since succeeded must lose to the fresher `fetched_at`, or a recovered account
+/// would be starved exactly as the dead one was.
+#[ test ]
+fn bug_559_staleness_ranks_on_last_attempt_not_last_success()
+{
+  let store = tempfile::tempdir().unwrap();
+  // Dead: last success 3 days ago, but attempted (and failed) one minute ago.
+  write_volatile_cache( store.path(), "dead@acme.com", "2026-08-13T12:00:00Z", Some( "2026-08-16T11:59:00Z" ) );
+  // Live: last success an hour ago, no failures.
+  write_volatile_cache( store.path(), "live@acme.com", "2026-08-16T11:00:00Z", None );
+  let accounts = vec![ mk_account( "dead@acme.com" ), mk_account( "live@acme.com" ) ];
+
+  let selected = select_stalest( &accounts, store.path(), 1, 0, now_secs() );
+
+  assert_eq!(
+    selected, HashSet::from( [ "live@acme.com".to_string() ] ),
+    "BUG-559: a just-attempted dead account must not outrank an account last reached an hour ago",
+  );
+}
+
+/// bug_reproducer(BUG-559): a recorded failure must not starve an account that has
+/// since fetched successfully — the `max` half of the ranking key.
+///
+/// **Root Cause**: n/a — this guards the fix's own failure mode rather than the original
+/// defect. See `bug_559_staleness_ranks_on_last_attempt_not_last_success`.
+///
+/// **Why Not Caught**: n/a.
+///
+/// **Fix Applied**: `ok.max( fail )` selects the newer of the two instants.
+///
+/// **Prevention**: the obvious alternative implementation — "use `last_error_at` when
+/// present, else `fetched_at`" — passes the sibling test above and fails this one,
+/// permanently demoting any account that ever failed once.
+///
+/// **Pitfall**: `write_quota_cache` clears both failure keys on success (BUG-557), so in
+/// production this state is transient. It is reachable from another host's subtree
+/// winning the freshest-wins merge, which is exactly what this fixture reproduces.
+#[ test ]
+fn bug_559_stale_failure_does_not_outrank_a_newer_success()
+{
+  let store = tempfile::tempdir().unwrap();
+  // Recovered: failed 3 days ago, succeeded 5 minutes ago — must be the freshest.
+  write_volatile_cache( store.path(), "recovered@acme.com", "2026-08-16T11:55:00Z", Some( "2026-08-13T12:00:00Z" ) );
+  // Ordinary: last success 2 hours ago, no failures — genuinely the stalest.
+  write_volatile_cache( store.path(), "ordinary@acme.com", "2026-08-16T10:00:00Z", None );
+  let accounts = vec![ mk_account( "recovered@acme.com" ), mk_account( "ordinary@acme.com" ) ];
+
+  let selected = select_stalest( &accounts, store.path(), 1, 0, now_secs() );
+
+  assert_eq!(
+    selected, HashSet::from( [ "ordinary@acme.com".to_string() ] ),
+    "BUG-559: an old failure must not make a freshly-succeeded account look stale",
+  );
+}

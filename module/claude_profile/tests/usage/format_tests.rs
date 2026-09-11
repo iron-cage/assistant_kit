@@ -10,7 +10,7 @@ use claude_profile::usage::test_bridge::{
   projected_window_end_secs,
 };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
-use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy, REDIRECT_NO_QUOTA_REASON };
+use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy, REDIRECT_NO_QUOTA_REASON, NO_SUBSCRIPTION_REASON };
 use tempfile::TempDir;
 
 // ── shorten_error ──────────────────────────────────────────────────────────
@@ -1518,5 +1518,170 @@ fn test_bug551_projected_window_end_floors_to_ten_minute_boundary()
   assert_eq!(
     projected_window_end_secs( 1_787_419_800 ), 1_787_437_800,
     "a touch exactly on a 10-minute boundary must not floor to the previous one",
+  );
+}
+
+// ── BUG-557: cached dead accounts render 🔴, not 🟢 ──────────────────────────
+
+/// Build the cache-rendered shape of a dead account: healthy-looking quota numbers,
+/// no live account data, and the failure verdict restored from the quota cache.
+///
+/// This is what all three `account: None` + `result: Ok(cached)` fetch branches produce
+/// — the 30s cache-first guard, the `stalest::K` stale-skip, and G1b occupied-elsewhere.
+fn mk_aq_cached_dead( h5_util : f64, d7_util : f64 ) -> AccountQuota
+{
+  let mut aq = mk_aq_ok_both( h5_util, d7_util );
+  aq.account         = None;
+  aq.cached          = true;
+  aq.cache_age_secs  = Some( 198_000 );
+  aq.fallback_reason = Some( NO_SUBSCRIPTION_REASON.to_string() );
+  aq
+}
+
+/// bug_reproducer(BUG-557): a dead account rendered from cache must show 🔴, not the
+/// green dot its last successful snapshot would otherwise imply.
+///
+/// # Root Cause
+/// `status_emoji`'s cancelled-subscription gate re-derived the literal
+/// `billing_type == "none"` against `aq.account` — the exact re-derivation BUG-332's own
+/// pitfall warns against. Every cache-rendered branch sets `account: None`, so the gate
+/// could never fire there, and the row fell through to the ordinary quota thresholds and
+/// was classified on numbers from the last time the account still worked.
+///
+/// # Why Not Caught
+/// BUG-317's test uses `mk_aq_cancelled`, which populates `account` with a live
+/// `billing_type: "none"`. That is the live path, which always worked. The cache-rendered
+/// shape — where the live signal is absent by construction rather than by accident — had
+/// no fixture at all.
+///
+/// # Fix Applied
+/// `status_emoji` calls the shared `AccountQuota::is_no_subscription()`, which recognises
+/// both the live conjunct and the verdict persisted by `write_quota_cache_error`.
+///
+/// # Prevention
+/// This is the user-visible half of the bug: four expired accounts showed 🟢/🟡 with
+/// plausible percentages in the watchdog's table for days, while a full live sweep of the
+/// same fleet correctly showed all four 🔴. Both tables were reading the same frozen
+/// cache; only the sweep re-fetched and re-learned the billing state in-process.
+///
+/// # Pitfall
+/// The quota numbers here are deliberately healthy (85% and 90% left). A fixture with
+/// spent quota would render 🔴 for the wrong reason and pass without the fix.
+#[ test ]
+fn bug_557_cached_dead_account_renders_red()
+{
+  let aq = mk_aq_cached_dead( 15.0, 10.0 );
+  assert_eq!(
+    status_emoji( &aq ), "🔴",
+    "BUG-557: a persisted no-subscription verdict must reach the Status dot",
+  );
+}
+
+/// bug_reproducer(BUG-557): the same row must sort into the Red group, so the dot and
+/// the table ordering agree.
+///
+/// # Root Cause
+/// As above — `status_group_of` carried its own copy of the same re-derived literal.
+///
+/// # Why Not Caught
+/// As above.
+///
+/// # Fix Applied
+/// `status_group_of` calls `is_no_subscription()` too.
+///
+/// # Prevention
+/// The dot and the group are computed by different functions from the same row. Fixing
+/// only one produces the 🔴-sorted-into-Green divergence BUG-321 already warns about, and
+/// a dead account would lead the table while displaying a red dot.
+///
+/// # Pitfall
+/// Assert the group separately from the emoji rather than inferring one from the other —
+/// that inference is exactly what went wrong.
+#[ test ]
+fn bug_557_cached_dead_account_sorts_into_red_group()
+{
+  let aq = mk_aq_cached_dead( 15.0, 10.0 );
+  assert_eq!(
+    status_group_of( &aq ), StatusGroup::Red,
+    "BUG-557: the Status dot and the sort group must agree on a cache-rendered dead row",
+  );
+}
+
+/// bug_reproducer(BUG-557): a transient cache-fallback row must keep its ordinary
+/// quota-based classification.
+///
+/// # Root Cause
+/// n/a — this guards the fix's own failure mode.
+///
+/// # Why Not Caught
+/// n/a.
+///
+/// # Fix Applied
+/// The cached disjunct matches `NO_SUBSCRIPTION_REASON` exactly rather than testing
+/// `fallback_reason` for presence.
+///
+/// # Prevention
+/// BUG-335 populates `fallback_reason` on every transient cache fallback. Keying the
+/// verdict on `.is_some()` would paint the whole fleet 🔴 during any upstream outage —
+/// replacing an under-reporting bug with a louder over-reporting one.
+///
+/// # Pitfall
+/// The fixture's quota must be healthy, so that a 🟢 result proves the reason string was
+/// inspected rather than merely that the thresholds happened to agree.
+#[ test ]
+fn bug_557_transient_cache_fallback_row_keeps_quota_classification()
+{
+  let mut aq = mk_aq_ok_both( 15.0, 10.0 );
+  aq.account         = None;
+  aq.cached          = true;
+  aq.cache_age_secs  = Some( 900 );
+  aq.fallback_reason = Some( "HTTP 502 Bad Gateway".to_string() );
+  assert_eq!(
+    status_emoji( &aq ), "🟢",
+    "BUG-557: a transient fetch failure must not be read as a cancelled subscription",
+  );
+}
+
+/// bug_reproducer(BUG-557): the BUG-317 population must survive the BUG-557 refactor —
+/// `billing_type == "none"` with a *successful* fetch is still a dead account.
+///
+/// # Root Cause
+/// n/a for BUG-317 itself; this guards the refactor that fixed BUG-557. The natural-looking
+/// move — route all three classification sites through the existing `is_no_subscription()`
+/// — is wrong, because that predicate requires `result.is_err()` (BUG-332's conjunction).
+/// Applying it here would silently readmit every live `billing_type == "none"` account
+/// whose usage fetch happened to return 200, undoing BUG-317.
+///
+/// # Why Not Caught
+/// It would have been: `invariant/011_shared_predicate_consistency.md` records these three
+/// sites as deliberately `result`-independent exceptions. The invariant is the only place
+/// that distinction is written down, and nothing enforced it mechanically.
+///
+/// # Fix Applied
+/// Two predicates, not one. `is_dead_account()` (`result`-independent, for classification)
+/// and `is_no_subscription()` (`result`-conjunctive, for the `~Renews` display cell), with
+/// the cached verdict as a shared disjunct on both.
+///
+/// # Prevention
+/// This test now enforces mechanically what the invariant could previously only assert in
+/// prose: merging the two predicates fails here, immediately.
+///
+/// # Pitfall
+/// `mk_aq_cancelled` builds `billing_type: "none"` with a live `account` — the fixture's
+/// `result` must be `Ok` for this test to bite. A cancelled account whose fetch also failed
+/// would render 🔴 via the plain `result.is_err()` gate and pass regardless.
+#[ test ]
+fn bug_557_live_cancelled_account_with_ok_result_stays_red()
+{
+  let aq = mk_aq_cancelled( "cancelled", 15.0, 10.0 );
+  assert!( aq.result.is_ok(), "fixture precondition: the fetch must have succeeded" );
+  assert_eq!(
+    status_emoji( &aq ), "🔴",
+    "BUG-317/BUG-557: billing_type=\"none\" is a dead account on its own — classification \
+     must not require result.is_err()",
+  );
+  assert_eq!(
+    status_group_of( &aq ), StatusGroup::Red,
+    "BUG-317/BUG-557: the sort group must stay result-independent too",
   );
 }

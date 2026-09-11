@@ -21,6 +21,9 @@
 //! | `t502_05_history_ring_continues_across_hosts` | TSK-502/T06: another host's ring is carried into the own-host file by write_quota_cache and continued by write_history_entry |
 //! | `bug_540_period_key_is_utilization_not_left_pct` | BUG-540: serialized period key is `utilization` (what the value is), never the inverted `left_pct` |
 //! | `bug_540_legacy_left_pct_cache_file_still_reads` | BUG-540: legacy cache files carrying `left_pct` stay readable via the dual-key reader |
+//! | `bug_557_definitive_failure_persists_without_disturbing_last_success` | BUG-557: write_quota_cache_error records the verdict; `fetched_at`, periods and history all survive it |
+//! | `bug_557_success_clears_a_prior_failure` | BUG-557: a later successful fetch drops `last_error`/`last_error_at` by construction |
+//! | `bug_557_failure_without_any_prior_cache_writes_nothing` | BUG-557: merge-only — a never-succeeded account gets no file, so it keeps ranking infinitely stale |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1082,3 +1085,155 @@ fn bug_540_legacy_left_pct_cache_file_still_reads()
   assert_eq!( resets_at.as_deref(), Some( "2026-08-19T15:00:00Z" ) );
 }
 
+
+// ── BUG-557: definitive-failure persistence ──────────────────────────────────
+
+/// bug_reproducer(BUG-557): a definitive fetch failure must leave a durable trace
+/// on disk without disturbing anything the last *successful* fetch recorded.
+///
+/// **Root Cause**: `write_quota_cache` was reachable only from `fetch_quota_for_list`'s
+/// `Ok` arm, so a failure wrote nothing at all. The one status-ish key the writer emitted
+/// was the hardcoded literal `"status": "ok"` — no reader consulted it and no failure path
+/// could contradict it, so a dead account's cache file kept asserting health indefinitely.
+///
+/// **Why Not Caught**: every existing cache test drives the success path. Nothing asserted
+/// what the cache says after a failure, because until now the answer was "nothing at all"
+/// and that was the design rather than a defect.
+///
+/// **Fix Applied**: `write_quota_cache_error` records `last_error`/`last_error_at` by
+/// merging into the freshest existing snapshot, leaving `fetched_at`, the period values
+/// and the history ring untouched.
+///
+/// **Prevention**: assert the preserved fields explicitly, not just the new ones — the
+/// tempting implementation (build a fresh object like `write_quota_cache` does) would pass
+/// a test that only checked `last_error` while silently discarding the quota data that
+/// makes a cache-rendered row worth rendering.
+///
+/// **Pitfall**: `fetched_at` must NOT advance on a failure. Every render surface prints
+/// its age as "time since last success" (`(55h ago)`), so bumping it here would make a
+/// dead account read as freshly refreshed — the precise illusion this bug is about.
+#[ test ]
+fn bug_557_definitive_failure_persists_without_disturbing_last_success()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "dead@acme.com";
+
+  account::write_quota_cache(
+    store, name,
+    Some( ( 20.0, Some( "2026-08-27T12:00:00Z" ) ) ),
+    Some( ( 55.0, Some( "2026-08-30T12:00:00Z" ) ) ),
+    None,
+  );
+  account::write_history_entry( store, name, 1_756_000_000, Some( ( 20.0, "" ) ), None, None );
+  let before = account::read_quota_cache( store, name ).expect( "success write must be readable" );
+
+  account::write_quota_cache_error( store, name, "no subscription" );
+
+  let after = account::read_quota_cache( store, name ).expect( "cache must survive a failure write" );
+  assert_eq!(
+    after.last_error.as_deref(), Some( "no subscription" ),
+    "BUG-557: the failure verdict must be readable back from disk",
+  );
+  assert!(
+    after.last_error_at.is_some(),
+    "BUG-557: the failure must carry its own timestamp, distinct from fetched_at",
+  );
+  assert_eq!(
+    after.fetched_at, before.fetched_at,
+    "BUG-557: fetched_at means 'last success' — a failure must never advance it",
+  );
+  assert_eq!(
+    after.five_hour, before.five_hour,
+    "BUG-557: the last-good 5h reading must survive the failure write",
+  );
+  assert_eq!(
+    after.seven_day, before.seven_day,
+    "BUG-557: the last-good 7d reading must survive the failure write",
+  );
+  assert_eq!(
+    account::read_history( store, name ).len(), 1,
+    "BUG-557: the measurement history ring must survive the failure write",
+  );
+}
+
+/// bug_reproducer(BUG-557): a later success must clear the recorded failure, so an
+/// account that resubscribes stops being reported as dead.
+///
+/// **Root Cause**: as above — the failure verdict is durable state, and durable state
+/// that only ever gets set is a latch, not a status.
+///
+/// **Why Not Caught**: new behaviour; no prior test could observe a verdict that was
+/// never written in the first place.
+///
+/// **Fix Applied**: none needed beyond the existing shape — `write_quota_cache` rebuilds
+/// its JSON object from scratch on every success, so the failure keys are dropped rather
+/// than merged forward. This test pins that emergent property so a future refactor toward
+/// merge-on-write cannot silently turn the verdict into a latch.
+///
+/// **Prevention**: assert the *absence* explicitly. A merge-preserving rewrite of
+/// `write_quota_cache` would look strictly safer in review while stranding every recovered
+/// account permanently 🔴.
+///
+/// **Pitfall**: `last_error_at` must clear alongside `last_error` — `select_stalest` ranks
+/// on `max(fetched_at, last_error_at)`, so an orphaned timestamp would keep skewing the
+/// refresh schedule after the error itself was gone.
+#[ test ]
+fn bug_557_success_clears_a_prior_failure()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "revived@acme.com";
+
+  account::write_quota_cache( store, name, Some( ( 10.0, None ) ), None, None );
+  account::write_quota_cache_error( store, name, "no subscription" );
+  assert!(
+    account::read_quota_cache( store, name ).unwrap().last_error.is_some(),
+    "precondition: the failure must be recorded before the recovery write",
+  );
+
+  account::write_quota_cache( store, name, Some( ( 12.0, None ) ), None, None );
+
+  let entry = account::read_quota_cache( store, name ).expect( "cache present" );
+  assert_eq!(
+    entry.last_error, None,
+    "BUG-557: a successful fetch must clear the failure verdict, not latch it",
+  );
+  assert_eq!(
+    entry.last_error_at, None,
+    "BUG-557: the failure timestamp must clear with the failure it belongs to",
+  );
+}
+
+/// bug_reproducer(BUG-557): an account that has never fetched successfully gets no
+/// cache file from a failure alone.
+///
+/// **Root Cause**: n/a — this pins a deliberate boundary of the fix rather than a defect.
+///
+/// **Why Not Caught**: n/a.
+///
+/// **Fix Applied**: `write_quota_cache_error` is merge-only. With no volatile candidate to
+/// merge into there is no `fetched_at` to preserve, and synthesising one would either
+/// fabricate a success that never happened or write a file the reader rejects anyway.
+///
+/// **Prevention**: this is load-bearing for BUG-559. `select_stalest` ranks a cacheless
+/// account `u64::MAX` (refresh first); writing a file here would give a never-verified
+/// account a finite age and quietly demote it below accounts that have real data.
+///
+/// **Pitfall**: "no cache after a failure" is the correct outcome, not a missed write. A
+/// single failure is not evidence an account is dead — it may simply have never been
+/// reached yet, and it must stay at the front of the refresh queue until it has been.
+#[ test ]
+fn bug_557_failure_without_any_prior_cache_writes_nothing()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "never-seen@acme.com";
+
+  account::write_quota_cache_error( store, name, "no subscription" );
+
+  assert!(
+    account::read_quota_cache( store, name ).is_none(),
+    "BUG-557: a failure with no prior success must not fabricate a cache entry",
+  );
+}

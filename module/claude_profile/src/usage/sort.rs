@@ -48,7 +48,11 @@ pub fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   // Pitfall: account may be None (account-API fetch failed) — only classify Red when
   //   account data is present and billing_type is definitively "none". Absent data is
   //   ambiguous; do not penalize it.
-  if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+  // Fix(BUG-557): shared predicate, not the re-derived literal — see `status_emoji`. Left
+  //   as the literal, a cache-rendered dead account sorted into Green and led the table.
+  //   `is_dead_account()` keeps this gate `result`-independent (BUG-317), unlike
+  //   `is_no_subscription()`.
+  if aq.is_dead_account()
   {
     return StatusGroup::Red;
   }

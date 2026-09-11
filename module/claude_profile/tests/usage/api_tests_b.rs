@@ -618,14 +618,17 @@ fn ft_apply_post_switch_touch_routes_through_refresh_account_token()
 /// good quota data returned by the API, but subscription permanently cancelled.
 ///
 /// # Fix Applied
-/// Fix D (BUG-317): the retain predicate is now:
-/// `aq.result.is_ok() && !aq.account.as_ref().is_some_and(|a| a.billing_type == "none")`
-/// Both conditions must pass. A cancelled account satisfies `result.is_ok()` but fails the
-/// second condition — correctly excluded.
+/// Fix D (BUG-317): the retain predicate is now
+/// `aq.result.is_ok() && !aq.is_dead_account()` (BUG-557 replaced the re-derived
+/// `billing_type == "none"` literal with the shared predicate; the combination with `result`
+/// stays disjunctive and at the call site, per invariant/011). Both conditions must pass. A
+/// cancelled account satisfies `result.is_ok()` but fails the second — correctly excluded.
 ///
 /// # Prevention
-/// Structural inspection of `api.rs` via `include_str!` ensures the `billing_type` guard
-/// cannot be silently removed. If Fix D is reverted, the structural assertion fails immediately.
+/// Structural inspection via `include_str!` ensures the guard cannot be silently removed.
+/// Since BUG-557 the check is a two-link chain — `api.rs` must call `is_dead_account()`, and
+/// `types.rs`'s definition of it must still test `billing_type == "none"` — because either
+/// link alone can be gutted while the other still reads as intact.
 ///
 /// # Pitfall
 /// `account = None` is NOT equivalent to `billing_type = "none"`. `account = None` means the
@@ -640,16 +643,39 @@ fn mre_bug317_cancelled_excluded_by_only_valid()
 
   // ── Structural: verify Fix D predicate is present in api.rs ─────────────────────────────
   // include_str! is compile-time — the assertion fails at build if Fix D is reverted.
+  // Fix(BUG-557): Fix D's literal moved behind AccountQuota::is_dead_account(), so this
+  //   guard is now a two-link chain: the call site must name the predicate, and the
+  //   predicate must still encode the literal.
+  // Root cause: the old scan read a fixed 300-byte window after `if params.only_valid`
+  //   looking for "billing_type". BUG-557 added an explanatory comment to that block, which
+  //   pushed the retain line past the window — the guard reported a revert that never happened.
+  // Pitfall: checking only the call site lets the predicate be gutted while the call remains;
+  //   checking only types.rs misses the call being dropped here. Both links are required.
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
   let only_valid_pos = src
     .find( "if params.only_valid" )
     .expect( "BUG-317 Fix D: 'if params.only_valid' block must exist in api.rs" );
-  // Scan the retain expression (next 300 bytes) for the billing_type guard.
-  let block = &src[ only_valid_pos .. ( only_valid_pos + 300 ).min( src.len() ) ];
+  // Link 1 — the call site. Scan forward to the block's own retain call (comment-length
+  // independent, unlike a fixed byte window).
+  let retain_line = src[ only_valid_pos .. ]
+    .lines()
+    .find( |l| l.contains( "accounts.retain(" ) )
+    .expect( "BUG-317 Fix D: only_valid block must contain an accounts.retain(...) call" );
   assert!(
-    block.contains( "billing_type" ),
-    "BUG-317 Fix D: only_valid retain predicate must check billing_type=\"none\" to exclude \
-    cancelled accounts — revert of Fix D detected in api.rs\nblock:\n{block}",
+    retain_line.contains( "is_dead_account" ),
+    "BUG-317 Fix D: only_valid retain predicate must exclude dead accounts via \
+    is_dead_account() — revert of Fix D detected in api.rs\nretain:{retain_line}",
+  );
+  // Link 2 — the predicate itself still tests the definitive cancellation signal.
+  let types_src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/types.rs" ) );
+  let dead_pos = types_src
+    .find( "fn is_dead_account" )
+    .expect( "BUG-317 Fix D: AccountQuota::is_dead_account must exist in types.rs" );
+  let body = &types_src[ dead_pos .. ( dead_pos + 300 ).min( types_src.len() ) ];
+  assert!(
+    body.contains( r#"billing_type == "none""# ),
+    "BUG-317 Fix D: is_dead_account() must still test billing_type=\"none\" — the api.rs \
+    call site is intact but its predicate was gutted\nbody:\n{body}",
   );
 
   // ── Preconditions: mk_aq_cancelled produces the critical BUG-317 scenario ────────────────
@@ -667,14 +693,17 @@ fn mre_bug317_cancelled_excluded_by_only_valid()
   );
 
   // ── Predicate: Fix D correctly excludes the cancelled account ────────────────────────────
-  // Replicate the Fix D retain predicate. The retain keeps accounts where this is true;
-  // the cancelled account must evaluate to false (excluded).
-  let passes_only_valid = cancelled.result.is_ok()
-    && !cancelled.account.as_ref().is_some_and( |a| a.billing_type == "none" );
+  // Fix(BUG-557): evaluate the shipped predicate, don't re-derive it.
+  // Root cause: this line used to replicate the retain expression's literal inline — the exact
+  //   copy-of-a-predicate drift invariant/011 exists to prevent. A replica passes forever, so
+  //   it proved the copy correct rather than the code.
+  // Pitfall: `is_dead_account()`, never `is_no_subscription()` — the latter additionally
+  //   requires result.is_err(), which this fixture (result=Ok) deliberately does not satisfy.
+  let passes_only_valid = cancelled.result.is_ok() && !cancelled.is_dead_account();
   assert!(
     !passes_only_valid,
     "BUG-317 Fix D: cancelled account (result=Ok, billing_type=\"none\") must be excluded \
-    by only_valid::1 — the billing_type guard must negate the result.is_ok() pass",
+    by only_valid::1 — the dead-account guard must negate the result.is_ok() pass",
   );
 }
 

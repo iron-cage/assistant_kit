@@ -25,7 +25,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 1 | Current | `is_current = true` | `sort_next.rs:27` |
 | 2 | Active | `is_active = true` | `sort_next.rs:27` |
 | 3 | Occupied | `is_occupied_elsewhere = true` | `sort_next.rs:28` |
-| 3b | Cancelled | `billing_type = "none"` | `sort_next.rs:29` |
+| 3b | Cancelled | `aq.is_dead_account()` — `billing_type = "none"` (independent of `result`, per BUG-317) **or** a persisted no-subscription verdict on `fallback_reason` ([feature/033 AC-21](../feature/033_quota_cache.md)). Never `is_no_subscription()`: that predicate additionally requires `result.is_err()` (BUG-332) and would readmit live cancelled accounts whose fetch returned `Ok` | `sort_next.rs` |
 | 4 | Error | `result = Err(...)` | `sort_next.rs:30` |
 | 5 | h-exhausted | `five_hour_left( aq ) <= H_EXHAUSTED_THRESHOLD` (rounded left ≤ 15%; audit-h-exhaustion-drift — formerly raw `utilization >= 85.0`) | `sort_next.rs:47` |
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |

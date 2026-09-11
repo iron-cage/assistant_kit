@@ -38,9 +38,20 @@ Key definitions:
 - `sub_renewal_secs`: seconds until subscription billing renewal (`renewal_at` or estimated `org_created_at`; `u64::MAX` if absent). Source: `sort.rs:138-152` (`sort::renew`), `sort.rs:179-187` (`sort::renews`).
 - `prefer_weekly`: model-aware 7d capacity via `relevant_quotas(aq, prefer).1` (`format.rs`). See [algorithm/007](007_sort_strategies.md).
 
-#### Step 3 — First eligible wins
+#### Step 3 — First eligible wins, preferring weekly headroom
 
 Walk the sorted list from position 0. The first account passing all 10 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error). Because `reserve` is a leading sort key (Step 2) rather than a gate, a reserved account is only ever reached by this walk once every non-reserved candidate has already failed a gate — "first eligible wins" needs no change to produce "reserved accounts are picked only when nothing else qualifies."
+
+The walk runs **twice** (`find_preferring_headroom`, BUG-558), identically except for Gate 7's weekly floor:
+
+| Pass | Gate 7 floor | Runs when |
+|---|---|---|
+| 1 | `seven_day_left > ROTATION_HEADROOM_THRESHOLD` (15%) | always |
+| 2 | `seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD` (3%) | only when pass 1 returned `None` |
+
+Both passes walk the *same* sorted slice, so Step 2's strategy ordering is preserved exactly — headroom narrows the candidate set, it never reorders it. Under `sort::renew` this is what stops the soonest-reset key from electing an account with minutes of usable life left merely because its reset is imminent: an account at 5% weekly and an account at 40% weekly are both above the 3% exclusion floor, and only pass 1 distinguishes them.
+
+The second pass is load-bearing, not a nicety: a single raised gate would make `rotate::1` report "no eligible account to rotate to" ([feature/038](../feature/038_usage_strategy_rotate.md) AC-03) the moment every account fell below 15%, converting a degraded-but-working fleet into a hard failure.
 
 #### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
 

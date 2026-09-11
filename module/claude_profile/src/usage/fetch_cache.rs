@@ -16,6 +16,25 @@ fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
   now.saturating_sub( then )
 }
 
+// ── Persisted failure verdict ────────────────────────────────────────────────
+
+// Fix(BUG-557): a separate reader rather than a 4th element on `read_cached_quota`'s
+//   return tuple — that tuple has 5 source call sites and ~8 test destructurings, none
+//   of which want this, and widening it would have churned every one of them to add a
+//   `_` they ignore. Root cause of the bug itself is documented on `QuotaCacheEntry`.
+// Pitfall: returns the raw persisted reason, NOT a health verdict — the caller decides
+//   what it means by comparing against `NO_SUBSCRIPTION_REASON`. Do not let this grow a
+//   bool "is dead" return; that judgement belongs to `AccountQuota::is_no_subscription`.
+/// Reason string of the last definitive fetch failure recorded for `name`, if any.
+///
+/// `None` when no cache exists, or when the freshest cached snapshot came from a
+/// successful fetch — [`claude_profile_core::account::write_quota_cache`] rebuilds the
+/// cache object from scratch, so a success drops any prior failure by construction.
+pub fn read_cached_error( credential_store : &std::path::Path, name : &str ) -> Option< String >
+{
+  claude_profile_core::account::read_quota_cache( credential_store, name )?.last_error
+}
+
 // ── Centralized cache-read + approximation ───────────────────────────────────
 
 /// Read quota cache and apply Feature 040 polynomial approximation when available.

@@ -21,9 +21,30 @@ pub fn reduction_applies( stalest : u32, rotate : bool ) -> bool
   stalest > 0 && !rotate
 }
 
-/// Select the fetch set: the `k` accounts with the oldest cache `fetched_at`.
+// Fix(BUG-559): every slot this reducer handed out went to an account that could not use
+//   it, so a fleet on `stalest::K` refreshed nothing at all and its live accounts sat
+//   frozen for days. Two distinct starvation sources, one per patch below:
+//   1. A redirect-backend account has no Anthropic quota to fetch, so it never writes a
+//      cache, so it ranks `u64::MAX` forever and wins slot 1 on every single tick.
+//   2. A permanently dead account's fetch always fails, so `write_quota_cache` — reachable
+//      only on success — never advances its `fetched_at`, so it stays the stalest live
+//      candidate forever and wins slot 2 on every single tick.
+// Root cause shared by both: staleness was defined as "time since last SUCCESS", which for
+//   an account that can never succeed is unbounded and monotonically increasing. A ranking
+//   meant to spread refreshes evenly instead pinned itself to exactly the accounts that
+//   could not benefit, and starved the ones that could.
+// Pitfall: (1) is an exclusion, (2) is a re-definition — do not collapse them. Excluding
+//   dead accounts too would strand them: nothing would ever re-fetch one, so a resubscribed
+//   account could never be discovered alive again. Ranking by last *attempt* keeps them in
+//   the rotation at a fair cadence instead of at the front of the queue forever.
+/// Select the fetch set: the `k` accounts whose last fetch *attempt* is oldest.
 ///
 /// Age ranking:
+/// - Ranked by `max(fetched_at, last_error_at)` — the last attempt, not the last success.
+///   An account that fails every time still has its turn come round, but does not
+///   monopolise the fetch set by never advancing its success timestamp.
+/// - Redirect-backend accounts (Feature 071) are excluded outright: they have no Anthropic
+///   quota to fetch, so a slot spent on one produces nothing on every tick, forever.
 /// - Missing cache, or an unparseable `fetched_at`, ranks infinitely stale
 ///   (`u64::MAX`) — an account without a usable cache should be refreshed first.
 ///   This deliberately differs from `fetch_cache.rs`'s `unwrap_or( now )` (age 0):
@@ -46,10 +67,19 @@ pub fn select_stalest(
   let mut ranked : Vec< ( usize, u64, &str ) > = accounts
     .iter()
     .enumerate()
+    // Gate 10's own convention: an empty `inference_provider` means "anthropic", never a
+    // wildcard. Only a non-anthropic backend is genuinely quota-less and excludable.
+    .filter( |( _, acct )| acct.inference_provider.is_empty() || acct.inference_provider == "anthropic" )
     .map( |( idx, acct )|
     {
       let age = claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
-        .and_then( | entry | claude_profile_core::account::parse_iso_utc_secs( &entry.fetched_at ) )
+        .and_then( | entry |
+        {
+          let ok   = claude_profile_core::account::parse_iso_utc_secs( &entry.fetched_at );
+          let fail = entry.last_error_at.as_deref().and_then( claude_profile_core::account::parse_iso_utc_secs );
+          // Newest of the two instants — either one is an attempt that has already run.
+          ok.max( fail )
+        } )
         .map_or( u64::MAX, | then | now_secs.saturating_sub( then ) );
       ( idx, age, acct.name.as_str() )
     } )

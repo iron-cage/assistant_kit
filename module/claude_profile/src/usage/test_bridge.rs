@@ -12,7 +12,8 @@ pub mod types
     AccountQuota, SortStrategy, PreferStrategy, ColsVisibility,
     SubprocessModel, SubprocessEffort, GetField,
     OPUS_OVERRIDE_THRESHOLD, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
-    REDIRECT_NO_QUOTA_REASON,
+    ROTATION_HEADROOM_THRESHOLD,
+    REDIRECT_NO_QUOTA_REASON, NO_SUBSCRIPTION_REASON,
   };
 }
 
@@ -72,7 +73,7 @@ pub use super::subprocess::{ resolve_model, resolve_effort, effort_pre_args };
 
 // ── Fetch ─────────────────────────────────────────────────────────────────
 pub use super::fetch::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
-pub use super::fetch_cache::read_cached_quota;
+pub use super::fetch_cache::{ read_cached_quota, read_cached_error };
 
 // ── Stalest ───────────────────────────────────────────────────────────────
 pub use super::stalest::{ select_stalest, reduction_applies };
