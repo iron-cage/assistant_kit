@@ -490,7 +490,18 @@ fn render_cell
     ColumnKey::Rank => format!( "{rank:>width$}" ),
     ColumnKey::Group =>
     {
-      let text = truncate_str( short_id( &row.group ), width );
+      // `project` grouping stores the project's own absolute path in
+      // `row.group` (see `ColumnKey::Project`'s arm below) — head-truncating
+      // it via `truncate_str` collides sibling projects sharing a long
+      // prefix, the exact defect `Fix(BUG-544)` fixed for the `Project`
+      // column but left standing here for `Group` under this one dimension
+      // (`Fix(BUG-550)`). `session`/`model`/`day` values are never paths, so
+      // they keep the original `short_id` + head-truncation.
+      let text = match group_by
+      {
+        GroupKey::Project => truncate_path_tail( &row.group, width ),
+        GroupKey::Session | GroupKey::Model | GroupKey::Day => truncate_str( short_id( &row.group ), width ),
+      };
       format!( "{text:<width$}" )
     }
     ColumnKey::Project =>

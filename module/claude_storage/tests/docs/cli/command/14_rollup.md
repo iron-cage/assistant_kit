@@ -38,6 +38,7 @@ Integration tests for the `.rollup` command, implemented in `tests/cli_cmd_rollu
 | INT-28 | Default columns:: excludes Rank/CacheW/CacheR | Column Projection |
 | B528 | Cross-project session_id duplication inflates totals | Bug Reproducer |
 | B544 | Group header tracks group:: and session rows name their project | Bug Reproducer |
+| B550 | group::project's Group column tail-truncates instead of colliding sibling prefixes | Bug Reproducer |
 
 ## Test Coverage Summary
 
@@ -51,7 +52,7 @@ Integration tests for the `.rollup` command, implemented in `tests/cli_cmd_rollu
 - Exit Codes: 2 tests (INT-14, INT-15)
 - Input Validation: 6 tests (INT-16 through INT-21)
 - Composition: 1 test (INT-22)
-- Bug Reproducer: 2 tests (B528, B544)
+- Bug Reproducer: 3 tests (B528, B544, B550)
 
 ## Test Cases
 

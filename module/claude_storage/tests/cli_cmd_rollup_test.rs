@@ -1743,3 +1743,86 @@ fn bug_544_group_header_tracks_dimension_and_sessions_name_project()
     );
   }
 }
+
+/// BUG-550: `group::project`'s `Group` column head-truncated the project's
+/// own absolute path via `truncate_str`, colliding sibling projects that
+/// share a long absolute prefix — the exact defect `Fix(BUG-544)` fixed for
+/// the CLI-synthesized `Project` column but left standing in `Group`'s own
+/// arm, which `group::project` populates with that same path value
+/// (`row.group`).
+///
+/// ## Root Cause
+/// `render_cell`'s `ColumnKey::Group` arm unconditionally called
+/// `truncate_str( short_id( &row.group ), width )` regardless of `group_by`.
+/// `short_id` only shortens exact 36-char UUID-shaped strings, so a project
+/// path passes through unchanged into `truncate_str`, which keeps the
+/// *head* — identical for any two paths sharing a long common prefix.
+///
+/// ## Why Not Caught
+/// BUG-544's own reproducer exercises `group::project` with two short,
+/// disjoint-prefix `TempDir`-child paths (`bug544-x`/`bug544-y`) that both
+/// fit within the 24-char column width, so head- and tail-truncation
+/// produce identical output for either project and the defect never
+/// triggers.
+///
+/// ## Fix Applied
+/// `ColumnKey::Group`'s arm now matches on `group_by`: `GroupKey::Project`
+/// truncates via `truncate_path_tail` (tail-preserving — the same helper
+/// the `Project` column already uses for this identical value);
+/// `Session`/`Model`/`Day` keep the original `short_id` + head-truncation,
+/// since those values are never paths.
+///
+/// ## Prevention
+/// A reproducer for a truncation-direction defect must construct fixtures
+/// whose distinguishing content sits past the truncation boundary — a
+/// same-length-as-the-column fixture (as BUG-544's own test uses) cannot
+/// exercise either truncation direction differently.
+///
+/// ## Pitfall
+/// Two columns rendering the same underlying value (`row.group`, under
+/// `group::project`) must apply the same truncation strategy — fixing one
+/// (`Project`, `Fix(BUG-544)`) and not its sibling (`Group`) leaves the
+/// exact defect reachable through the column that is on-screen by default.
+// test_kind: bug_reproducer(BUG-550)
+#[ test ]
+fn bug_550_group_project_path_truncation_keeps_head_collides_siblings()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let shared = root.path().join( "bug550_shared_prefix_directory_name_padding" );
+  let proj_alpha = shared.join( "alpha" );
+  let proj_beta = shared.join( "beta" );
+  std::fs::create_dir_all( &proj_alpha ).unwrap();
+  std::fs::create_dir_all( &proj_beta ).unwrap();
+
+  write_rollup_session(
+    &storage_root, &proj_alpha, "bug550aa-1111-4abc-9def-000000000003",
+    &RollupSession::simple( proj_alpha.to_str().unwrap() ),
+  );
+  write_rollup_session(
+    &storage_root, &proj_beta, "bug550bb-2222-4abc-9def-000000000004",
+    &RollupSession::simple( proj_beta.to_str().unwrap() ),
+  );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".rollup" )
+    .arg( "scope::global" )
+    .arg( "group::project" )
+    .output()
+    .unwrap();
+
+  common::assert_exit( &out, 0 );
+  let s = common::stdout( &out );
+  assert_eq!( data_rows( &s ), 2, "BUG-550: both projects must render; got:\n{s}" );
+
+  let alpha_row = s.lines().find( | l | l.contains( "alpha" ) )
+    .unwrap_or_else( || panic!( "BUG-550: a row naming 'alpha' must exist — head-truncation would hide it past the column width; got:\n{s}" ) );
+  let beta_row = s.lines().find( | l | l.contains( "beta" ) )
+    .unwrap_or_else( || panic!( "BUG-550: a row naming 'beta' must exist — head-truncation would hide it past the column width; got:\n{s}" ) );
+  assert_ne!(
+    alpha_row, beta_row,
+    "BUG-550: sibling projects sharing a long prefix must render distinguishable Group cells; got identical rows:\n{s}"
+  );
+}
