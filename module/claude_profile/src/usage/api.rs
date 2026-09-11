@@ -218,7 +218,14 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // Pitfall: account=None is ambiguous (API fetch failed); is_some_and guards correctly.
     if params.only_valid
     {
-      accounts.retain( |aq| aq.result.is_ok() && !aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) );
+      // Fix(BUG-557): the second conjunct is now `is_dead_account()`, so a cache-rendered
+      //   dead account is dropped too. Root cause: the re-derived literal read `account`,
+      //   which every cache-rendered branch leaves `None` — such a row carried `result: Ok`
+      //   and survived `only_valid::1` as if healthy. Pitfall: `is_dead_account()`, not
+      //   `is_no_subscription()` — this filter is deliberately `result`-independent in its
+      //   dead-account half (BUG-317) and combines with `result` disjunctively, which
+      //   `is_no_subscription()`'s own conjunction would silently change.
+      accounts.retain( |aq| aq.result.is_ok() && !aq.is_dead_account() );
     }
     if params.exclude_exhausted { accounts.retain( |aq| status_emoji( aq ) == "🟢" ); }
 

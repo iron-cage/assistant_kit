@@ -36,6 +36,23 @@ pub struct QuotaCacheEntry
   //   a fake OauthAccountData to backfill it (risks BUG-232 regression).
   /// Org creation timestamp (UTC ISO-8601), persisted so cache-only reads can compute renewal dates.
   pub org_created_at    : Option< String >,
+  // Fix(BUG-557): a definitive fetch failure left no trace on disk, so the next
+  //   invocation that rendered this account from cache could not tell a dead
+  //   account from a healthy one — it saw only the last SUCCESSFUL snapshot.
+  //   Root cause: `write_quota_cache` was reachable only from the `Ok` arm, and the
+  //   sole status-ish key ever written was the hardcoded literal `"status": "ok"`,
+  //   which no reader ever consulted and which no failure path could contradict.
+  //   Pitfall: this is a fetch OUTCOME, not a cached identity field — it records the
+  //   reason a fetch failed, never `billing_type` itself (feature/033 keeps every
+  //   `fetch_oauth_account` identity field but `org_created_at` live-fetch-only).
+  /// Reason string of the last *definitive* fetch failure, `None` when the last
+  /// fetch succeeded. Written by [`write_quota_cache_error`]; cleared implicitly by
+  /// [`write_quota_cache`], which rebuilds the object from scratch on every success.
+  pub last_error        : Option< String >,
+  /// UTC ISO-8601 timestamp of the failure recorded in [`Self::last_error`].
+  /// Distinct from [`Self::fetched_at`], which never advances on a failure — the age
+  /// a render surface prints means "since last success", and a failure is not one.
+  pub last_error_at     : Option< String >,
 }
 
 /// Root of the tracked per-host cache tree inside the credential store (TSK-502).
@@ -167,7 +184,14 @@ pub fn write_quota_cache(
   let legacy = migrate_legacy_cache( credential_store, name );
   let local_path = local_cache_path( credential_store, name );
   let candidates = read_volatile_candidates( credential_store, name );
-  let mut cache = serde_json::json!( { "fetched_at": chrono_now_utc(), "status": "ok" } );
+  // Fix(BUG-557): the `"status"` key this once also wrote is gone. It was a hardcoded
+  //   `"ok"` on the only path that could reach it, so it asserted health for every
+  //   account that had ever succeeded once and could never say anything else.
+  //   Root cause: a status field with a single writer and no reader is not state —
+  //   `QuotaCacheEntry` never had a field to deserialize it into.
+  //   Pitfall: health now lives in `last_error`/`last_error_at`, which this rebuild
+  //   drops by construction — a success must clear a prior failure, never merge it.
+  let mut cache = serde_json::json!( { "fetched_at": chrono_now_utc() } );
   if let Some( co ) = cache.as_object_mut()
   {
     if let Some( ( u, r ) ) = five_hour
@@ -213,6 +237,48 @@ pub fn write_quota_cache(
   }
 }
 
+/// Record a definitive fetch failure against this host's tracked cache file,
+/// preserving the last successful snapshot verbatim (BUG-557).
+///
+/// The counterpart to [`write_quota_cache`]: that one is reachable only on success,
+/// which is exactly why a dead account used to be indistinguishable from a healthy
+/// one on any invocation that rendered it from cache. This writes the *outcome* of a
+/// failed fetch — never quota numbers, never `fetched_at`, never history — so a later
+/// cache-only read can still say why the row is dead while its age suffix keeps
+/// meaning "since the last success".
+///
+/// Merge-only by design: with no volatile candidate anywhere, nothing is written and
+/// the account keeps ranking infinitely stale in
+/// `select_stalest`. That is the honest outcome — an account that has never once
+/// fetched successfully is indistinguishable from a brand-new one, and should be
+/// retried, not written off on the strength of a single failure.
+///
+/// Reserved for *definitive* failures (no active subscription). A transient 5xx or a
+/// timeout must never land here: it would pin a permanent verdict on a passing
+/// condition, and the existing cache-fallback path already renders those correctly.
+#[ inline ]
+pub fn write_quota_cache_error(
+  credential_store : &std::path::Path,
+  name             : &str,
+  reason           : &str,
+)
+{
+  // Freshest candidate anywhere, mirroring write_quota_cache's own history seeding:
+  // the failure was observed here, but it is recorded against the newest snapshot the
+  // fleet has, so a host that never fetched this account still writes a coherent file.
+  let Some( mut cache ) = read_volatile_candidates( credential_store, name ).into_iter().next()
+  else { return };
+  cache.insert( "last_error".into(), serde_json::Value::String( reason.to_string() ) );
+  cache.insert( "last_error_at".into(), serde_json::Value::String( chrono_now_utc() ) );
+  let local_path = local_cache_path( credential_store, name );
+  if let Some( dir ) = local_path.parent()
+  {
+    let _ = std::fs::create_dir_all( dir );
+  }
+  let value = serde_json::Value::Object( cache );
+  let _ = atomic_write( &local_path, &serde_json::to_string_pretty( &value ).map( | s | s + "\n" ).unwrap_or_default() );
+}
+
 /// Read cached quota, merging per-host volatile files with tracked metadata.
 ///
 /// Volatile fields (`fetched_at`, `status`, periods) come from the freshest
@@ -254,6 +320,11 @@ pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> O
     // Fix(BUG-327): org_created_at written by write_cache_string(); defaults to
     //   None gracefully for stores that predate this field (T06).
     org_created_at   : low( "org_created_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
+    // Fix(BUG-557): volatile, not low-churn — a failure is per-fetch state that belongs
+    //   to the same snapshot as `fetched_at`, and must lose to a fresher host's success
+    //   under the same freshest-wins rule rather than outliving it in tracked metadata.
+    last_error       : volatile.get( "last_error" ).and_then( | v | v.as_str() ).map( str::to_string ),
+    last_error_at    : volatile.get( "last_error_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
   } )
 }
 

@@ -885,6 +885,10 @@ fn test_mre_bug552_refuted_touch_yields_no_corroboration()
       last_touch_at    : Some( "2026-08-22T17:30:00Z".to_string() ),
       touch_idle       : Some( false ),
       org_created_at   : None,
+      // BUG-557: touch corroboration reads only the touch/fetch timestamps — a recorded
+      // subscription failure is orthogonal to whether a touch was refuted.
+      last_error       : None,
+      last_error_at    : None,
     };
 
   // A: the fetch raced the touch (+1s) and saw no window — uninformative, not refuting.

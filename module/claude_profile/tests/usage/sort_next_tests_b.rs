@@ -12,6 +12,7 @@ use claude_profile::usage::test_bridge::
   mk_aq_cancelled,
   reset_iso_at,
 };
+use claude_profile::usage::test_bridge::types::NO_SUBSCRIPTION_REASON;
 
 /// BUG-229 MRE: `sort::renew` (`find_next_for_strategy`) must pick the account with the soonest
 /// subscription renewal when it fires before any 7d reset.
@@ -1143,5 +1144,208 @@ fn test_cc_gate11_untagged_fails_include_passes_exclude()
   assert_eq!(
     result, Some( 0 ),
     "FT-12: an untagged account must trivially pass an exclude-only filter; got: {result:?}",
+  );
+}
+
+// ── BUG-558: rotation headroom preference ────────────────────────────────────
+
+/// bug_reproducer(BUG-558): `renew` must not elect an account whose weekly quota is
+/// nearly spent merely because it holds the fleet's soonest 7d reset.
+///
+/// # Root Cause
+/// The weekly gate every strategy applied was `> WEEKLY_EXHAUSTION_THRESHOLD` — a 3%
+/// floor. That constant answers "is this account spent?", which is correct for *display*
+/// and for excluding a target, but nothing answered "will this account still be usable
+/// after we switch to it?" So the spent-boundary silently became the selection bar, and
+/// an account 2 points above it with the earliest reset outranked one holding ten times
+/// its capacity.
+///
+/// # Why Not Caught
+/// BUG-292/BUG-324's tests pin the floor's *lower* edge — an account at or below 3% must
+/// be skipped — and they still pass. Nothing exercised the band between the floor and any
+/// usable amount of headroom, because no test had ever asserted that clearing the floor
+/// is insufficient on its own.
+///
+/// # Fix Applied
+/// `find_preferring_headroom` runs `find_first_eligible` twice: pass 1 demands
+/// `seven_day_left > ROTATION_HEADROOM_THRESHOLD`, pass 2 falls back to the bare floor.
+///
+/// # Prevention
+/// Reproduces the observed production incident directly. The elected account went from 5%
+/// to 0% weekly in nine minutes, and the caller's 1800s anti-flap cooldown then blocked
+/// the corrective rotation for the remaining ~20 — a single bad choice cost half an hour
+/// of throughput while an account at 100%/100% sat idle.
+///
+/// # Pitfall
+/// The reset ordering here is load-bearing and must stay inverted against the desired
+/// answer: the spent account has the *sooner* reset, so a fix that merely re-sorted rather
+/// than re-filtered would still pick it.
+#[ test ]
+fn bug_558_renew_prefers_headroom_over_soonest_reset()
+{
+  let now = 1_000_000_u64;
+  // 95% weekly consumed (5% left) — clears the 3% floor, and its reset is 2h sooner.
+  let nearly_spent = mk_aq_with_7d_reset_util( "spent", 0.0, 95.0, now, 3600 );
+  // 52% weekly consumed (48% left) — the account rotation should actually land on.
+  let roomy        = mk_aq_with_7d_reset_util( "roomy", 0.0, 52.0, now, 3600 * 3 );
+
+  let idx = find_next_for_strategy(
+    &[ nearly_spent, roomy ],
+    SortStrategy::Renew,
+    PreferStrategy::Any,
+    now,
+    false,
+    "anthropic", &TagFilter::default() );
+
+  assert_eq!(
+    idx, Some( 1 ),
+    "BUG-558: a 5%-left account with the soonest reset must lose to a 48%-left account",
+  );
+}
+
+/// bug_reproducer(BUG-558): with every account below the headroom bar, selection must
+/// still return the strategy's best remaining candidate rather than nothing.
+///
+/// # Root Cause
+/// n/a — this pins the boundary of the fix rather than the original defect.
+///
+/// # Why Not Caught
+/// n/a.
+///
+/// # Fix Applied
+/// The second pass of `find_preferring_headroom`, at the original
+/// `WEEKLY_EXHAUSTION_THRESHOLD` floor.
+///
+/// # Prevention
+/// This is the test that forbids the tempting one-line version of the fix. Collapsing the
+/// two passes into a single raised gate passes the sibling test above and fails here,
+/// making `rotate::1` report BUG-529's "no eligible account to rotate to"
+/// (feature/038 AC-03) for any fleet whose accounts all sit below 15% — turning a
+/// degraded-but-working fleet into a hard failure exactly when it can least afford one.
+///
+/// # Pitfall
+/// Both accounts must clear the 3% floor, or this would test the floor rather than the
+/// fallback. 10% and 8% left are both under the 15% bar and both over the 3% one.
+#[ test ]
+fn bug_558_falls_back_to_bare_floor_when_no_account_has_headroom()
+{
+  let now = 1_000_000_u64;
+  // 10% left, reset in 1h — the better of two poor options by renew's own ordering.
+  let poor   = mk_aq_with_7d_reset_util( "poor",   0.0, 90.0, now, 3600 );
+  // 8% left, reset in 3h.
+  let poorer = mk_aq_with_7d_reset_util( "poorer", 0.0, 92.0, now, 3600 * 3 );
+
+  let idx = find_next_for_strategy(
+    &[ poor, poorer ],
+    SortStrategy::Renew,
+    PreferStrategy::Any,
+    now,
+    false,
+    "anthropic", &TagFilter::default() );
+
+  assert_eq!(
+    idx, Some( 0 ),
+    "BUG-558: headroom is a preference, never a second exclusion — a depleted fleet must still rotate",
+  );
+}
+
+// ── BUG-557: cached dead accounts are never rotation targets ─────────────────
+
+/// bug_reproducer(BUG-557): an account whose subscription was recorded as inactive on a
+/// prior invocation must not be elected as a rotation target when this invocation renders
+/// it from cache.
+///
+/// # Root Cause
+/// `find_first_eligible`'s cancelled-subscription gate re-derived the literal
+/// `billing_type == "none"` against `aq.account`. Every cache-rendered branch sets
+/// `account: None` and `result: Ok(cached)`, so the gate was unsatisfiable there by
+/// construction — a dead account presented its last healthy quota numbers and passed.
+///
+/// # Why Not Caught
+/// BUG-317's test builds its fixture with `mk_aq_cancelled`, which populates `account`
+/// with a live `billing_type: "none"` — the live path, which always worked. No test
+/// constructed the cache-rendered shape, where the live signal is absent by design.
+///
+/// # Fix Applied
+/// The gate calls the shared `AccountQuota::is_no_subscription()`, whose second disjunct
+/// recognises the persisted verdict carried on `fallback_reason`.
+///
+/// # Prevention
+/// This was the shape observed in production: four accounts rendered 🟢/🟡 with plausible
+/// percentages for days, and rotation was free to elect any of them.
+///
+/// # Pitfall
+/// `fallback_reason` must be matched against `NO_SUBSCRIPTION_REASON` specifically, never
+/// tested with `.is_some()` — a transient 5xx populates the same field (BUG-335) and a
+/// stale-but-live account must stay eligible.
+#[ test ]
+fn bug_557_cached_dead_account_is_not_an_eligible_target()
+{
+  let now = 1_000_000_u64;
+  let mut dead = mk_aq_with_7d_reset_util( "dead", 0.0, 10.0, now, 3600 );
+  // The cache-rendered shape: no live account data, an Ok result carrying the last
+  // successful snapshot, and the verdict restored from disk.
+  dead.account         = None;
+  dead.cached          = true;
+  dead.cache_age_secs  = Some( 198_000 );
+  dead.fallback_reason = Some( NO_SUBSCRIPTION_REASON.to_string() );
+  let healthy = mk_aq_with_7d_reset_util( "healthy", 0.0, 20.0, now, 3600 * 5 );
+
+  let idx = find_next_for_strategy(
+    &[ dead, healthy ],
+    SortStrategy::Renew,
+    PreferStrategy::Any,
+    now,
+    false,
+    "anthropic", &TagFilter::default() );
+
+  assert_eq!(
+    idx, Some( 1 ),
+    "BUG-557: an account recorded as having no subscription must never be a rotation target",
+  );
+}
+
+/// bug_reproducer(BUG-557): a transiently-stale account must stay eligible — the
+/// cached-verdict disjunct must not condemn every cache-fallback row.
+///
+/// # Root Cause
+/// n/a — this guards the fix's own failure mode.
+///
+/// # Why Not Caught
+/// n/a.
+///
+/// # Fix Applied
+/// `is_no_subscription()` compares `fallback_reason` against `NO_SUBSCRIPTION_REASON`
+/// rather than testing it for presence.
+///
+/// # Prevention
+/// BUG-335 populates `fallback_reason` for every transient error that falls back to cache
+/// — a 429, a timeout, a 502. Keying the verdict on `.is_some()` would mark the entire
+/// fleet dead during any upstream outage, and rotation would then find nothing at all.
+///
+/// # Pitfall
+/// The reason string here must be a plausible real transient error, not a placeholder —
+/// the point is that arbitrary non-sentinel text is benign.
+#[ test ]
+fn bug_557_transiently_stale_account_stays_eligible()
+{
+  let now = 1_000_000_u64;
+  let mut stale = mk_aq_with_7d_reset_util( "stale", 0.0, 10.0, now, 3600 );
+  stale.account         = None;
+  stale.cached          = true;
+  stale.cache_age_secs  = Some( 900 );
+  stale.fallback_reason = Some( "HTTP 502 Bad Gateway".to_string() );
+
+  let idx = find_next_for_strategy(
+    &[ stale ],
+    SortStrategy::Renew,
+    PreferStrategy::Any,
+    now,
+    false,
+    "anthropic", &TagFilter::default() );
+
+  assert_eq!(
+    idx, Some( 0 ),
+    "BUG-557: a transient fetch failure must not be read as a cancelled subscription",
   );
 }

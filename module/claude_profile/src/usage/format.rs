@@ -849,7 +849,17 @@ pub fn status_emoji( aq : &AccountQuota ) -> &'static str
   //   with remaining quota appeared 🟢/🟡 even though they can never be used.
   // Pitfall: billing_type gate must fire BEFORE quota threshold checks in all classification
   //   functions; cancelled accounts are dead regardless of their quota readings.
-  if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { return "🔴"; }
+  // Fix(BUG-557): call the shared predicate instead of re-deriving the literal, so the
+  //   cached verdict reaches the Status dot. A dead account rendered from cache showed 🟢
+  //   with its last healthy percentages.
+  // Root cause: `account` is None on every cache-rendered branch, so the literal condition
+  //   was unsatisfiable there by construction, not merely unlikely.
+  // Pitfall: `is_dead_account()`, NOT `is_no_subscription()` — the latter requires
+  //   `result.is_err()` (BUG-332) and would readmit live `billing_type == "none"` accounts
+  //   whose fetch returned Ok, regressing BUG-317. The same substitution is required at
+  //   `status_group_of` and `find_first_eligible`, or the dot, the sort group, and
+  //   eligibility disagree with each other.
+  if aq.is_dead_account() { return "🔴"; }
   let Ok( data ) = &aq.result else { unreachable!() };
   // Fix(BUG-336): h5_left/d7_left compared raw against threshold constants, while
   //   pct_emoji() (BUG-331) already rounds the identical measurement before its own

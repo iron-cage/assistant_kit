@@ -151,7 +151,10 @@ fn test_class_a_billing_none_override_predicate()
 ///
 /// # Pitfall
 /// When adding new result overrides in future, ensure they precede the result trace block —
-/// not after it. The Class A override must remain immediately before the trace.
+/// not after it. The Class A override must remain immediately before the trace. The structural
+/// anchor below covers only the override's *predicate*, not its body: BUG-557 grew the body
+/// (it now persists the verdict via `write_quota_cache_error` before returning it) and a
+/// body-spanning anchor broke on that legitimate change.
 #[ doc = "bug_reproducer(BUG-234)" ]
 #[ test ]
 fn mre_bug234_result_trace_after_billing_type_override()
@@ -159,7 +162,14 @@ fn mre_bug234_result_trace_after_billing_type_override()
   // Structural assertion: Class A override must precede the result trace in source.
   // RED before fix (trace at ~144, override at ~154); GREEN after fix (override first).
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
-  let override_pos = src.find( r#"a.billing_type == "none" ) && r.is_err() { Err( "no subscription""# )
+  // Fix(BUG-557): anchor on the override's conjunctive predicate alone.
+  // Root cause: the prior anchor spanned the predicate *and* its `Err( "no subscription" )`
+  //   body as one contiguous line. BUG-557 gave the override a real body (persist the verdict
+  //   before returning it) and replaced the inline string with NO_SUBSCRIPTION_REASON, so that
+  //   text no longer occurs anywhere and this guard failed on a fix, not a revert.
+  // Pitfall: anchor on the half a revert must delete. The predicate is BUG-234's actual
+  //   subject — what the override *does* once it fires is free to grow.
+  let override_pos = src.find( r#"a.billing_type == "none" ) && r.is_err()"# )
     .expect( "BUG-234: Class A billing_type override not found in fetch.rs" );
   let trace_pos = src.find( r#"eprintln!( "{}{}  result: OK""# )
     .expect( "BUG-234: result: OK trace line not found in fetch.rs" );

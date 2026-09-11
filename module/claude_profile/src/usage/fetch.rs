@@ -8,7 +8,7 @@
 use unilang::data::{ ErrorCode, ErrorData };
 use super::types::AccountQuota;
 use super::format::{ token_exp_label, is_http_code };
-use super::fetch_cache::read_cached_quota;
+use super::fetch_cache::{ read_cached_quota, read_cached_error };
 use claude_profile_core::account::{ trace_ts, AccountBackend };
 
 // ── Token reader ──────────────────────────────────────────────────────────────
@@ -173,9 +173,15 @@ pub fn fetch_quota_for_list(
         Some( ( data, age, oca ) ) => ( Ok( data ), true, Some( age ), oca ),
         None                       => ( Err( "not owned".to_string() ), false, None, None ),
       };
+      // Fix(BUG-557): carry the persisted failure verdict onto this cache-rendered row —
+      //   `account` is None here by construction, so `is_no_subscription`'s live conjunct
+      //   can never fire and a dead account would otherwise render 🟢 on its last healthy
+      //   numbers. Guarded on `cached`: with no cache there is no verdict to carry, and
+      //   `result` is already the Err that speaks for itself.
+      let fallback_reason = if cached { read_cached_error( credential_store, &acct.name ) } else { None };
       results.push( AccountQuota
       {
-        fallback_reason : None,
+        fallback_reason,
         touched_at_secs : None,
         name                  : acct.name.clone(),
         is_current            : false,
@@ -266,9 +272,12 @@ pub fn fetch_quota_for_list(
       if trace { eprintln!( "{}{}  cache-first ({}s old, skipping API)", trace_ts(), acct.name, age ); }
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
+      // Fix(BUG-557): see the G1 branch above — this row is unconditionally cache-backed,
+      //   so the verdict must be restored from disk or it is lost for the whole invocation.
+      let fallback_reason = read_cached_error( credential_store, &acct.name );
       results.push( AccountQuota
       {
-        fallback_reason : None,
+        fallback_reason,
         touched_at_secs : None,
         name                  : acct.name.clone(),
         is_current,
@@ -356,7 +365,24 @@ pub fn fetch_quota_for_list(
           //   That holds for genuinely cancelled accounts but not for all billing arrangements.
           // Pitfall: only override when BOTH signals agree (billing says no-sub AND usage errored);
           //   a successful usage response (r=Ok) must be preserved regardless of billing_type.
-          let r = if account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err() { Err( "no subscription".to_string() ) } else { r };
+          // Fix(BUG-557): the reason is now the shared `NO_SUBSCRIPTION_REASON` const, and the
+          //   verdict is persisted here rather than dying with `account_data` at process exit.
+          // Root cause: this was the *only* place in the program that ever learned an account
+          //   was permanently dead, and it wrote nothing to disk — `write_quota_cache` is
+          //   reachable only from the `Ok` arm below, so every later cache-rendered
+          //   invocation re-derived "healthy" from the last successful snapshot.
+          // Pitfall: persist only on this Class-A branch, where both signals agree. A bare
+          //   transient error must never reach `write_quota_cache_error` — it would pin a
+          //   permanent verdict on a passing condition that the cache-fallback arm below
+          //   already renders correctly.
+          let r = if account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err()
+          {
+            claude_profile_core::account::write_quota_cache_error(
+              credential_store, &acct.name, super::types::NO_SUBSCRIPTION_REASON,
+            );
+            Err( super::types::NO_SUBSCRIPTION_REASON.to_string() )
+          }
+          else { r };
           // Fix(BUG-234): trace the final stored result, not the raw API response.
           // Root cause: trace preceded Class A override — for billing_type="none", raw=Ok but stored=Err.
           // Pitfall: always emit result trace AFTER all result-modifying overrides.
@@ -582,9 +608,14 @@ fn approximate_quota(
     Some( ( data, age, oca ) ) => ( Ok( data ), true, Some( age ), oca ),
     None                       => ( Err( "no cache".to_string() ), false, None, None ),
   };
+  // Fix(BUG-557): see the G1 branch in `fetch_quota_for_list` — this is the third
+  //   `account: None` + `result: Ok(cached)` construction site (solo-skip / stale-skip /
+  //   G1b occupied-elsewhere), and the one the `stalest::K` reducer routes most rows
+  //   through, so it is where a dead account stayed 🟢 for days at a time.
+  let fallback_reason = if cached { read_cached_error( credential_store, &acct.name ) } else { None };
   AccountQuota
   {
-    fallback_reason : None,
+    fallback_reason,
     touched_at_secs : None,
     name                  : acct.name.clone(),
     is_current,

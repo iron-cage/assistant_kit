@@ -273,13 +273,71 @@ impl AccountQuota
   //   Pitfall: any future "no active subscription" check must call this method, not re-derive
   //   the literal `billing_type == "none"` condition — that silently drops the `result.is_err()`
   //   conjunct and regresses BUG-332.
-  /// `true` when the account has no active subscription: `billing_type == "none"` AND the
-  /// quota fetch itself failed. Both conjuncts are required — `billing_type == "none"` alone
-  /// does not imply "no active subscription" when a live quota fetch succeeded.
+  // Fix(BUG-557): the live conjunct alone could only ever fire on the one branch that
+  //   actually performed an account fetch this invocation. Every cache-rendered row —
+  //   the 30s cache-first guard, the stale-skip reducer, and G1b occupied-elsewhere —
+  //   sets `account: None` and `result: Ok(cached)`, so a dead account escaped both the
+  //   `result.is_err()` gate and this one and rendered 🟢 with its last healthy numbers.
+  // Root cause: "no active subscription" was derived exclusively from live in-process
+  //   state (`OauthAccountData`), which is dropped at exit and absent by construction on
+  //   every branch that does not re-fetch.
+  // Pitfall: the second disjunct must stay keyed to the *persisted verdict*, never to
+  //   `fallback_reason.is_some()` — a transient 5xx populates that same field (BUG-335)
+  //   and a stale-but-live account must not be condemned as dead.
+  /// `true` when the account has no active subscription, established either way:
+  /// - **live** — `billing_type == "none"` AND the quota fetch failed. Both conjuncts are
+  ///   required; `billing_type == "none"` alone does not imply "no active subscription"
+  ///   when a live quota fetch succeeded.
+  /// - **cached** — a prior invocation recorded [`NO_SUBSCRIPTION_REASON`] via
+  ///   `write_quota_cache_error`, and this row was rendered from that cache.
+  ///
+  /// Answers the *display* question ("should the `~Renews` cell read `—`?"). For the
+  /// *classification* question, use [`Self::is_dead_account`] — see its note on why the
+  /// two must not be merged.
   #[ must_use ]
   pub fn is_no_subscription( &self ) -> bool
   {
-    self.account.as_ref().is_some_and( |a| a.billing_type == "none" ) && self.result.is_err()
+    if self.account.as_ref().is_some_and( |a| a.billing_type == "none" ) && self.result.is_err()
+    {
+      return true;
+    }
+    self.is_cached_no_subscription()
+  }
+
+  // Fix(BUG-557): the classification sites — `status_emoji`, `status_group_of`,
+  //   `find_first_eligible` — each re-derived `billing_type == "none"` against `account`,
+  //   which every cache-rendered branch leaves `None`. A dead account therefore rendered
+  //   🟢, sorted into Green, and stayed a valid rotation target for as long as nothing
+  //   re-fetched it — days, under `stalest::K`.
+  // Root cause: the dead-account fact lived only in live in-process state.
+  // Pitfall: deliberately NOT `is_no_subscription()`. That predicate requires
+  //   `result.is_err()` (BUG-332); this one must not, because BUG-317 answers a different
+  //   question — an account with `billing_type == "none"` whose fetch happened to return
+  //   `Ok` is still permanently unusable and must stay excluded. Routing these three sites
+  //   through `is_no_subscription()` would silently readmit exactly that population.
+  //   `invariant/011_shared_predicate_consistency.md` records the distinction; keep both.
+  /// `true` when the account is permanently unusable and must be excluded from
+  /// classification, sorting, and rotation — `billing_type == "none"` on its own
+  /// (independent of `result`, per BUG-317), or a persisted no-subscription verdict.
+  ///
+  /// Strictly weaker than [`Self::is_no_subscription`]: everything that predicate accepts,
+  /// this one accepts too, plus the live `billing_type == "none"` / `result == Ok` case.
+  #[ must_use ]
+  pub fn is_dead_account( &self ) -> bool
+  {
+    self.account.as_ref().is_some_and( |a| a.billing_type == "none" ) || self.is_cached_no_subscription()
+  }
+
+  /// `true` when a prior invocation persisted [`NO_SUBSCRIPTION_REASON`] for this account
+  /// and the current row was rendered from that cache.
+  ///
+  /// Matched against the shared const rather than tested for presence: `fallback_reason`
+  /// also carries transient errors (BUG-335), and a stale-but-live account must not be
+  /// condemned as dead.
+  #[ must_use ]
+  fn is_cached_no_subscription( &self ) -> bool
+  {
+    self.fallback_reason.as_deref() == Some( NO_SUBSCRIPTION_REASON )
   }
 
   /// `true` when this row is a redirect-backend account (Feature 071) — identified by the
@@ -522,6 +580,43 @@ pub const H_EXHAUSTED_THRESHOLD : f64 = 15.0;
 /// An account is classified **weekly-exhausted** when `7d Left ≤ 3%`. All comparison
 /// sites must reference this constant; never duplicate the literal `3.0`.
 pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 3.0;
+
+// Fix(BUG-558): `renew` ranked purely by soonest reset and admitted any candidate clearing
+//   WEEKLY_EXHAUSTION_THRESHOLD, so an account 2 points above the floor with the earliest
+//   7d reset in the fleet outranked accounts holding ten times its capacity. Rotation
+//   landed on it, its weekly hit 0% nine minutes later, and the caller's own anti-flap
+//   cooldown then blocked the corrective rotation for the remaining ~20 minutes.
+// Root cause: one threshold served two different questions. `WEEKLY_EXHAUSTION_THRESHOLD`
+//   answers "is this account spent?" — correct for *display* and for excluding a target.
+//   Nothing answered "will this account still be usable after we switch to it?", so the
+//   spent-boundary silently became the selection bar as well.
+// Pitfall: this is a *preference*, never a second exclusion — `find_next_for_strategy`
+//   falls back to the bare floor when nothing clears it, so a fleet whose every account
+//   is nearly spent still rotates to its best remaining option. Turning it into a hard
+//   gate would resurrect BUG-529's false "no eligible account to rotate to" (038/AC-03).
+/// 7-day headroom a rotation target is *preferred* to hold: `7d Left > 15%`.
+///
+/// Deliberately equal in value to `H_EXHAUSTED_THRESHOLD` but independent in meaning —
+/// that one bounds the 5h window's exhaustion, this one bounds weekly headroom at
+/// selection time. They are free to diverge; neither may be expressed in terms of the
+/// other, and no call site may duplicate the literal `15.0`.
+pub const ROTATION_HEADROOM_THRESHOLD : f64 = 15.0;
+
+// Fix(BUG-557): this reason string was a bare literal at its single producer, and the
+//   fact it carries — "definitively dead, not transiently unreachable" — died with the
+//   in-process `OauthAccountData` that produced it.
+// Root cause: no shared symbol tied the producer to any consumer, so nothing downstream
+//   could recognise the string once it had been persisted and read back.
+// Pitfall: a *method*, not an `AccountQuota` field, for the same reason
+//   `is_redirect_backend` is one — ~130 full struct-literal construction sites, and the
+//   fact already rides losslessly on `result`/`fallback_reason`. Both ends reference this
+//   const, so the coupling is compiler-checked rather than a free-text string match.
+/// Canonical reason string for an account whose subscription is definitively inactive.
+///
+/// Written by `fetch_quota_for_list`'s Class-A override (live: `billing_type == "none"`
+/// *and* the usage fetch failed) and persisted by `write_quota_cache_error`; read back by
+/// [`AccountQuota::is_no_subscription`]. Displayed verbatim as the row's reason string.
+pub const NO_SUBSCRIPTION_REASON : &str = "no subscription";
 
 /// Map a model shorthand to its full model ID.
 ///
