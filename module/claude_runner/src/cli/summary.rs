@@ -16,18 +16,46 @@ const DIM    : &str = "\x1b[2m";
 const RESET  : &str = "\x1b[0m";
 
 // ── Minimal JSON extraction ────────────────────────────────────────────────────
+//
+// Fix(BUG-568): every extractor below is depth-aware — each locates its key through
+//   `find_key_shallow`, which matches only at bracket-depth 0 relative to its input's own
+//   start and stops the instant depth would go negative. The depth-unaware `s.find()`
+//   variants this module used to carry (`extract_str`/`extract_u64`/`extract_f64`/
+//   `extract_bool`) are deleted rather than left available, so the defect BUG-436, BUG-439,
+//   BUG-440, BUG-549 and BUG-568 each re-reported at a different call site can no longer be
+//   written here at all. The `_shallow` suffix is kept: it names the guarantee.
+// Root cause: four prior fixes each migrated only the one field whose wrong value happened
+//   to be visible, leaving the depth-unaware helper in place for the next call site to reach
+//   for — so the same defect class kept re-emerging under new bug numbers.
+// Pitfall: removing a defect's last call site does not remove the defect; while the unsafe
+//   primitive still compiles, "fixed" means "no current caller", not "cannot recur".
 
-/// Extract a JSON string value for `key`.  Returns `None` for `null` or absent keys.
-/// JSON escape sequences (`\n`, `\t`, `\\`, `\"`, `\/`, `\r`) are unescaped.
-fn extract_str( s : &str, key : &str ) -> Option< String >
+/// The content of a JSON envelope's outermost object — `s` with any leading whitespace and
+/// its opening `{` removed, so the envelope's own top-level keys sit at bracket-depth 0.
+///
+/// [`find_key_shallow`] treats its input's own start as depth 0, so a whole envelope must be
+/// unwrapped before any depth-0 read: passing it intact would put every top-level field at
+/// depth 1 (inside that brace) and match nothing. Returns `s` trimmed but otherwise unchanged
+/// when it is already unwrapped, so a caller holding either form reads correctly.
+///
+/// Fix(BUG-568)
+/// Root cause: BUG-549 open-coded this unwrap as `json.strip_prefix('{').unwrap_or(json)` at
+///   its single call site, where it silently degrades to a no-op — and thereafter matches
+///   nothing at all — on any envelope carrying leading whitespace. Generalizing that read to
+///   the other eleven top-level fields would have multiplied the latent failure elevenfold.
+/// Pitfall: an inline unwrap that happens to work on the current input becomes a silent
+///   match-nothing the moment that input gains a leading space. Name it, trim it, share it.
+fn envelope_body( s : &str ) -> &str
 {
-  let needle = format!( "\"{key}\":" );
-  let pos    = s.find( &needle )?;
-  parse_str_value( &s[ pos + needle.len() .. ] )
+  let trimmed = s.trim_start();
+  trimmed.strip_prefix( '{' ).unwrap_or( trimmed )
 }
 
-/// Depth-0 variant of [`extract_str`] — matches `key` only at bracket-depth 0 relative to
-/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+/// Extract a JSON string value for `key`, matching only at bracket-depth 0 relative to the
+/// start of `s` — never inside a nested `{...}`/`[...]` value, and never past the closing
+/// delimiter of `s`'s own enclosing object.  Returns `None` for `null` or absent keys.  JSON
+/// escape sequences (`\n`, `\t`, `\\`, `\"`, `\/`, `\r`) are unescaped.  Pass whole envelopes
+/// through [`envelope_body`] first.  See [`find_key_shallow`].
 fn extract_str_shallow( s : &str, key : &str ) -> Option< String >
 {
   let needle = format!( "\"{key}\":" );
@@ -36,8 +64,8 @@ fn extract_str_shallow( s : &str, key : &str ) -> Option< String >
 }
 
 /// Parse a JSON string value from `rest` (the text immediately following a `"key":`).
-/// Shared by [`extract_str`] and [`extract_str_shallow`], which differ only in how they
-/// locate the key's position.
+/// Separated from [`extract_str_shallow`] so locating the key and decoding its value stay
+/// independently testable.
 fn parse_str_value( rest : &str ) -> Option< String >
 {
   let rest = rest.trim_start_matches( ' ' );
@@ -81,16 +109,9 @@ fn parse_str_value( rest : &str ) -> Option< String >
   None
 }
 
-/// Extract a `u64` JSON number for `key`.
-fn extract_u64( s : &str, key : &str ) -> Option< u64 >
-{
-  let needle = format!( "\"{key}\":" );
-  let pos    = s.find( &needle )?;
-  parse_u64_value( &s[ pos + needle.len() .. ] )
-}
-
-/// Depth-0 variant of [`extract_u64`] — matches `key` only at bracket-depth 0 relative to
-/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+/// Extract a `u64` JSON number for `key`, matching only at bracket-depth 0 relative to the
+/// start of `s`, never inside a nested `{...}`/`[...]` value.  Pass whole envelopes through
+/// [`envelope_body`] first.  See [`find_key_shallow`].
 fn extract_u64_shallow( s : &str, key : &str ) -> Option< u64 >
 {
   let needle = format!( "\"{key}\":" );
@@ -99,7 +120,8 @@ fn extract_u64_shallow( s : &str, key : &str ) -> Option< u64 >
 }
 
 /// Parse a `u64` JSON number from `rest` (the text immediately following a `"key":`).
-/// Shared by [`extract_u64`] and [`extract_u64_shallow`].
+/// Separated from [`extract_u64_shallow`] so locating the key and decoding its value stay
+/// independently testable.
 fn parse_u64_value( rest : &str ) -> Option< u64 >
 {
   let rest = rest.trim_start_matches( ' ' );
@@ -198,16 +220,9 @@ fn object_extent( s : &str ) -> Option< usize >
   None
 }
 
-/// Extract an `f64` JSON number for `key`.
-fn extract_f64( s : &str, key : &str ) -> Option< f64 >
-{
-  let needle = format!( "\"{key}\":" );
-  let pos    = s.find( &needle )?;
-  parse_f64_value( &s[ pos + needle.len() .. ] )
-}
-
-/// Depth-0 variant of [`extract_f64`] — matches `key` only at bracket-depth 0 relative to
-/// the start of `s`, never inside a nested `{...}`/`[...]` value.  See [`find_key_shallow`].
+/// Extract an `f64` JSON number for `key`, matching only at bracket-depth 0 relative to the
+/// start of `s`, never inside a nested `{...}`/`[...]` value.  Pass whole envelopes through
+/// [`envelope_body`] first.  See [`find_key_shallow`].
 fn extract_f64_shallow( s : &str, key : &str ) -> Option< f64 >
 {
   let needle = format!( "\"{key}\":" );
@@ -216,7 +231,8 @@ fn extract_f64_shallow( s : &str, key : &str ) -> Option< f64 >
 }
 
 /// Parse an `f64` JSON number from `rest` (the text immediately following a `"key":`).
-/// Shared by [`extract_f64`] and [`extract_f64_shallow`].
+/// Separated from [`extract_f64_shallow`] so locating the key and decoding its value stay
+/// independently testable.
 fn parse_f64_value( rest : &str ) -> Option< f64 >
 {
   let rest = rest.trim_start_matches( ' ' );
@@ -226,12 +242,30 @@ fn parse_f64_value( rest : &str ) -> Option< f64 >
   rest[ ..end ].parse().ok()
 }
 
-/// Extract a JSON boolean value for `key`.
-fn extract_bool( s : &str, key : &str ) -> Option< bool >
+/// Extract a JSON boolean value for `key`, matching only at bracket-depth 0 relative to the
+/// start of `s`, never inside a nested `{...}`/`[...]` value.  Pass whole envelopes through
+/// [`envelope_body`] first.  See [`find_key_shallow`].
+///
+/// Fix(BUG-568)
+/// Root cause: `bool` was the one member of this extractor family with no depth-0 variant, so
+///   `is_error` — the field whose wrong value contradicts the rendered `subtype` most visibly
+///   — could not be migrated alongside its siblings during BUG-439's sweep without first
+///   writing this function, and was silently left behind.
+/// Pitfall: a partially-migrated helper family quietly pins every call site that needs the
+///   missing member to the old, defective form — completing the family IS part of the fix.
+fn extract_bool_shallow( s : &str, key : &str ) -> Option< bool >
 {
   let needle = format!( "\"{key}\":" );
-  let pos    = s.find( &needle )?;
-  let rest   = s[ pos + needle.len() .. ].trim_start_matches( ' ' );
+  let pos    = find_key_shallow( s, key )?;
+  parse_bool_value( &s[ pos + needle.len() .. ] )
+}
+
+/// Parse a JSON boolean from `rest` (the text immediately following a `"key":`).
+/// Separated from [`extract_bool_shallow`] so locating the key and decoding its value stay
+/// independently testable, matching the str/u64/f64 members of this family.
+fn parse_bool_value( rest : &str ) -> Option< bool >
+{
+  let rest = rest.trim_start_matches( ' ' );
   if rest.starts_with( "true" )  { return Some( true ); }
   if rest.starts_with( "false" ) { return Some( false ); }
   None
@@ -249,11 +283,22 @@ fn extract_bool( s : &str, key : &str ) -> Option< bool >
 /// — without also tracking string-literal state (quote toggling with
 /// backslash-escape lookahead), a bracket character inside a quoted field value is
 /// misread as a structural delimiter.
-fn count_permission_denials( json : &str ) -> u64
+///
+/// Fix(BUG-568)
+/// Root cause: the array was located by a raw `find("\"permission_denials\":[")` over the
+///   whole buffer, so a nested or second-envelope occurrence could be counted as this
+///   envelope's own — BUG-442 fixed where the scan *ends*, never where it *starts*.
+/// Pitfall: fixing a scan's terminator while leaving its origin a depth-unaware substring
+///   search yields a precisely-bounded count of the wrong array.
+///
+/// Takes the envelope BODY (see [`envelope_body`]), not the raw envelope.
+fn count_permission_denials( body : &str ) -> u64
 {
-  let needle = "\"permission_denials\":[";
-  let Some( pos ) = json.find( needle ) else { return 0 };
-  let rest = &json[ pos + needle.len() .. ];
+  let needle = "\"permission_denials\":";
+  let Some( pos ) = find_key_shallow( body, "permission_denials" ) else { return 0 };
+  // A non-array value is not a malformed count of zero denials — it is not a denial list.
+  let Some( rest ) = body[ pos + needle.len() .. ].trim_start_matches( ' ' ).strip_prefix( '[' )
+  else { return 0 };
 
   let mut depth       = 1_i32;
   let mut in_string   = false;
@@ -292,7 +337,13 @@ fn count_permission_denials( json : &str ) -> u64
 /// in retry diagnostic messages.
 pub( super ) fn extract_result_text( json : &str ) -> Option< String >
 {
-  extract_str( json, "result" )
+  // Fix(BUG-568): depth-aware read — a `"result"` inside usage.iterations[] (or inside a
+  //   second envelope concatenated after this one) can no longer be returned as this
+  //   envelope's own result text.
+  // Root cause: depth-unaware s.find() first-matched "result" anywhere in the buffer.
+  // Pitfall: a diagnostic-only reader is still a reader — showing a neighbouring object's
+  //   text as this one's is worse than showing the raw JSON it was meant to replace.
+  extract_str_shallow( envelope_body( json ), "result" )
 }
 
 /// Extract the `"session_id"` field from a CLR JSON envelope, gated on `"type":"result"`.
@@ -309,11 +360,20 @@ pub fn extract_session_id( json : &str ) -> Option< String >
   //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
   // Root cause: same depth-blindness as BUG-436 — extract_str(json,"type") finds
   //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
-  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
-  let is_result = extract_str( json, "subtype" ).is_some()
-    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  // Pitfall: a depth-unaware "type":"result" gate alone catches iterations[].type.
+  //
+  // Fix(BUG-568): all three reads made depth-aware against the envelope's own body. Both
+  //   gate reads matter as much as the payload read: a nested `subtype`, or one belonging
+  //   to a second envelope in the same buffer, could admit a chunk that is not a result at
+  //   all — and the session UUID this returns is what BUG-320's mismatch check compares.
+  // Root cause: BUG-437 fixed which keys the gate consults, not how deep it looks for them.
+  // Pitfall: hardening a gate's predicate while leaving its reads depth-unaware moves the
+  //   defect from "asks the wrong question" to "asks the right question of the wrong object".
+  let body      = envelope_body( json );
+  let is_result = extract_str_shallow( body, "subtype" ).is_some()
+    || extract_str_shallow( body, "type" ).as_deref() == Some( "result" );
   if !is_result { return None; }
-  extract_str( json, "session_id" )
+  extract_str_shallow( body, "session_id" )
 }
 
 /// Extract the `"structured_output"` field value from a CLR JSON envelope as a raw JSON string.
@@ -331,21 +391,35 @@ pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
   //   Rejects non-result stream chunks that have neither "subtype" nor "type":"result".
   // Root cause: same depth-blindness as BUG-436/437 — extract_str(json,"type") finds
   //   iterations[].type = "message" first; no top-level "type":"result" in new SDK.
-  // Pitfall: extract_str uses s.find() — "type":"result" gate alone catches iterations[].type.
-  let is_result = extract_str( json, "subtype" ).is_some()
-    || extract_str( json, "type" ).as_deref() == Some( "result" );
+  // Pitfall: a depth-unaware "type":"result" gate alone catches iterations[].type.
+  //
+  // Fix(BUG-568): both gate reads made depth-aware, as in extract_session_id() above —
+  //   this gate admits the payload that downstream --json-schema consumers parse.
+  // Root cause: BUG-438 fixed which keys the gate consults, not how deep it looks for them.
+  // Pitfall: the deeper the consumer trusts a gated payload, the less tolerable a gate that
+  //   can be satisfied by a key belonging to some other object in the same buffer.
+  let is_result = extract_str_shallow( envelope_body( json ), "subtype" ).is_some()
+    || extract_str_shallow( envelope_body( json ), "type" ).as_deref() == Some( "result" );
   if !is_result { return None; }
-  extract_json_value( json, "structured_output" )
+  extract_json_value_shallow( envelope_body( json ), "structured_output" )
 }
 
-/// Extract an arbitrary JSON value (object, array, string, or scalar) for `key`.
+/// Extract an arbitrary JSON value (object, array, string, or scalar) for `key`, matching
+/// only at bracket-depth 0 relative to the start of `s`.
 ///
-/// Scans for `"<key>":` then captures the balanced value that follows.
-/// Returns `None` when the key is absent or the value is the JSON literal `null`.
-fn extract_json_value( s : &str, key : &str ) -> Option< String >
+/// Locates `"<key>":` via [`find_key_shallow`], then captures the balanced value that follows.
+/// Returns `None` when the key is absent at depth 0 or the value is the JSON literal `null`.
+/// Pass whole envelopes through [`envelope_body`] first.
+///
+/// Fix(BUG-568)
+/// Root cause: this reader was the last depth-unaware `s.find()` in the module — the same
+///   defect as its scalar siblings, but on the one value fed to `--json-schema` consumers.
+/// Pitfall: a payload extractor inherits the trust of everything downstream of it; leaving
+///   one behind in a sweep concentrates the whole defect class into the highest-stakes read.
+fn extract_json_value_shallow( s : &str, key : &str ) -> Option< String >
 {
   let needle = format!( "\"{key}\":" );
-  let start  = s.find( &needle )? + needle.len();
+  let start  = find_key_shallow( s, key )? + needle.len();
   let rest   = s[ start.. ].trim_start();
   if rest.starts_with( "null" ) { return None; }
   let first = rest.chars().next()?;
@@ -406,8 +480,8 @@ fn extract_json_value( s : &str, key : &str ) -> Option< String >
 /// `.find('"')` terminator search with no escape-state tracking, so an escaped `\"`
 /// inside the value terminated extraction early instead of at the true closing quote.
 /// Root cause: none of the three sites adopted the escape-tracking loop already proven
-/// correct by `extract_str` (above) and `extract_json_value`'s string-value branch —
-/// each was written to solve a narrower, seemingly-simple parsing need in isolation.
+/// correct by `parse_str_value` (above) and `extract_json_value_shallow`'s string-value
+/// branch — each was written to solve a narrower, seemingly-simple need in isolation.
 /// Pitfall: a bare `.find('"')` is only safe when the searched text is guaranteed to
 /// contain no escaped quotes before the true terminator — never assume that for
 /// user-influenced content (message text, filesystem paths) or JSON object keys that
@@ -522,36 +596,59 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   //   usage.iterations[].type = "message" appears first (extract_str depth-unaware find()).
   // Root cause: newer Claude SDK dropped top-level "type":"result"; depth-unaware
   //   extract_str(json,"type") finds iterations[].type = "message" first.
-  // Pitfall: extract_str uses s.find() — "type" gate catches nested iterations[].type.
-  let subtype  = extract_str( json, "subtype" );
-  // Fix(BUG-549): depth-aware read of the top-level "type" — the one extraction BUG-439's
+  // Pitfall: a depth-unaware "type" gate catches nested iterations[].type.
+  //
+  // Fix(BUG-568): the whole top-level block below reads from one `envelope` binding via the
+  //   depth-0 extractors, replacing twelve independent depth-unaware searches over `json`.
+  //   Closes two distinct failure modes with the single change, because `find_key_shallow`
+  //   both skips nested values AND stops the moment depth would go negative:
+  //     (1) nested shadowing — a same-named key inside usage.iterations[] is no longer
+  //         matched ahead of the envelope's own field, whatever order the SDK emits them in;
+  //     (2) cross-object assembly — when `json` holds more than one concatenated envelope
+  //         (a buffered JSONL read), a field absent from the FIRST object now falls back to
+  //         its default instead of being satisfied from a later object, which previously
+  //         produced one rendered block corresponding to no single envelope and able to
+  //         contradict itself (`subtype: success` beside `is_error: true`).
+  //   BUG-549 fixed only "type" here; BUG-439 only the usage.* reads. Neither generalized,
+  //   and `is_error` could not have been migrated with them at all — `extract_bool` was the
+  //   one family member with no depth-0 variant until this fix added `extract_bool_shallow`.
+  // Root cause: eleven of twelve top-level reads used depth-unaware `s.find()`, so each
+  //   field independently first-matched its own key anywhere in the buffer. Correctness
+  //   rested entirely on the current serializer's key order (unspecified, RFC 8259 §4) and
+  //   on the caller happening to pass exactly one object.
+  // Pitfall: N fields read by N independent unbounded searches have no single-object
+  //   invariant to violate loudly — they degrade into a plausible-looking composite whose
+  //   only symptom is that the fields disagree with each other, which no individual field's
+  //   assertion can detect.
+  let envelope = envelope_body( json );
+  let subtype  = extract_str_shallow( envelope, "subtype" );
+  // Fix(BUG-549): depth-aware read of the top-level "type" — the first extraction BUG-439's
   //   *_shallow migration skipped. Correct under both branches of BUG-436's disjunction above:
   //   None (-> blank) when no top-level "type" exists, "result" when one exists but is
   //   byte-preceded by usage.iterations[].type. Retires the former Fix(BUG-440) blanking line,
-  //   which was only correct under the first of those two branches. `find_key_shallow` treats
-  //   its input's own start as depth 0, so the envelope's own leading '{' must be stripped
-  //   first — passing `json` unstripped would put every top-level field at depth 1 (inside
-  //   that brace) and never match at depth 0.
-  // Root cause: extract_str uses depth-unaware s.find(); a nested iterations[].type shadows
-  //   the top-level key whenever the SDK serializes usage before it (order is unspecified).
+  //   which was only correct under the first of those two branches. The envelope's own leading
+  //   '{' must be stripped first (now shared, via `envelope_body`) — `find_key_shallow` treats
+  //   its input's own start as depth 0, so passing `json` intact would put every top-level
+  //   field at depth 1 inside that brace and never match.
+  // Root cause: a depth-unaware s.find(); a nested iterations[].type shadows the top-level
+  //   key whenever the SDK serializes usage before it (order is unspecified).
   // Pitfall: a value compensating for a depth-unaware read is only ever correct under one
   //   branch of the ambiguity it compensates for — a depth-aware read needs no compensation.
-  let msg_type = extract_str_shallow( json.strip_prefix( '{' ).unwrap_or( json ), "type" )
-    .unwrap_or_default();
+  let msg_type = extract_str_shallow( envelope, "type" ).unwrap_or_default();
   if subtype.is_none() && msg_type != "result" { return None; }
   let subtype    = subtype.unwrap_or_default();
-  let session_id = extract_str( json, "session_id" ).unwrap_or_default();
-  let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
-  let result       = extract_str( json, "result" ).unwrap_or_default();
+  let session_id = extract_str_shallow( envelope, "session_id" ).unwrap_or_default();
+  let is_error     = extract_bool_shallow( envelope, "is_error" ).unwrap_or( false );
+  let result       = extract_str_shallow( envelope, "result" ).unwrap_or_default();
 
   // Top-level scalars
-  let uuid         = extract_str( json, "uuid" ).unwrap_or_default();
-  let stop_reason  = extract_str( json, "stop_reason" ).unwrap_or_default();
-  let num_turns    = extract_u64( json, "num_turns" ).unwrap_or( 0 );
-  let fast_mode    = extract_str( json, "fast_mode_state" ).unwrap_or_default();
-  let duration_ms  = extract_u64( json, "duration_ms" ).unwrap_or( 0 );
-  let duration_api = extract_u64( json, "duration_api_ms" ).unwrap_or( 0 );
-  let cost         = extract_f64( json, "total_cost_usd" ).unwrap_or( 0.0 );
+  let uuid         = extract_str_shallow( envelope, "uuid" ).unwrap_or_default();
+  let stop_reason  = extract_str_shallow( envelope, "stop_reason" ).unwrap_or_default();
+  let num_turns    = extract_u64_shallow( envelope, "num_turns" ).unwrap_or( 0 );
+  let fast_mode    = extract_str_shallow( envelope, "fast_mode_state" ).unwrap_or_default();
+  let duration_ms  = extract_u64_shallow( envelope, "duration_ms" ).unwrap_or( 0 );
+  let duration_api = extract_u64_shallow( envelope, "duration_api_ms" ).unwrap_or( 0 );
+  let cost         = extract_f64_shallow( envelope, "total_cost_usd" ).unwrap_or( 0.0 );
 
   // usage nested object
   // Fix(BUG-439): usage_str stays an unbounded suffix slice (harmless — find_key_shallow
@@ -560,12 +657,21 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   //   Prevents usage.iterations[]'s own input_tokens/output_tokens/cache_read_input_tokens/
   //   cache_creation_input_tokens fields from being matched ahead of usage's own totals when
   //   the SDK serializes iterations before scalars (JSON object field order is unspecified).
-  // Root cause: extract_u64/extract_str do a depth-unaware s.find() over the whole (unbounded)
+  // Root cause: the extractions did a depth-unaware s.find() over the whole (unbounded)
   //   usage_str slice; correctness depended entirely on the current SDK's field order.
   // Pitfall: a depth-unaware first-occurrence search over a slice containing a same-named
   //   nested field is correct only by accident of the current serializer's key order.
-  let usage_marker = "\"usage\":{";
-  let usage_str    = json.find( usage_marker ).map( |p| &json[ p + usage_marker.len() .. ] );
+  //
+  // Fix(BUG-568): `usage` itself is now located depth-0 within the envelope, not by a raw
+  //   `json.find("\"usage\":{")`. BUG-439 hardened every read INSIDE usage while leaving the
+  //   search for usage itself depth-unaware, so a nested `"usage":{` (or one belonging to a
+  //   second concatenated envelope) could still hand all nine of those hardened reads the
+  //   wrong object to be correct about.
+  // Root cause: a marker `find()` locates a byte sequence, not a field — it cannot tell the
+  //   envelope's own `usage` from an identically-spelled key at any other depth or object.
+  // Pitfall: hardening the reads within a container while locating the container itself by
+  //   raw substring search moves the defect up one level rather than removing it.
+  let usage_str = nested_object_shallow( envelope, "usage" );
   let in_tok       = usage_str.and_then( |s| extract_u64_shallow( s, "input_tokens" ) ).unwrap_or( 0 );
   let out_tok      = usage_str.and_then( |s| extract_u64_shallow( s, "output_tokens" ) ).unwrap_or( 0 );
   let cache_create = usage_str.and_then( |s| extract_u64_shallow( s, "cache_creation_input_tokens" ) ).unwrap_or( 0 );
@@ -600,8 +706,14 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   // Pitfall: "first entry found" is not "the complete field" for a collection-shaped
   //   JSON field, and an opening marker alone is not a boundary — aggregate across the
   //   field's own bounded extent, or an empty/multi-entry object silently corrupts output.
-  let mu_marker      = "\"modelUsage\":{";
-  let mu_all         = json.find( mu_marker ).map( |p| &json[ p + mu_marker.len() .. ] );
+  //
+  // Fix(BUG-568): `modelUsage` located depth-0 within the envelope, for the same reason as
+  //   `usage` above — BUG-476/477 bounded the scan WITHIN modelUsage but still found
+  //   modelUsage itself by raw marker search.
+  // Root cause: a marker `find()` locates a byte sequence, not a field.
+  // Pitfall: correctly bounding a container's extent is worthless if the wrong container
+  //   was located to begin with.
+  let mu_all = nested_object_shallow( envelope, "modelUsage" );
   let mut model_name = String::new();
   let mut m_in_tok   = 0u64;
   let mut m_out_tok  = 0u64;
@@ -644,7 +756,7 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
     }
   }
 
-  let denials  = count_permission_denials( json );
+  let denials  = count_permission_denials( envelope );
   let is_err_s = if is_error { "true" } else { "false" };
 
   let mut out = String::new();

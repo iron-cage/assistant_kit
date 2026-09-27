@@ -820,3 +820,255 @@ fn bug477_multi_entry_modelusage_aggregates_all_entries()
      sum. Got:\n{rendered}"
   );
 }
+
+// ── BUG-568: depth-unaware top-level scalar reads ───────────────────────────
+
+/// Assert each `( field, correct, wrong )` case: `correct` present, `wrong` absent.
+///
+/// Shared by both BUG-568 reproducers, which exercise the same set of top-level reads
+/// through two different shadowing mechanisms (nested key vs. sibling JSON object) and
+/// would otherwise repeat an identical eleven-field assertion block twice.
+fn assert_top_level_fields( rendered : &str, cases : &[ ( &str, &str, &str ) ] )
+{
+  for ( field, correct, wrong ) in cases
+  {
+    assert!(
+      rendered.contains( correct ),
+      "BUG-568: {field} must render the top-level value {correct:?}. Got:\n{rendered}"
+    );
+    assert!(
+      !rendered.contains( wrong ),
+      "BUG-568: {field} must not render the shadowing value {wrong:?}. Got:\n{rendered}"
+    );
+  }
+}
+
+// Mode 1 (nested shadowing), generalized past BUG-439/549: `usage` is serialized FIRST, and
+// `usage.iterations[0]` carries a decoy for every top-level scalar `render_summary()` reads.
+// JSON object field order is unspecified (RFC 8259 §4), so this ordering is exactly as valid
+// as the one the current SDK happens to emit. Each decoy value is distinct, so a wrong read
+// names itself. The top-level `"type":"result"` sits after `usage`, as in BUG-549's fixture.
+const NEW_SDK_ENVELOPE_USAGE_SHADOWS_EVERY_TOP_LEVEL_SCALAR : &str = r#"{"usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[{"type":"message","subtype":"WRONG_SUBTYPE","session_id":"99999999-9999-9999-9999-999999999999","is_error":true,"result":"WRONG_RESULT_BODY","uuid":"88888888-8888-8888-8888-888888888888","stop_reason":"WRONG_STOP_REASON","num_turns":99,"fast_mode_state":"WRONG_FAST_MODE","duration_ms":999,"duration_api_ms":888,"total_cost_usd":9.99}]},"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","uuid":"00000000-0000-0000-0000-000000000002","stop_reason":"end_turn","num_turns":1,"fast_mode_state":"off","duration_ms":100,"duration_api_ms":90,"total_cost_usd":0.001,"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
+
+// Mode 2 (cross-object assembly): two complete, newline-separated result envelopes handed to
+// `render_summary()` as one `&str` — the shape produced whenever a JSONL stream is buffered
+// and passed whole rather than split per line. The FIRST object is the one being rendered; it
+// deliberately omits `is_error`, `stop_reason`, and `total_cost_usd`, and the SECOND object
+// supplies contradictory values for exactly those three. Every other field is present in the
+// first object, so the fixture also pins that the fix does not over-reach and blank them.
+const TWO_CONCATENATED_RESULT_ENVELOPES : &str = concat!
+(
+  r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","uuid":"00000000-0000-0000-0000-000000000002","num_turns":1,"duration_ms":100,"duration_api_ms":90,"result":"hello","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0}},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#,
+  "\n",
+  r#"{"type":"result","subtype":"error_during_execution","session_id":"99999999-9999-9999-9999-999999999999","is_error":true,"stop_reason":"WRONG_STOP_REASON","total_cost_usd":9.99,"num_turns":99,"uuid":"88888888-8888-8888-8888-888888888888","result":"WRONG_RESULT_BODY","fast_mode_state":"WRONG_FAST_MODE","duration_ms":999,"duration_api_ms":888,"permission_denials":[]}"#,
+);
+
+/// BUG-568 regression, mode 1: no top-level scalar may be read from a same-named key nested
+/// inside `usage.iterations[]`, whatever order the SDK serializes the two in.
+///
+/// # Root Cause
+/// Eleven of the twelve top-level reads in `render_summary()` still used the depth-unaware
+/// `extract_str`/`extract_u64`/`extract_f64`/`extract_bool`, which first-match their key
+/// anywhere in the envelope. Only `"type"` (BUG-549) had been migrated to a `_shallow`
+/// variant. Whenever the SDK serializes `usage` before a top-level scalar — permitted, since
+/// JSON object field order is unspecified (RFC 8259 §4) — `usage.iterations[]`'s same-named
+/// field is found first and rendered as if it were the envelope's own.
+///
+/// # Why Not Caught
+/// BUG-439 migrated the reads *inside* `usage` and BUG-549 migrated the top-level `"type"`,
+/// each fixing the one field its own symptom exposed; neither generalized to the rest of the
+/// top-level block. `extract_bool` compounded this — it is the only extractor family member
+/// with no `_shallow` counterpart, so `is_error` (the most visibly contradictory field) could
+/// not have been migrated alongside the others without writing new code first. Every existing
+/// fixture serializes `usage` after the scalars it would shadow, so none of them can fail.
+///
+/// # Fix Applied
+/// Added `extract_bool_shallow` (with `parse_bool_value` factored out, matching the
+/// str/u64/f64 members of the family), bound the envelope slice once as
+/// `json.strip_prefix( '{' )`, and routed every top-level read through a `_shallow` variant
+/// against that slice. The leading-`{` strip is load-bearing: `find_key_shallow` treats its
+/// input's own start as depth 0, so an unstripped `json` puts every top-level field at depth 1.
+///
+/// # Prevention
+/// A read is depth-aware or it is order-dependent — there is no third state. When a helper
+/// family gains a `_shallow` variant, every member gains one, and every call site outside a
+/// deliberately-nested slice migrates in the same pass; migrating only the field that happened
+/// to produce a visible symptom leaves the identical defect in its ten siblings.
+///
+/// # Pitfall
+/// Fixing the one field a symptom exposed, rather than the read *class* that field belongs to,
+/// converts a systemic defect into a latent one — the remaining sites stay correct only by
+/// accident of the current serializer's key order, and each re-emerges as its own bug report.
+// test_kind: bug_reproducer(BUG-568)
+#[ test ]
+fn render_summary_reads_top_level_scalars_past_shadowing_usage_iterations_keys()
+{
+  let rendered = render_summary( NEW_SDK_ENVELOPE_USAGE_SHADOWS_EVERY_TOP_LEVEL_SCALAR, None )
+    .expect( "render_summary must return Some for a gated result envelope" );
+  assert_top_level_fields
+  (
+    &rendered,
+    &[
+      ( "subtype",         "subtype:\u{1b}[0m \u{1b}[32msuccess\u{1b}[0m",   "WRONG_SUBTYPE" ),
+      (
+        "session_id",
+        "session_id:\u{1b}[0m \u{1b}[32m00000000-0000-0000-0000-000000000001\u{1b}[0m",
+        "99999999-9999-9999-9999-999999999999",
+      ),
+      (
+        "uuid",
+        "uuid:\u{1b}[0m \u{1b}[32m00000000-0000-0000-0000-000000000002\u{1b}[0m",
+        "88888888-8888-8888-8888-888888888888",
+      ),
+      ( "is_error",        "is_error:\u{1b}[0m \u{1b}[33mfalse\u{1b}[0m",    "\u{1b}[33mtrue\u{1b}[0m" ),
+      ( "stop_reason",     "stop_reason:\u{1b}[0m \u{1b}[32mend_turn\u{1b}[0m", "WRONG_STOP_REASON" ),
+      ( "num_turns",       "num_turns:\u{1b}[0m \u{1b}[33m1\u{1b}[0m",       "\u{1b}[33m99\u{1b}[0m" ),
+      ( "fast_mode_state", "fast_mode_state:\u{1b}[0m \u{1b}[32moff\u{1b}[0m", "WRONG_FAST_MODE" ),
+      ( "duration_ms",     "duration_ms:\u{1b}[0m \u{1b}[33m100\u{1b}[0m",   "\u{1b}[33m999\u{1b}[0m" ),
+      ( "duration_api_ms", "duration_api_ms:\u{1b}[0m \u{1b}[33m90\u{1b}[0m", "\u{1b}[33m888\u{1b}[0m" ),
+      ( "total_cost_usd",  "total_cost_usd:\u{1b}[0m \u{1b}[33m0.0010\u{1b}[0m", "9.9900" ),
+      ( "result body",     "\nhello\n",                                      "WRONG_RESULT_BODY" ),
+    ],
+  );
+}
+
+/// BUG-568 regression, mode 2: a rendered envelope must be assembled from ONE JSON object —
+/// a field absent from the first object falls back to its default, never to a later object's.
+///
+/// # Root Cause
+/// The same depth-unaware top-level reads as mode 1, exercised across an object boundary
+/// rather than a nesting boundary. Handed two concatenated envelopes, each field independently
+/// first-matches its own key, so a field missing from the first object is silently satisfied
+/// from the second — producing one rendered block that corresponds to no single envelope and
+/// can contradict itself (`subtype: success` beside `is_error: true`).
+///
+/// # Why Not Caught
+/// Every prior fixture in this file is a single JSON object, so no test could ever observe a
+/// cross-object read. The BUG-436/439/440/549 family all framed the defect as nested-key
+/// shadowing *within* one envelope; the multi-object failure mode was never described, even
+/// though the same depth-unaware reads produce it.
+///
+/// # Fix Applied
+/// The same `_shallow` migration as mode 1 closes this mode too, with no additional code:
+/// `find_key_shallow` returns `None` the moment depth goes below zero (its `depth < 0` guard),
+/// so a search starting inside the first object self-bounds at that object's closing brace and
+/// can never reach a sibling object's keys.
+///
+/// # Prevention
+/// A parser handed a buffer must define its own extent. Any extraction whose correctness
+/// assumes the input holds exactly one object needs a bound that enforces it, not a caller
+/// contract that merely states it — the caller is one stream-buffering change away from
+/// violating it silently.
+///
+/// # Pitfall
+/// Reading N fields with N independent unbounded searches has no single-object invariant to
+/// violate loudly; it degrades into a plausible-looking composite whose only symptom is that
+/// the fields disagree with each other, which no individual field's assertion can detect.
+// test_kind: bug_reproducer(BUG-568)
+#[ test ]
+fn render_summary_never_fills_a_missing_field_from_a_following_json_object()
+{
+  let rendered = render_summary( TWO_CONCATENATED_RESULT_ENVELOPES, None )
+    .expect( "render_summary must return Some for a gated result envelope" );
+  assert_top_level_fields
+  (
+    &rendered,
+    &[
+      // The three fields the first object omits — defaults, never the second object's values.
+      ( "is_error",       "is_error:\u{1b}[0m \u{1b}[33mfalse\u{1b}[0m",  "\u{1b}[33mtrue\u{1b}[0m" ),
+      ( "stop_reason",    "stop_reason:\u{1b}[0m \u{1b}[32m\u{1b}[0m",    "WRONG_STOP_REASON" ),
+      ( "total_cost_usd", "total_cost_usd:\u{1b}[0m \u{1b}[33m0.0000\u{1b}[0m", "9.9900" ),
+      // Fields the first object does carry — pinned so the fix does not over-reach and blank them.
+      ( "subtype",        "subtype:\u{1b}[0m \u{1b}[32msuccess\u{1b}[0m", "error_during_execution" ),
+      (
+        "session_id",
+        "session_id:\u{1b}[0m \u{1b}[32m00000000-0000-0000-0000-000000000001\u{1b}[0m",
+        "99999999-9999-9999-9999-999999999999",
+      ),
+      (
+        "uuid",
+        "uuid:\u{1b}[0m \u{1b}[32m00000000-0000-0000-0000-000000000002\u{1b}[0m",
+        "88888888-8888-8888-8888-888888888888",
+      ),
+      ( "num_turns",       "num_turns:\u{1b}[0m \u{1b}[33m1\u{1b}[0m",     "\u{1b}[33m99\u{1b}[0m" ),
+      ( "fast_mode_state", "fast_mode_state:\u{1b}[0m \u{1b}[32moff\u{1b}[0m", "WRONG_FAST_MODE" ),
+      ( "duration_ms",     "duration_ms:\u{1b}[0m \u{1b}[33m100\u{1b}[0m", "\u{1b}[33m999\u{1b}[0m" ),
+      ( "duration_api_ms", "duration_api_ms:\u{1b}[0m \u{1b}[33m90\u{1b}[0m", "\u{1b}[33m888\u{1b}[0m" ),
+      ( "result body",     "\nhello\n",                                    "WRONG_RESULT_BODY" ),
+    ],
+  );
+}
+
+// A non-result stream chunk followed by a genuine result envelope. The chunk carries no
+// `"subtype"` and `"type":"message"`, so it must NOT satisfy the result gate — but the
+// envelope after it carries both a `"subtype"` and a different `session_id`.
+const NON_RESULT_CHUNK_THEN_RESULT_ENVELOPE : &str = concat!
+(
+  r#"{"type":"message","session_id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","message":{"role":"assistant","content":[{"type":"text","text":"thinking"}]}}"#,
+  "\n",
+  r#"{"type":"result","subtype":"success","session_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","is_error":false,"result":"done","permission_denials":[]}"#,
+);
+
+// A well-formed single result envelope preceded by whitespace — the shape `envelope_body`'s
+// `trim_start` exists for, and the one `strip_prefix('{')` alone silently fails to unwrap.
+const RESULT_ENVELOPE_WITH_LEADING_WHITESPACE : &str = "  \n\t{\"type\":\"result\",\"subtype\":\"success\",\"session_id\":\"cccccccc-cccc-cccc-cccc-cccccccccccc\",\"is_error\":false,\"result\":\"done\",\"permission_denials\":[]}";
+
+/// BUG-568 regression, gate reads: the `is_result` gate in `extract_session_id()` must be
+/// satisfiable only by the FIRST object in the buffer, and the UUID it returns must come
+/// from that same object.
+///
+/// # Root Cause
+/// The gate read `extract_str( json, "subtype" )` depth-unaware, so a `"subtype"` belonging
+/// to a *later* object in a buffered JSONL read could admit a leading chunk that is not a
+/// result at all — after which the equally depth-unaware `session_id` read returned the
+/// leading chunk's UUID. Gate and payload could therefore come from different objects.
+///
+/// # Why Not Caught
+/// BUG-437 hardened *which keys* the gate consults (adding the `subtype` disjunct for the
+/// new SDK) without changing *how deep* it looks for them, and every fixture was a single
+/// object, so no test could distinguish "this envelope is a result" from "some object
+/// somewhere in this buffer is a result".
+///
+/// # Fix Applied
+/// Both gate reads and the `session_id` read now go through `extract_str_shallow` against a
+/// single `envelope_body( json )` binding, so all three see the first object and nothing
+/// else. `envelope_body` also trims leading whitespace, which the open-coded
+/// `strip_prefix('{')` it replaces did not — that form degrades to a silent no-op on a
+/// whitespace-prefixed envelope, after which no depth-0 read matches anything.
+///
+/// # Prevention
+/// A gate and the payload it admits must be read from the same bound object, not
+/// independently located in a shared buffer. Binding the object once is what makes the two
+/// reads coherent; depth-awareness alone would still allow them to disagree across objects.
+///
+/// # Pitfall
+/// A gate whose predicate is correct but whose reads are unbounded answers the right
+/// question about the wrong object — and because the payload read is unbounded too, the
+/// value it returns need not even belong to whatever satisfied the gate.
+// test_kind: bug_reproducer(BUG-568)
+#[ test ]
+fn extract_session_id_gate_and_payload_come_from_the_first_object_only()
+{
+  assert_eq!
+  (
+    extract_session_id( NON_RESULT_CHUNK_THEN_RESULT_ENVELOPE ),
+    None,
+    "BUG-568: a leading non-result chunk must not be admitted by a \"subtype\" belonging to \
+     a later object in the same buffer, nor yield its own session_id once admitted"
+  );
+  assert_eq!
+  (
+    extract_session_id( RESULT_ENVELOPE_WITH_LEADING_WHITESPACE ).as_deref(),
+    Some( "cccccccc-cccc-cccc-cccc-cccccccccccc" ),
+    "BUG-568: a whitespace-prefixed envelope must still be unwrapped — `envelope_body` trims \
+     before stripping the opening brace, where a bare strip_prefix would no-op and leave \
+     every top-level field at depth 1"
+  );
+  let rendered = render_summary( RESULT_ENVELOPE_WITH_LEADING_WHITESPACE, None )
+    .expect( "BUG-568: a whitespace-prefixed result envelope must still render" );
+  assert!(
+    rendered.contains( "type:\u{1b}[0m \u{1b}[32mresult\u{1b}[0m" ),
+    "BUG-568: the top-level \"type\" must be found in a whitespace-prefixed envelope. \
+     Got:\n{rendered}"
+  );
+}
