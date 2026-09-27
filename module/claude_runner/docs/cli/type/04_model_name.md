@@ -5,7 +5,7 @@ subprocess via `--model`.
 
 - **Purpose:** Claude model identifier string
 - **Fundamental Type:** String
-- **Constants:** —
+- **Constants:** `DEFAULT_MODEL` = `claude-opus-5-5` (built-in default — see [`--model`](../param/003_model.md)); `REFRESH_DEFAULT_MODEL` = `claude-sonnet-5` (`refresh` only)
 - **Constraints:** any non-empty string accepted by `claude --model`
 - **Parsing:** consumed as the next token after `--model`
 - **Methods:** —

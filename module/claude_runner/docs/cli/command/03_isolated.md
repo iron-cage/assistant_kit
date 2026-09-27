@@ -19,7 +19,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 |-----------|------|---------|-------------|
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt forwarded to Claude |
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
-| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model override; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `opus` alias; env: `CLR_MODEL` |
+| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | `claude-opus-5-5` | Model override; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `claude-opus-5-5` (`DEFAULT_MODEL`); env: `CLR_MODEL` |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | 8 | Max concurrent non-interactive sessions before blocking; `0` = unlimited (gate disabled); JSON key: `"max-sessions"`; env: `CLR_MAX_SESSIONS`; no config-file tier |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
@@ -27,7 +27,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--effort`](../param/017_effort.md) | [`EffortLevel`](../type/07_effort_level.md) | max | Reasoning effort: `low`, `medium`, `high`, `max`; default `max` injected when absent; env: `CLR_EFFORT` |
 | [`--no-effort-max`](../param/018_no_effort_max.md) | bool | false | Suppress automatic `--effort max` injection entirely; env: `CLR_NO_EFFORT_MAX` |
 | [`--no-chrome`](../param/021_no_chrome.md) | bool | false | Suppress automatic `--chrome` injection; env: `CLR_NO_CHROME` |
-| [`--no-compact-window`](../param/077_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
+| [`--no-compact-window`](../param/077_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` injection; env: `CLR_NO_COMPACT_WINDOW` |
 | [`--dir`](../param/008_dir.md) | path | — | Working directory injected into subprocess command; validated to exist before spawn; env: `CLR_DIR` |
 | [`--add-dir`](../param/066_add_dir.md) | path (repeatable) | — | Additional directory Claude may access; injected per entry into subprocess command; env: `CLR_ADD_DIR` |
 | [`--file`](../param/025_file.md) | path | — | File piped as stdin to the subprocess; validated to exist before spawn |
@@ -55,7 +55,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 2. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 3. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
 4. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-5. Build subprocess command: `--model` from native flag (if given) else project `.clr.toml` → user `~/.clr/config.toml` → `"opus"` alias; `--effort` from native flag else `max` unless `--no-effort-max` suppresses it entirely; `--no-session-persistence` always; `--dangerously-skip-permissions` when message present; `--chrome` unless `--no-chrome` is set; push `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config` (each entry), `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns` when given; prepend all before `--print` and message; passthrough args appended last for last-wins override.
+5. Build subprocess command: `--model` from native flag (if given) else project `.clr.toml` → user `~/.clr/config.toml` → `"claude-opus-5-5"` (`DEFAULT_MODEL`); `--effort` from native flag else `max` unless `--no-effort-max` suppresses it entirely; `--no-session-persistence` always; `--dangerously-skip-permissions` when message present; `--chrome` unless `--no-chrome` is set; push `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config` (each entry), `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns` when given; prepend all before `--print` and message; passthrough args appended last for last-wins override.
 6. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
 7. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
 
@@ -91,7 +91,7 @@ clr isolated --creds /path/to/creds.json
 The isolated subprocess has no access to the caller's real `$HOME` — no `~/.claude/settings.json`, no previous conversation state. A minimal `~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing the subprocess to execute immediately without asking clarifying questions or requesting confirmation.
 
 Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-- `--model` — resolved across 2 tiers: project `.clr.toml`'s `model` key, then user `~/.clr/config.toml`'s `model` key (set via `clr .model.select`); first tier with a value wins. Falls back to `"opus"` (`ISOLATED_DEFAULT_MODEL` — Opus alias; binary resolves to latest Opus) when neither tier sets a value. See [`parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) for the full comparison against `run`/`ask`'s equivalent cascade.
+- `--model` — resolved across 2 tiers: project `.clr.toml`'s `model` key, then user `~/.clr/config.toml`'s `model` key (set via `clr .model.select`); first tier with a value wins. Falls back to `"claude-opus-5-5"` (`DEFAULT_MODEL` — an explicit ID rather than the `opus` alias, which the binary resolves per release and per settings; shared with `run`/`ask`/`topic`) when neither tier sets a value. See [`parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md) for the full comparison against `run`/`ask`'s equivalent cascade.
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
 - `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)

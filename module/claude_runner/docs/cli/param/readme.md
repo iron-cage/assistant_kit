@@ -133,7 +133,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 |---|-----------|------|---------|--------------|-------------|---------|
 | 1 | `[MESSAGE]` | [`MessageText`](../type/01_message_text.md) | — | Any text | Prompt text for Claude | 2 cmds |
 | 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (auto-default: message, non-TTY stdin, or file/stdin content) | 1 cmd |
-| 3 | `--model` | [`ModelName`](../type/04_model_name.md) | — | Any model name | Claude model to use | 1 cmd |
+| 3 | `--model` | [`ModelName`](../type/04_model_name.md) | `claude-opus-5-5` | Any model name | Claude model to use | 1 cmd |
 | 4 | `--verbose` | bool | false | present/absent | Enable Claude verbose output | 1 cmd |
 | 5 | `--no-skip-permissions` | bool | false | present/absent | Disable automatic permission bypass | 1 cmd |
 | 6 | `--interactive` | bool | false | present/absent | Forces TTY passthrough, overriding all auto-print triggers | 1 cmd |
@@ -203,7 +203,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
 | 75 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
 | 76 | `--from` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any existing directory path | Cross-load most recent session from another directory (transplanted into target storage before spawn); defaults to cwd, same as `--to` | 2 cmds |
-| 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
+| 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` injection into subprocess environment | 4 cmds |
 | 78 | `--name` | string | — | Any substring | Filter `clr tools` by tool name (case-insensitive substring) | 1 cmd |
 | 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
 | 80 | `--value` | string | — | `idx`/`name`/`category`/`desc` | Print only the named column's value for each matching tool, one per line | 1 cmd |

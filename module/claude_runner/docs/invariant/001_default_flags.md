@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the automatic flag injection behavior that must be maintained across all `clr run` invocations.
 - **Responsibility**: State which flags are injected by default, their opt-out mechanism, and why the defaults exist.
-- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"\n\nultrathink"` message suffix default-on, `--effort max` default-on, `CLAUDECODE` env var removal default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out, `--no-effort-max` opt-out, `--no-chrome` opt-out, `--keep-claudecode` opt-out.
+- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"\n\nultrathink"` message suffix default-on, `--effort max` default-on, `--model` built-in default (`DEFAULT_MODEL`), `CLAUDECODE` env var removal default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out, `--no-effort-max` opt-out, `--no-chrome` opt-out, `--keep-claudecode` opt-out.
 - **Out of Scope**: Dependency constraints (→ `invariant/002_dep_constraints.md`), execution mode behavior (→ `feature/001_runner_tool.md`).
 
 ### Invariant Statement
@@ -18,6 +18,7 @@
 | `--chrome` | ON (interactive only; suppressed in print mode or non-TTY stdin — BUG-304, BUG-425) | `--no-chrome` | Browser context for web-aware automation; suppressed in print mode and non-TTY to prevent permanent session hang |
 | `"\n\nultrathink"` message suffix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
 | `--effort max` | ON (print mode, or when `--effort <level>` given; not injected in interactive mode with no explicit level — BUG-434) | `--effort <level>` or `--no-effort-max` | Agentic automation requires maximum reasoning; claude binary default (`medium`) undershoots |
+| `--model claude-opus-5-5` | ON (every mode, interactive included; withheld on a non-anthropic seat — [Provider Gate](../cli/config_param.md#provider-gate)) | `--model <id>`, `--args-file` `"model"`, `CLR_MODEL`, or config-file `model` | The claude binary resolves its own default (and the `opus` alias) per release and per settings; an explicit ID pins one model across hosts and releases. Withheld on a redirect seat so the seat's `ANTHROPIC_MODEL` binding stays authoritative |
 | `CLAUDECODE` removal | ON | `--keep-claudecode` | Subprocess must behave as standalone; inheriting `CLAUDECODE=1` triggers nested-agent mode which alters permissions, output format, and tool availability |
 
 These defaults are intentional and must not be removed without explicit design decision. They represent the automation-optimized defaults for the `clr` runner.
@@ -31,6 +32,7 @@ The flag injection is implemented at three layers:
 - `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`. Suppression (Fix(BUG-304), Fix(BUG-425)): `builder.rs` computes `use_print` and `is_tty` early and applies `if cli.no_chrome || use_print || !is_tty { chrome = None }` — prevents `--chrome` emission for all print-mode and non-TTY-stdin invocations without requiring `--no-chrome`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`, gated on `!cli.no_effort_max && (cli.effort.is_some() || use_print)` (Fix(BUG-434)) — interactive mode with no explicit `--effort` never receives the injection, since claude v2.1.78+ rejects `"max"` in interactive mode. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.
+- `--model`: `apply_config_defaults()` (`src/cli/config.rs`) fills `cli.model` with the config-file `model`, else `DEFAULT_MODEL` (`claude_runner_core`), only when levels 1–3 left it unset and the seat carries no `env.ANTHROPIC_MODEL` (Provider Gate); `build_claude_command()` then emits it via `builder.with_model()`.
 - `CLAUDECODE` removal: `std::env::remove_var("CLAUDECODE")` called on the subprocess environment before spawn. Skipped when `cli.keep_claudecode` is set.
 
 `--dangerously-skip-permissions` is no longer user-facing as a positive flag. Users disable it via `--no-skip-permissions`. This prevents confusion between "skip permissions" as an intentional choice vs. the default behavior.
@@ -44,6 +46,7 @@ If any default injection is removed:
 - Each invocation starts a new session, losing conversation context (continuation removed)
 - Claude performs fast (non-extended) thinking on every automation request (ultrathink suffix removed)
 - Claude uses medium-effort reasoning instead of maximum for every automation request (effort max removed)
+- The model silently tracks whatever the claude binary's own default is on each host and release (built-in `--model` removed)
 - Subprocess detects nested-agent context and alters permissions, output format, and tool availability (`CLAUDECODE` removal skipped)
 - Automation pipelines that depend on these defaults will behave differently without a version change
 
@@ -73,6 +76,7 @@ If any default injection is removed:
 |------|--------------|
 | `../../src/cli/mod.rs` | `build_claude_command()` entry point and CLI dispatch |
 | `../../src/cli/builder.rs` | `session_exists()` guard and `build_claude_command()` implementation |
+| `../../src/cli/config.rs` | `apply_config_defaults()` — built-in `--model` default and Provider Gate |
 
 ### Tests
 
@@ -82,7 +86,8 @@ If any default injection is removed:
 | `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79; --keep-claudecode and extended flag coverage |
 | `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
 | `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
-| `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_source_suppresses_continue_flag` — BUG-214 regression (empty session source via `--from` → no `-c`) |
+| `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_source_suppresses_continue_flag` — BUG-214 regression (empty session source via `--from` → no `-c`); `s08_model_defaults_to_builtin_when_absent` — built-in `--model` default |
+| `../../tests/config_file_test.rs` | T22 — built-in `--model` default withheld on a non-anthropic seat (Provider Gate) |
 | `../../tests/dry_run_test.rs` | `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag` — BUG-214-reopen regression (fresh CWD, no `--session-dir` → no `-c`) |
 
 ### Provenance

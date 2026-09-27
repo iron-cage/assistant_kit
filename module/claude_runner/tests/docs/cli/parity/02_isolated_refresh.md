@@ -28,11 +28,11 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 
 ### PC-1: isolated injects opus model; refresh injects sonnet model
 
-- **Given:** `ISOLATED_DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` constants in source
-- **When:** `ISOLATED_DEFAULT_MODEL` value read; `REFRESH_DEFAULT_MODEL` value read
-- **Then:** `ISOLATED_DEFAULT_MODEL == "claude-opus-4-8"` (heavyweight model for user tasks); `REFRESH_DEFAULT_MODEL == "claude-sonnet-5"` (lightweight model for trivial OAuth ping)
+- **Given:** `DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` constants in source
+- **When:** `DEFAULT_MODEL` value read; `REFRESH_DEFAULT_MODEL` value read
+- **Then:** `DEFAULT_MODEL == "claude-opus-5-5"` (heavyweight model for user tasks); `REFRESH_DEFAULT_MODEL == "claude-sonnet-5"` (lightweight model for trivial OAuth ping)
 - **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
-- **Implemented by:** `isolated_defaults_test.rs::isd_01_isolated_default_model_is_opus`, `isolated_defaults_test.rs::isd_02_refresh_default_model_is_sonnet`
+- **Implemented by:** `isolated_defaults_test.rs::isd_01_default_model_is_opus_5_5`, `isolated_defaults_test.rs::isd_02_refresh_default_model_is_sonnet`
 
 ---
 

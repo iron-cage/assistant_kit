@@ -27,9 +27,11 @@
 //! a no-op for anyone using `config.toml`. Task 408 carried forward any existing `prefs.json`
 //! pin into `config.toml`'s user tier once (a one-time data-preservation step, not shipped code)
 //! so `.model.select` pins predating this change keep working — then deleted the now-redundant
-//! read. `dispatch_run()`'s resolution is now exactly 4 tiers: `--model` flag → JSON config →
+//! read. `dispatch_run()`'s resolution became exactly 4 tiers: `--model` flag → JSON config →
 //! `CLR_MODEL` env → `config.toml`. `dispatch_ask()` is a pure alias calling `dispatch_run()` —
-//! updated automatically.
+//! updated automatically. A later change added the level-5 built-in default: with all four
+//! tiers unset, `apply_config_defaults()` injects `DEFAULT_MODEL` (`claude-opus-5-5`) — except
+//! on a non-anthropic seat (Provider Gate), where no `--model` is injected at all.
 //!
 //! ## Prevention
 //!
@@ -58,6 +60,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
+use claude_runner_core::DEFAULT_MODEL;
 
 // ── BUG-008-1 (superseded by task 408): prefs.json alone no longer injects a model ──
 
@@ -68,8 +71,9 @@ use cli_binary_test_helpers::run_cli_with_env;
 /// all — `config.toml`'s `model` field already resolves earlier in the same
 /// dispatch sequence via `apply_config_defaults()`, making the direct `prefs.json`
 /// read redundant. With only `prefs.json`'s `subprocess_model` set (no `--model`
-/// flag, no `CLR_MODEL` env, no `config.toml` `model` key), no `--model` flag is
-/// injected — the Claude binary's own default model applies.
+/// flag, no `CLR_MODEL` env, no `config.toml` `model` key), the `prefs.json` pin
+/// is never injected — resolution falls through to the level-5 built-in default
+/// (`DEFAULT_MODEL`).
 #[ test ]
 fn dispatch_run_prefs_json_alone_no_longer_injects_model()
 {
@@ -87,9 +91,13 @@ fn dispatch_run_prefs_json_alone_no_longer_injects_model()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout   = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( "--model" ),
-    "prefs.json alone must no longer inject --model — the redundant fallback tier \
+    !stdout.contains( "claude-opus-4-6" ),
+    "prefs.json alone must no longer inject its pinned model — the redundant fallback tier \
      was removed by task 408 (config.toml resolves earlier in the same sequence). Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "with only prefs.json set, the level-5 built-in default model must apply. Got:\n{stdout}"
   );
 }
 
@@ -169,17 +177,19 @@ fn dispatch_run_clr_model_env_var_beats_prefs_json()
   );
 }
 
-// ── BUG-008-3: no --model injected when nothing is configured anywhere ────────
+// ── BUG-008-3: built-in default model injected when nothing is configured ────
 
-/// BUG-008: without `prefs.json`, `config.toml`, `CLR_MODEL`, or `--model`, no
-/// `--model` flag is injected (Test Matrix T6, task 408 — unchanged behavior).
+/// BUG-008: without `prefs.json`, `config.toml`, `CLR_MODEL`, or `--model`, exactly
+/// one `--model` flag is injected, carrying the level-5 built-in default
+/// `DEFAULT_MODEL` (Test Matrix T6, task 408 — the expected outcome was "no
+/// `--model`" until the built-in default was introduced).
 ///
 /// Since task 408, `dispatch_run()` no longer reads `prefs.json` at all, so its
 /// absence here is incidental rather than the operative condition — the same
 /// temp `HOME` also has no `config.toml`, so this is the "nothing set anywhere"
-/// case: the assembled command must not include `--model`.
+/// case: the assembled command must carry the built-in default and nothing else.
 #[ test ]
-fn dispatch_run_no_model_injected_when_prefs_absent()
+fn dispatch_run_builtin_default_model_injected_when_prefs_absent()
 {
   let home_dir = tempfile::TempDir::new().expect( "failed to create temp HOME dir" );
   let home_str = home_dir.path().to_str().expect( "HOME path must be valid UTF-8" );
@@ -187,7 +197,11 @@ fn dispatch_run_no_model_injected_when_prefs_absent()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout   = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( "--model" ),
-    "no --model must be injected when prefs.json is absent. Got:\n{stdout}"
+    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "the built-in default model must be injected when nothing is configured. Got:\n{stdout}"
+  );
+  assert_eq!(
+    stdout.matches( "--model" ).count(), 1,
+    "exactly one --model must be injected when nothing is configured. Got:\n{stdout}"
   );
 }

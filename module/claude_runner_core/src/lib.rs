@@ -87,7 +87,7 @@ pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW 
 pub use crate::control::ControlSession;
 pub use crate::exit_code::signal_exit_code;
 pub use crate::fanout::{ run_bounded, FanoutOutcome, SPAWN_FAILED_EXIT_CODE };
-pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL };
+pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, DEFAULT_MODEL, ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL };
 pub use crate::types::{
   AccountInfo, ActionMode, ContextUsageResult, EffortLevel, ErrorKind, ExecutionOutput,
   InitializeResult, InputFormat, LogLevel, McpPermissionOverrideMode, McpServerStatusEntry,
@@ -110,7 +110,7 @@ pub use crate::isolated::run_isolated;
 /// Re-export of [`crate::isolated::run_isolated_ext`].
 ///
 /// Extended variant that accepts `compact_window: Option<u32>` — use when you need to
-/// suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (`None`) or override the 300K default.
+/// suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (`None`) or override the 400K default.
 ///
 /// # Warning
 ///

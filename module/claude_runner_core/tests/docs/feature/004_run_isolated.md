@@ -2,21 +2,21 @@
 
 ### Scope
 
-- **Purpose**: FT- test cases verifying the `IsolatedModel` enum, `ISOLATED_DEFAULT_MODEL` constant, and `run_isolated()` home-isolation behavior.
+- **Purpose**: FT- test cases verifying the `IsolatedModel` enum, `DEFAULT_MODEL` constant, and `run_isolated()` home-isolation behavior.
 - **Responsibility**: Acceptance criteria confirming model-id resolution per `IsolatedModel` variant, isolated `CLAUDE.md` content, and `--chrome` suppression under home isolation.
-- **In Scope**: `IsolatedModel::Default`/`KeepCurrent`/`Specific` `.model_id()`, `ISOLATED_DEFAULT_MODEL` value, `run_isolated()` CLAUDE.md write, `with_home_isolation()` chrome-flag suppression.
+- **In Scope**: `IsolatedModel::Default`/`KeepCurrent`/`Specific` `.model_id()`, `DEFAULT_MODEL` value, `run_isolated()` CLAUDE.md write, `with_home_isolation()` chrome-flag suppression.
 - **Out of Scope**: stdin file piping (-> `005_stdin_file.md`), CLAUDECODE env var unsetting (-> `006_unset_claudecode.md`).
 
-Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md). Tests validate the `IsolatedModel` enum and `ISOLATED_DEFAULT_MODEL` constant introduced alongside the model parameter to `run_isolated()`.
+Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md). Tests validate the `IsolatedModel` enum and `DEFAULT_MODEL` constant introduced alongside the model parameter to `run_isolated()`.
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| FT-1 | `IsolatedModel::Default.model_id()` → `Some("opus")` | Unit |
+| FT-1 | `IsolatedModel::Default.model_id()` → `Some("claude-opus-5-5")` | Unit |
 | FT-2 | `IsolatedModel::KeepCurrent.model_id()` → `None` | Unit |
 | FT-3 | `IsolatedModel::Specific("custom-model").model_id()` → `Some("custom-model")` | Unit |
-| FT-4 | `ISOLATED_DEFAULT_MODEL` constant → `"opus"` | Unit |
+| FT-4 | `DEFAULT_MODEL` constant → `"claude-opus-5-5"` | Unit |
 | FT-5 | `run_isolated()` writes `CLAUDE.md` with immediate-response instruction to temp HOME | Unit |
 | FT-6 | `ClaudeCommand` built with `with_home_isolation()` does not include `--chrome` in args | Unit |
 
@@ -28,11 +28,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-1: `IsolatedModel::Default.model_id()` → `Some("opus")`
+### FT-1: `IsolatedModel::Default.model_id()` → `Some("claude-opus-5-5")`
 
 - **Given:** no external resources; `IsolatedModel::Default` constructed inline
 - **When:** `IsolatedModel::Default.model_id()` called
-- **Then:** returns `Some("opus")` (the Opus capability alias; binary resolves to latest Opus at runtime)
+- **Then:** returns `Some("claude-opus-5-5")` (`DEFAULT_MODEL`, an explicit ID rather than the `opus` alias)
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 
@@ -58,11 +58,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-4: `ISOLATED_DEFAULT_MODEL` constant equals `"opus"`
+### FT-4: `DEFAULT_MODEL` constant equals `"claude-opus-5-5"`
 
 - **Given:** no external resources
-- **When:** `ISOLATED_DEFAULT_MODEL` constant value is asserted
-- **Then:** equals `"opus"` (the Opus capability alias); `IsolatedModel::Default.model_id()` returns `Some(ISOLATED_DEFAULT_MODEL)`; the `claude` binary resolves the alias to the latest available Opus at runtime
+- **When:** `DEFAULT_MODEL` constant value is asserted
+- **Then:** equals `"claude-opus-5-5"`; `IsolatedModel::Default.model_id()` returns `Some(DEFAULT_MODEL)`; the explicit ID pins one model, where the `opus` alias would resolve per release and per settings
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 

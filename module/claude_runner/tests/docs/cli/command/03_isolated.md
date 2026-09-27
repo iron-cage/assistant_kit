@@ -43,7 +43,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 | IT-35 | `CLR_OUTPUT_STYLE=summary` env var fallback | Output Env |
 | IT-36 | `CLR_SUMMARY_FIELDS=minimal` env var fallback | Output Env |
 | IT-37 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
-| IT-46 | `--model sonnet` overrides isolated's injected `opus` default | Native Flag: model |
+| IT-46 | `--model sonnet` overrides isolated's injected `claude-opus-5-5` default | Native Flag: model |
 | IT-47 | `--effort medium` overrides isolated's injected `max` default | Native Flag: effort |
 | IT-48 | `--no-effort-max` suppresses the injected `--effort` flag entirely | Native Flag: no-effort-max |
 | IT-49 | `--system-prompt "You are terse"` forwarded to subprocess | Native Flag: system-prompt |
@@ -206,7 +206,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 
 - **Setup:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent in test environment
 - **Command:** `clr isolated --creds <f> --trace "Fix bug"` (no `--dry-run`; trace fires before subprocess attempt)
-- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000`), and `claude --chrome --model claude-opus-5-5 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [--trace](../../../../docs/cli/param/013_trace.md)
 
@@ -484,11 +484,11 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 
 ---
 
-### IT-46: `--model sonnet` overrides isolated's injected `opus` default
+### IT-46: `--model sonnet` overrides isolated's injected `claude-opus-5-5` default
 
 - **Setup:** credentials JSON at temp file (content `{}`); `--dry-run` flag prevents subprocess spawn
 - **Command:** `clr isolated --creds <f> --dry-run --model sonnet "msg"`
-- **Expected behavior:** exit 0; `--dry-run` preview stdout contains `--model sonnet`; confirms native flag overrides the default `opus` alias injection
+- **Expected behavior:** exit 0; `--dry-run` preview stdout contains `--model sonnet`; confirms native flag overrides the default `claude-opus-5-5` injection
 - **Exit:** 0
 - **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [param/003_model.md](../../../../docs/cli/param/003_model.md)
 

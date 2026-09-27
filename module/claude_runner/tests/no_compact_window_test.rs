@@ -2,7 +2,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify that `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` is injected by default for all four
+//! Verify that `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` is injected by default for all four
 //! running commands (`run`, `ask`, `isolated`, `refresh`) and that `--no-compact-window` /
 //! `CLR_NO_COMPACT_WINDOW` correctly suppresses it. All 12 functions use `--dry-run` to
 //! inspect the assembled subprocess environment without spawning Claude Code.
@@ -39,7 +39,7 @@ fn default_injection_run()
 {
   let output = stdout_str( &run_cli( &[ "--dry-run", "t" ] ) );
   assert!(
-    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000" ),
+    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000" ),
     "Default injection must be present in run dry-run stdout. Got:\n{output}"
   );
 }
@@ -92,7 +92,7 @@ fn env_zero_does_not_suppress()
     &[ ( "CLR_NO_COMPACT_WINDOW", "0" ) ],
   ) );
   assert!(
-    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000" ),
+    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000" ),
     "CLR_NO_COMPACT_WINDOW=0 (falsy) must NOT suppress injection. Got:\n{output}"
   );
 }
@@ -108,7 +108,7 @@ fn dry_run_shows_var_when_active()
 {
   let output = stdout_str( &run_cli( &[ "--dry-run", "t" ] ) );
   assert!(
-    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000" ),
+    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000" ),
     "dry-run must reveal injected env var when active (WYSIWYG fidelity). Got:\n{output}"
   );
 }
@@ -147,7 +147,7 @@ fn default_injection_isolated()
   let tmp_path = creds.path().to_str().unwrap();
   let output = stdout_str( &run_cli( &[ "isolated", "--creds", tmp_path, "--dry-run" ] ) );
   assert!(
-    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000" ),
+    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000" ),
     "Default injection must be present in isolated dry-run stdout. Got:\n{output}"
   );
 }
@@ -175,7 +175,7 @@ fn default_injection_refresh()
   let tmp_path = creds.path().to_str().unwrap();
   let output = stdout_str( &run_cli( &[ "refresh", "--creds", tmp_path, "--dry-run" ] ) );
   assert!(
-    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000" ),
+    output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000" ),
     "Default injection must be present in refresh dry-run stdout. Got:\n{output}"
   );
 }

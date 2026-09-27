@@ -2,7 +2,7 @@
 //!
 //! Covers the 2-tier chain `IsolatedModel::Default` resolves through:
 //! project `.clr.toml` → user `~/.clr/config.toml` → `None` (caller falls back
-//! to `ISOLATED_DEFAULT_MODEL`, unchanged, covered by `isolated_test.rs` T10).
+//! to `DEFAULT_MODEL`, unchanged, covered by `isolated_test.rs` T10).
 //! Task 410 removed the prior `~/.clr/prefs.json` fallback tier entirely —
 //! `read_subprocess_model_pref()` no longer exists. `claude_core::settings_io`
 //! itself is untouched — it remains live, shared code used by
@@ -91,7 +91,7 @@ fn t6_prefs_json_no_longer_consulted_when_config_toml_unset()
 // ── T7 ───────────────────────────────────────────────────────────────────────
 
 /// T7: neither `config.toml` nor `prefs.json` set anywhere → `None` (caller's
-/// existing `model.model_id()` fallback then supplies `ISOLATED_DEFAULT_MODEL`).
+/// existing `model.model_id()` fallback then supplies `DEFAULT_MODEL`).
 #[ test ]
 fn t7_neither_set_returns_none()
 {

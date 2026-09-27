@@ -14,7 +14,7 @@ Edge case tests for the model selection parameter. Tests validate value forwardi
 | EC-4 | Any model string accepted (no validation) | Permissive |
 | EC-5 | `--help` lists `--model` | Documentation |
 | EC-6 | `--model` with message → both forwarded correctly | Interaction |
-| EC-7 | Without `--model` → no `--model` flag in assembled command | Behavioral Divergence |
+| EC-7 | Without `--model` → built-in `--model claude-opus-5-5` in assembled command | Behavioral Divergence |
 
 ## Test Coverage Summary
 
@@ -91,11 +91,11 @@ Edge case tests for the model selection parameter. Tests validate value forwardi
 - **Commands:** run, ask
 ---
 
-### EC-7: Without `--model` → no `--model` flag in assembled command
+### EC-7: Without `--model` → built-in `--model claude-opus-5-5` in assembled command
 
-- **Given:** clean environment
+- **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command does NOT contain `--model`; claude uses its own default model
+- **Then:** Assembled command contains `--model claude-opus-5-5` (`DEFAULT_MODEL`); on a non-anthropic seat no `--model` is emitted at all (Provider Gate)
 - **Exit:** 0
 - **Source:** [003_model.md](../../../../docs/cli/param/003_model.md)
 - **Commands:** run, ask

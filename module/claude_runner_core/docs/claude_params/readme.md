@@ -145,7 +145,7 @@ These parameters are only settable via environment variables. All have dedicated
 | 58 | [session_dir](047_session_dir.md) | Env | — | `CLAUDE_CODE_SESSION_DIR` | auto | `with_session_dir()` | Override session directory |
 | 59 | [top_p](058_top_p.md) | Env | — | `CLAUDE_CODE_TOP_P` | none | `with_top_p()` | Top-p nucleus sampling (0.0–1.0) |
 | 60 | [top_k](057_top_k.md) | Env | — | `CLAUDE_CODE_TOP_K` | none | `with_top_k()` | Top-k sampling cutoff |
-| 61 | [compact_window](071_compact_window.md) | Env | — | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300000` | `with_compact_window()` | Auto-compaction context window (tokens) |
+| 61 | [compact_window](071_compact_window.md) | Env | — | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `400000` | `with_compact_window()` | Auto-compaction context window (tokens) |
 | 62 | [print_bg_wait_ceiling_ms](072_print_bg_wait_ceiling_ms.md) | Env | — | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` | `with_print_bg_wait_ceiling_ms()` | Print-mode background wait ceiling (ms) |
 
 ### Settings Config (`~/.claude/settings.json`)
@@ -184,7 +184,7 @@ unless the caller explicitly configures it.
 | 51 | [auto_continue](010_auto_continue.md) | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `false` | `with_auto_continue()` |
 | 52 | [telemetry](053_telemetry.md) | `CLAUDE_CODE_TELEMETRY` | `false` | `true` | `with_telemetry()` |
 | 40 | [chrome](015_chrome.md) | `--chrome` / `--no-chrome` | on | off | `with_chrome()` |
-| 61 | [compact_window](071_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300000` | unset — model native (`200000` standard / `1000000` extended) | `with_compact_window()` |
+| 61 | [compact_window](071_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `400000` | unset — model native (`200000` standard / `1000000` extended) | `with_compact_window()` |
 | 62 | [print_bg_wait_ceiling_ms](072_print_bg_wait_ceiling_ms.md) | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` (wait indefinitely) | `600000` (10 min) | `with_print_bg_wait_ceiling_ms()` |
 
 Two of these (`compact_window`, `chrome`) expose an explicit disable path

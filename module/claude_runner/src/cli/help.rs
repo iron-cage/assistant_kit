@@ -1,3 +1,5 @@
+use claude_runner_core::DEFAULT_MODEL;
+
 /// Print help for the main `clr` command to stdout.
 pub( crate ) fn print_help()
 {
@@ -141,7 +143,7 @@ fn claude_code_option_group() -> cli_fmt::help::OptionGroup
     name    : "CLAUDE CODE OPTIONS (forwarded)".to_string(),
     entries : vec!
     [
-      OptionEntry { name : "--model <MODEL>".into(),                 desc : "Model to use".into() },
+      OptionEntry { name : "--model <MODEL>".into(),                 desc : format!( "Model to use (default: {DEFAULT_MODEL})" ) },
       OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 128000)".into() },
       OptionEntry { name : "--effort <LEVEL>".into(),                desc : "Reasoning effort: low, medium, high, max (default: max)".into() },
       OptionEntry { name : "--output-format <FMT>".into(),           desc : "Output format: text, json, stream-json".into() },
@@ -177,7 +179,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!();
   println!( "CREDENTIAL OPTIONS:" );
   println!( "  --creds <FILE>                     Credentials JSON file (required) [env: CLR_CREDS]" );
-  println!( "  --model <MODEL>                    Model to use (default: claude's own default) [env: CLR_MODEL]" );
+  println!( "  --model <MODEL>                    Model to use (default: {DEFAULT_MODEL}) [env: CLR_MODEL]" );
   println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30) [env: CLR_TIMEOUT]" );
   println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
@@ -376,7 +378,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
   println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
   println!( "  --max-tokens <N>                   Max output tokens (default: 128000)" );
-  println!( "  --model <MODEL>                    Model to use" );
+  println!( "  --model <MODEL>                    Model to use (default: {DEFAULT_MODEL})" );
   println!( "  --dry-run                          Print command without executing" );
   println!( "  --trace                            Print command to stderr then execute" );
   println!( "  --system-prompt <TEXT>             Set system prompt" );
@@ -437,7 +439,7 @@ pub( crate ) fn print_topic_help() -> !
   println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
   println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
   println!( "  --max-tokens <N>                   Max output tokens (default: 128000)" );
-  println!( "  --model <MODEL>                    Model to use" );
+  println!( "  --model <MODEL>                    Model to use (default: {DEFAULT_MODEL})" );
   println!( "  --dry-run                          Print command without executing" );
   println!( "  --trace                            Print command to stderr then execute" );
   println!( "  --system-prompt <TEXT>             Set system prompt" );

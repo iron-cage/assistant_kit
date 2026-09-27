@@ -53,7 +53,7 @@ fn t493_override_with_session_no_export_no_continue()
   let home = empty_home.path().to_str().expect( "utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--dry-run", "--session-dir", override_str, "test" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: keep a host `~/.clr/config.toml` pin from replacing the default --model
     .env( "CLAUDE_HOME", home )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
@@ -91,7 +91,7 @@ fn t493_no_warning_without_parameter()
   let home = empty_home.path().to_str().expect( "utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--dry-run", "test" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: keep a host `~/.clr/config.toml` pin from replacing the default --model
     .env( "CLAUDE_HOME", home )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )

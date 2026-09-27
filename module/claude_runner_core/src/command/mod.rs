@@ -103,7 +103,7 @@ pub struct ClaudeCommand {
 /// Default auto-compaction window in tokens, applied by [`ClaudeCommand::new`] and shared with
 /// the `isolated`/`refresh` CLI paths in `claude_runner::cli::credential` to keep both defaults
 /// in lockstep.
-pub const DEFAULT_COMPACT_WINDOW: u32 = 300_000;
+pub const DEFAULT_COMPACT_WINDOW: u32 = 400_000;
 
 /// Environment variables that can override or redirect the credential source the `claude`
 /// binary uses — direct API keys, bearer/OAuth token overrides, endpoint redirects, cloud
@@ -187,7 +187,7 @@ impl ClaudeCommand {
       bash_max_timeout_ms: Some( 7_200_000 ),      // 2 hours (vs 10 min standard)
       auto_continue: Some( true ),                 // Enable automation (vs false standard)
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
-      compact_window: Some( DEFAULT_COMPACT_WINDOW ), // Limit compaction to 300K (vs model native 200K or 1M)
+      compact_window: Some( DEFAULT_COMPACT_WINDOW ), // Limit compaction to 400K (vs model native 200K or 1M)
       print_bg_wait_ceiling_ms: Some( 0 ),             // Disables claude's own ceiling-exceeded sweep (0 fails its `ra>0` guard — not an instant-kill; see contract/claude_code/docs/param/131_print_bg_wait_ceiling_ms.md) — clr owns background-task waiting via run_print_mode()'s watchdog + gate_poll_secs/gate_max_attempts, so a second internal wait layer would be redundant
 
       skip_permissions: false,

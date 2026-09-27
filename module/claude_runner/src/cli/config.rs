@@ -1,10 +1,12 @@
 //! Config-file parameter tier: `~/.clr/config.toml` (or `$CLR_CONFIG_DIR/config.toml`)
 //! and project-level `.clr.toml`, applied between `CLR_*` env vars and hardcoded
 //! defaults in the 5-level CLI parameter precedence chain (CLI > `--args-file`
-//! JSON > `CLR_*` env > this tier > hardcoded default).
+//! JSON > `CLR_*` env > this tier > hardcoded default). `model`'s level-5 hardcoded
+//! default (`DEFAULT_MODEL`) is applied here too, since it shares the config tier's
+//! Provider Gate.
 
 use crate::cli::parse::CliArgs;
-use claude_runner_core::EffortLevel;
+use claude_runner_core::{ EffortLevel, DEFAULT_MODEL };
 use error_tools::{ Error, Result };
 use std::path::PathBuf;
 
@@ -169,6 +171,8 @@ pub( crate ) fn load_config() -> Result< ConfigDefaults >
 /// tier above hardcoded defaults. Mirrors `apply_env_vars`'s and
 /// `apply_json_config`'s fill-only-if-unset guard: never overwrites a value
 /// already set by a higher tier (CLI flag, `--args-file`, or `CLR_*` env var).
+/// `model` falls back to the hardcoded `DEFAULT_MODEL` when `config` has none — both
+/// withheld on a non-anthropic seat (Provider Gate, see the comment below).
 /// Validates `output_style`/`summary_fields`/`journal` exactly as `apply_env_vars`
 /// does, returning `Err` on an unrecognized value — config-file input is no less
 /// trusted than an env var, so it must be rejected with the same rigor.
@@ -180,9 +184,10 @@ pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDe
   // `~/.claude/settings.json` — written on switch-to-redirect, removed on switch-back
   // (Feature 071's transactional contract). A config-tier model would be promoted to an
   // explicit `--model` flag — the strongest model source claude knows — silently
-  // overriding that seat binding on every launch. While that block is live the config
-  // tier's two model keys are ignored: higher tiers (CLI flag, `--args-file`,
-  // `CLR_MODEL`) still win when explicitly set, and `isolated`'s separate
+  // overriding that seat binding on every launch; the level-5 built-in `DEFAULT_MODEL`
+  // would do exactly the same. While that block is live the config tier's two model
+  // keys and the built-in default model are ignored: higher tiers (CLI flag,
+  // `--args-file`, `CLR_MODEL`) still win when explicitly set, and `isolated`'s separate
   // `resolve_isolated_default_model()` path (explicit creds, temp HOME strips the env
   // block by construction) is deliberately unaffected.
   let seat_model = seat_env_model();
@@ -205,7 +210,10 @@ pub( crate ) fn apply_config_defaults( parsed : &mut CliArgs, config : &ConfigDe
       );
     }
   }
-  if parsed.model.is_none() && !non_anthropic_seat { parsed.model.clone_from( &config.model ); }
+  if parsed.model.is_none() && !non_anthropic_seat
+  {
+    parsed.model = Some( config.model.clone().unwrap_or_else( || DEFAULT_MODEL.to_string() ) );
+  }
   if parsed.max_tokens.is_none() { parsed.max_tokens = config.max_tokens; }
   if parsed.effort.is_none()
   {

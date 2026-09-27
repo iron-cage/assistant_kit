@@ -14,14 +14,17 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 | IN-6 | All opt-outs together remove all suppressible defaults | Combined Suppression |
 | IN-7 | Empty session source (`--from`) → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
 | IN-8 | Fresh CWD, no `--session-dir` → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
+| IN-9 | `--model claude-opus-5-5` present by default | Default Present |
+| IN-10 | Non-anthropic seat → built-in `--model` withheld | Provider Gate |
 
 ## Test Coverage Summary
 
-- Default Present: 5 tests (IN-1, IN-2, IN-3, IN-4, IN-5)
+- Default Present: 6 tests (IN-1, IN-2, IN-3, IN-4, IN-5, IN-9)
 - Combined Suppression: 1 test (IN-6)
 - First-use guard: 2 tests (IN-7, IN-8)
+- Provider Gate: 1 test (IN-10)
 
-**Total:** 8 tests
+**Total:** 10 tests
 
 
 ---
@@ -106,3 +109,25 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../docs/invariant/001_default_flags.md)
 - **Implementation:** `tests/dry_run_test.rs` — `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag`
+
+---
+
+### IN-9: `--model claude-opus-5-5` present by default
+
+- **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
+- **When:** `clr --dry-run "Fix bug"`
+- **Then:** Assembled command contains `--model claude-opus-5-5` (`DEFAULT_MODEL`), exactly once
+- **Exit:** 0
+- **Source:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md)
+- **Implementation:** `tests/param_edge_cases_test.rs` — `s08_model_defaults_to_builtin_when_absent`; `tests/bug_reproducers_008_test.rs` — `dispatch_run_builtin_default_model_injected_when_prefs_absent`
+
+---
+
+### IN-10: Non-anthropic seat → built-in `--model` withheld
+
+- **Given:** `~/.claude/settings.json` carrying a non-empty `env.ANTHROPIC_MODEL`; no `CLR_MODEL`; empty config dir
+- **When:** `clr --dry-run "hi"`
+- **Then:** Assembled command contains no `--model` at all — the seat's own `ANTHROPIC_MODEL` binding stays authoritative
+- **Exit:** 0
+- **Source:** [config_param.md § Provider Gate](../../../docs/cli/config_param.md#provider-gate)
+- **Implementation:** `tests/config_file_test.rs` — `t22_seat_env_block_withholds_builtin_default_model`

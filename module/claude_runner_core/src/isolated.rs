@@ -12,7 +12,7 @@
 //! | `IsolatedRunResult`     | No                 |
 //! | `RunnerError`           | No                 |
 //! | `IsolatedModel`         | No                 |
-//! | `ISOLATED_DEFAULT_MODEL`| No                 |
+//! | `DEFAULT_MODEL`         | No                 |
 //! | `run_isolated()`        | Yes                |
 
 use core::fmt;
@@ -20,11 +20,15 @@ use std::io;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-/// Short alias passed as `--model` to the Claude binary for isolated subprocess invocations.
+/// Default model ID passed as `--model` to the Claude binary: the target of
+/// `IsolatedModel::Default`, shared with the `run`/`ask`/`topic` CLI paths in
+/// `claude_runner::cli::config` (level-5 built-in default) to keep every running
+/// command's default in lockstep.
 ///
-/// The Claude binary resolves the `"opus"` alias to the latest available Opus model at
-/// runtime.  Use `IsolatedModel::Specific` to pin an exact model ID instead.
-pub const ISOLATED_DEFAULT_MODEL : &str = "opus";
+/// An explicit ID, not the `"opus"` alias — the Claude binary resolves the alias per
+/// release and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/settings overrides, so the alias
+/// never pins one model.  Update this constant when the target model changes.
+pub const DEFAULT_MODEL : &str = "claude-opus-5-5";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -51,13 +55,14 @@ pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-5";
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
-/// The `Default` variant targets the current production Opus (highest capability)
-/// for real user tasks; callers that want the Claude binary to use whatever model
-/// it would normally select should pass `KeepCurrent`.
+/// The `Default` variant targets [`DEFAULT_MODEL`] — the current production Opus
+/// (highest capability) — for real user tasks; callers that want the Claude binary
+/// to use whatever model it would normally select should pass `KeepCurrent`.
 #[ derive( Debug, Clone ) ]
 pub enum IsolatedModel
 {
-  /// Prepend `--model opus` to subprocess args (binary resolves to latest Opus).
+  /// Prepend `--model` [`DEFAULT_MODEL`] to subprocess args, unless a config-file
+  /// preference resolves first (see `resolve_isolated_default_model`).
   Default,
   /// Pass no `--model` flag; the Claude binary chooses the model.
   KeepCurrent,
@@ -74,7 +79,7 @@ impl IsolatedModel
   {
     match self
     {
-      IsolatedModel::Default        => Some( ISOLATED_DEFAULT_MODEL ),
+      IsolatedModel::Default        => Some( DEFAULT_MODEL ),
       IsolatedModel::KeepCurrent    => None,
       IsolatedModel::Specific( id ) => Some( id.as_str() ),
     }
@@ -207,7 +212,7 @@ pub fn run_isolated
 
 /// Resolve `IsolatedModel::Default`'s model preference across both tiers, in order:
 /// project `.clr.toml` → user `~/.clr/config.toml`. Returns `None` if nothing is
-/// set at either tier — callers fall back to [`ISOLATED_DEFAULT_MODEL`] via
+/// set at either tier — callers fall back to [`DEFAULT_MODEL`] via
 /// `IsolatedModel::model_id()`, unchanged from today's behavior.
 ///
 /// Task 410 retired the prior `~/.clr/prefs.json` fallback tier (and the
@@ -266,10 +271,10 @@ fn create_isolated_home() -> io::Result< tempfile::TempDir >
 ///
 /// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
 /// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` on the subprocess:
-/// - `Some(n)` — set window to `n` tokens (default via `run_isolated()` is `Some(300_000)`)
+/// - `Some(n)` — set window to `n` tokens (default via `run_isolated()` is `Some(400_000)`)
 /// - `None` — suppress the env var (defer to model native window; up to 1M for extended models)
 ///
-/// Use this when the caller needs to opt out of the 300K cap, e.g. for `--no-compact-window`.
+/// Use this when the caller needs to opt out of the 400K cap, e.g. for `--no-compact-window`.
 ///
 /// # Errors
 ///
@@ -331,7 +336,7 @@ pub fn run_isolated_ext
   // Step 3: Build command — prepend --model flag then user args
   //
   // When IsolatedModel::Default, check project `.clr.toml` / user `~/.clr/config.toml`
-  // for a pinned model preference before falling back to ISOLATED_DEFAULT_MODEL.
+  // for a pinned model preference before falling back to DEFAULT_MODEL.
   let pref_override = match &model
   {
     IsolatedModel::Default => resolve_isolated_default_model(),

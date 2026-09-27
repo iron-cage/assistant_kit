@@ -224,7 +224,7 @@ fn defaults_set_tier1_env_vars() {
   assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ), "Incorrect default print_bg_wait_ceiling_ms: expected 0" );
 
   assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ), "Default compact_window not set" );
-  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"300000\"" ), "Incorrect default compact_window: expected 300000" );
+  assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"400000\"" ), "Incorrect default compact_window: expected 400000" );
 }
 
 // ── CLAUDE_CODE_CHILD_SESSION removal ────────────────────────────────────────

@@ -23,7 +23,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 |-----------|------|---------|-------------|
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt text for Claude |
 | [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode (default when message given, stdin is not a terminal, or `--file`/piped stdin content is present; explicit alias) |
-| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model to use |
+| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | `claude-opus-5-5` | Model to use; config-file `model` overrides the built-in default, and both are withheld on a non-anthropic seat ([Provider Gate](../config_param.md#provider-gate)) |
 | [`--verbose`](../param/004_verbose.md) | bool | false | Enable Claude verbose output |
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Disable automatic permission bypass |
 | [`--interactive`](../param/006_interactive.md) | bool | false | Forces TTY passthrough, overriding all auto-print triggers |
@@ -91,7 +91,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--keep-clone`](../param/089_keep_clone.md) | bool | false | Preserve an existing destination session copy on a `--from` transplant instead of the default re-clone |
 
 **Algorithm (7 steps):**
-1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final tier for every parameter including `--model`.
+1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; apply config-file defaults (project `.clr.toml` overriding user `~/.clr/config.toml`) for still-unset parameters — this is the final configurable tier for every parameter including `--model`, below which only built-in defaults remain (`--model` → `DEFAULT_MODEL` = `claude-opus-5-5`, withheld together with the config-file model keys on a non-anthropic seat — [Provider Gate](../config_param.md#provider-gate)).
 2. If invocation is non-interactive (print mode) and `--max-sessions > 0`, count active non-interactive `claude` processes; block in 30-second polling loop until slot available or 1000-attempt limit reached (exit 1 on limit). Interactive invocations skip this step entirely.
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
 4. Resolve execution directory (`--dir` + `--topic`): a fork-mode topic stays in the base directory (its session id is computed instead — see [`--topic`](../param/028_topic.md) § Mode selection); a dir-mode topic creates and enters the `/-NAME` topic directory when `--topic` is set and not `"."`.

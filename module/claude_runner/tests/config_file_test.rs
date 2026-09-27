@@ -37,6 +37,7 @@
 //! | T19 | CLI `--model` still wins on an env-pinned seat                           | Provider Gate |
 //! | T20 | `--trace` names the suppressed config model and the seat's pinned model  | Provider Gate |
 //! | T21 | stale `provider` pin alone no longer suppresses (MRE BUG-548)            | Provider Gate |
+//! | T22 | live seat env block withholds the built-in default model too             | Provider Gate |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -45,6 +46,7 @@ use cli_binary_test_helpers::
   run_cli_in_dir, run_cli_with_env, spawn_print_claude, spawn_print_claude_for,
   stderr_str, stdout_str, wait_bounded,
 };
+use claude_runner_core::DEFAULT_MODEL;
 use std::process::Command;
 
 /// Write `content` to `<dir>/config.toml`.
@@ -474,7 +476,8 @@ fn t11_project_discovery_unaffected_by_clr_config_dir_absence()
 /// T12: config `model = "claude-opus-4-8"`, `clr run --dry-run "hi"` → the printed
 /// command preview includes the config-resolved model, with no dry-run-specific
 /// code required (a direct consequence of `apply_config_defaults()` running before
-/// `handle_dry_run()`, mirroring how env var resolution already works).
+/// `handle_dry_run()`, mirroring how env var resolution already works) — and not the
+/// level-5 built-in default, which the config tier outranks.
 #[ test ]
 fn t12_dry_run_reflects_config_supplied_model()
 {
@@ -496,6 +499,10 @@ fn t12_dry_run_reflects_config_supplied_model()
   assert!(
     stdout.contains( "claude-opus-4-8" ),
     "T12: dry-run preview must reflect config-supplied model. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( DEFAULT_MODEL ),
+    "T12: config-supplied model must win over the built-in default. Got:\n{stdout}"
   );
 }
 
@@ -859,5 +866,38 @@ fn t21_mre_bug548_stale_provider_pin_does_not_suppress_on_anthropic_seat()
   assert!(
     !stderr.contains( "ignored" ),
     "T21: no suppression trace may fire on an anthropic seat. Got:\n{stderr}"
+  );
+}
+
+// ── T22: live seat env block withholds the built-in default model too ─────────────
+
+/// T22: `HOME/.claude/settings.json` pins `ANTHROPIC_MODEL=kimi-k3` and no config
+/// file sets `model` anywhere. The level-5 built-in default (`DEFAULT_MODEL`) must be
+/// withheld exactly like a config-tier model: emitting it as `--model` would be the
+/// same silent override of the seat binding the Provider Gate exists to prevent
+/// (`docs/cli/config_param.md § Provider Gate`).
+#[ test ]
+fn t22_seat_env_block_withholds_builtin_default_model()
+{
+  let config_dir = tempfile::TempDir::new().expect( "empty config dir" );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  write_seat_settings( home.path(), KIMI_SEAT_ENV );
+
+  let out = run_cli_with_env(
+    &[ "--dry-run", "hi" ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
+  );
+  assert_eq!( exit_code( &out ), 0, "T22: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( " claude " ),
+    "T22: sanity — the preview must show the assembled claude command. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--model" ),
+    "T22: the built-in default model must be withheld while the seat env block is live. Got:\n{stdout}"
   );
 }

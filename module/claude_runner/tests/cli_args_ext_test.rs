@@ -35,6 +35,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
+use claude_runner_core::DEFAULT_MODEL;
 
 // T36: flags after positional are still parsed
 #[ test ]
@@ -90,9 +91,11 @@ fn t38_double_dash_only_no_message()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION"
   // (default unset_claudecode=true, plus the always-stripped child-session marker)
+  // The built-in default `--model` sits between `--effort` and `--print`: the isolated HOME has
+  //   no `~/.claude/settings.json`, so the Provider Gate does not withhold it.
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    format!( "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model {DEFAULT_MODEL} --print --output-format json" ),
     "-- with nothing after, under non-TTY stdin, must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
 }

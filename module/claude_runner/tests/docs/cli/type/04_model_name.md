@@ -11,7 +11,7 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 | TC-1 | Valid model name → forwarded to claude | Valid Input |
 | TC-2 | Model name with hyphens → accepted | Valid Input |
 | TC-3 | `--model` without value → exit 1 | Missing Value |
-| TC-4 | `--model` absent → claude uses its own default | Default |
+| TC-4 | `--model` absent → built-in `claude-opus-5-5` in assembled command | Default |
 
 ## Test Coverage Summary
 
@@ -55,10 +55,10 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 
 ---
 
-### TC-4: `--model` absent → no model flag in assembled command
+### TC-4: `--model` absent → built-in `claude-opus-5-5` in assembled command
 
-- **Given:** clean environment
+- **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command does NOT contain `--model`; claude uses its own default model
+- **Then:** Assembled command contains `--model claude-opus-5-5` (`DEFAULT_MODEL`); on a non-anthropic seat no `--model` is emitted at all (Provider Gate)
 - **Exit:** 0
 - **Source:** [type/04_model_name.md](../../../../docs/cli/type/04_model_name.md)

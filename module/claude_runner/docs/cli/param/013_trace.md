@@ -13,7 +13,7 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 What `--trace` shows depends on the command:
 
 - **`run`** / **`ask`** / **`topic`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution); `topic` output is identical — it delegates to `run`'s handler
-- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-8`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
+- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-5-5`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
 - **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-5`, `--no-chrome`, `--effort low`, `--no-session-persistence`
 
 ```sh
@@ -25,7 +25,7 @@ clr --trace "Fix bug"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json -c "Fix bug\n\nultrathink"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model claude-opus-5-5 --print --output-format json -c "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on ask (pure alias — identical output to run)
@@ -36,7 +36,7 @@ clr ask --trace "What is X?"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json -c "What is X?\n\nultrathink"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model claude-opus-5-5 --print --output-format json -c "What is X?\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on isolated
@@ -50,7 +50,7 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: export CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: export CLAUDE_CODE_TELEMETRY=false
 # Stderr: (blank line)
-# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
+# Stderr: env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --chrome --model claude-opus-5-5 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh

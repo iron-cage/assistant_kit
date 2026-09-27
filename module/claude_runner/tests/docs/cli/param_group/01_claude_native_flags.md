@@ -63,9 +63,9 @@ Tests validate these flags coexist correctly and are forwarded to the claude sub
 
 ### CC-4: No group flags → only defaults injected
 
-- **Given:** clean environment
+- **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command has default `--effort max` and `--print`; no `--verbose`, `--model`, `--no-session-persistence`, `--json-schema`, or `--mcp-config`
+- **Then:** Assembled command has defaults `--effort max`, `--model claude-opus-5-5` (built-in `DEFAULT_MODEL`), and `--print`; no `--verbose`, `--no-session-persistence`, `--json-schema`, or `--mcp-config`
 - **Exit:** 0
 - **Source:** [param_group/01_claude_native_flags.md](../../../../docs/cli/param_group/01_claude_native_flags.md)
 - **Commands:** run, ask

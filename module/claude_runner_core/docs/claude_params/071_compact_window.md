@@ -14,7 +14,7 @@ CLAUDE_CODE_AUTO_COMPACT_WINDOW
 
 ## Default
 
-`300000` (300K tokens) — set unconditionally by `ClaudeCommand::new()`.
+`400000` (400K tokens) — set unconditionally by `ClaudeCommand::new()`.
 
 Standard `claude` default: unset — defers to the model's native context window
 (`200000` standard, or `1000000` on extended-context models). See the
@@ -27,7 +27,7 @@ calculations. When the active conversation approaches this token count (as a
 percentage governed by `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), Claude Code
 automatically compacts the conversation.
 
-`claude_runner_core` sets this to `300000` by default — a Tier 1 "different
+`claude_runner_core` sets this to `400000` by default — a Tier 1 "different
 from claude default" parameter — to prevent automation runs from silently
 running on an extended 1M-token window and accumulating a much larger,
 slower-to-compact context than intended. Pass `None` via `with_compact_window()`
@@ -57,7 +57,7 @@ Builder method: `with_compact_window(Option<u32>)`
 ```bash
 # Inspect the default in a dry-run
 clr --dry-run --message "hi"
-# ... CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000 ...
+# ... CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000 ...
 ```
 
 ## Notes

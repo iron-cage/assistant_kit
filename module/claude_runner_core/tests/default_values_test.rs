@@ -144,10 +144,10 @@ fn default_print_bg_wait_ceiling_ms_is_zero() {
 }
 
 #[test]
-fn default_compact_window_is_300k() {
-  // compact_window defaults to Some(300_000) — caps the auto-compaction window below
-  // the model-native context (200K standard / 1M extended) so automation runs never
-  // silently accumulate an extended-window context; None opts back into model-native
+fn default_compact_window_is_400k() {
+  // compact_window defaults to Some(400_000) — caps the auto-compaction window below
+  // the extended model-native context (1M) so automation runs never silently accumulate
+  // an extended-window context; None opts back into model-native
   // (see docs/claude_params/071_compact_window.md)
   let cmd_builder = ClaudeCommand::new();
   let cmd = cmd_builder.build_command_for_test();
@@ -155,8 +155,8 @@ fn default_compact_window_is_300k() {
   let debug = format!( "{cmd:?}" );
   assert!( debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ), "compact_window not set" );
   assert!(
-    debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"300000\"" ),
-    "Incorrect default: expected 300000 (300K token compaction window), got: {debug}"
+    debug.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=\"400000\"" ),
+    "Incorrect default: expected 400000 (400K token compaction window), got: {debug}"
   );
 }
 

@@ -93,6 +93,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Built-in default model is now `claude-opus-5-5`** (`claude_runner_core::DEFAULT_MODEL`)
+  - `run`/`ask`/`topic` pass `--model claude-opus-5-5` when no higher precedence level sets a model (CLI `--model`, `--args-file`, `CLR_MODEL`, config-file `model`) — previously no `--model` was passed and the `claude` binary picked its own default
+  - Provider Gate: a non-empty `env.ANTHROPIC_MODEL` in `~/.claude/settings.json` withholds the built-in default together with the config tier, so non-anthropic seats keep their own model binding; `--trace` emits no note for the withheld default
+  - `clr isolated` default switched from the `opus` alias (resolved by the binary per release and per settings) to the explicit ID `claude-opus-5-5`; `clr refresh` stays on `claude-sonnet-5`
+  - **Breaking (`claude_runner_core` public API):** `ISOLATED_DEFAULT_MODEL` (`"opus"`) renamed to `DEFAULT_MODEL` (`"claude-opus-5-5"`) — one constant now backs both `IsolatedModel::Default` and `clr`'s level-5 default
+  - `--help` for `run`/`isolated`/`ask`/`topic` prints `(default: claude-opus-5-5)`; the journal records `claude-opus-5-5` for runs that previously recorded no model
+  - Docs: `docs/cli/param/003_model.md`, `docs/cli/config_param.md`, `docs/invariant/001_default_flags.md` (new `--model` default row), `docs/invariant/005_isolated_subprocess_defaults.md`, plus the parity, type, and param-group docs; tests: `config_file_test.rs` T22 (Provider Gate withholds the default), `isolated_defaults_test.rs` ISD-14, `param_edge_cases_test.rs` S08, and the exact-command assertions in `dry_run_test.rs`, `ultrathink_args_test.rs`, and `cli_args_ext_test.rs`
+
+- **Default auto-compact window raised 300,000 → 400,000 tokens**
+  - `DEFAULT_COMPACT_WINDOW` (`claude_runner_core/src/command/mod.rs`) is now `400_000`, so every `clr` subprocess gets `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` unless opted out
+  - `--no-compact-window` (env `CLR_NO_COMPACT_WINDOW`, config `no_compact_window`) still omits it, leaving the model's native window in effect
+  - Docs and tests updated in both crates (`docs/cli/param/077_no_compact_window.md`, `claude_runner_core/docs/claude_params/071_compact_window.md`, `tests/no_compact_window_test.rs`, and the isolated-path tests)
+
 - **`--max-sessions` default raised 6 → 8**
   - Reflects typical parallel workloads; users with stricter limits can still pass `--max-sessions <N>` explicitly
 

@@ -11,6 +11,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
+use claude_runner_core::DEFAULT_MODEL;
 
 // ─── Group 1: Claude-Native Flags ─────────────────────────────────────────────
 // Source: tests/docs/cli/param_group/01_claude_native_flags.md
@@ -59,9 +60,10 @@ fn g1cc2_model_and_verbose_coexist()
   let out = run_cli( &[ "--dry-run", "--model", "opus", "--verbose", "Fix bug" ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "--model" ),   "output must contain --model: {stdout}" );
-  assert!( stdout.contains( "opus" ),      "output must contain model value: {stdout}" );
-  assert!( stdout.contains( "--verbose" ), "output must contain --verbose: {stdout}" );
+  // Exact `--model opus` pair — a bare `--model`/`opus` substring check would also be
+  // satisfied by the built-in default `--model claude-opus-5-5`.
+  assert!( stdout.contains( "--model opus" ), "output must contain --model opus: {stdout}" );
+  assert!( stdout.contains( "--verbose" ),    "output must contain --verbose: {stdout}" );
 }
 
 /// G1CC3: `--verbose` and `--effort max` both present in assembled command.
@@ -80,7 +82,8 @@ fn g1cc3_verbose_and_effort_max_both_present()
 
 /// G1CC4: No group flags → only defaults injected; no user-supplied group flags appear.
 ///
-/// Default `--effort max` and `--print` are present; `--verbose` and `--model` are absent.
+/// Default `--effort max`, `--print`, and the built-in `--model claude-opus-5-5` are
+/// present; `--verbose` is absent.
 ///
 /// Spec: `01_claude_native_flags.md` CC-4
 #[ test ]
@@ -93,7 +96,10 @@ fn g1cc4_no_group_flags_only_defaults_injected()
   assert!( stdout.contains( "max" ),       "default effort value must be present: {stdout}" );
   assert!( stdout.contains( "--print" ),   "default --print must be present: {stdout}" );
   assert!( !stdout.contains( "--verbose" ), "no --verbose without explicit flag: {stdout}" );
-  assert!( !stdout.contains( "--model" ),   "no --model without explicit flag: {stdout}" );
+  assert!(
+    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "built-in default --model must be present without explicit flag: {stdout}"
+  );
 }
 
 /// G1CC5: `--no-persist` + `--json-schema` + `--mcp-config` → all three new members forwarded.

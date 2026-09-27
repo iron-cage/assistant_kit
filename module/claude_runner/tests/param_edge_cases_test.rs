@@ -23,7 +23,7 @@
 //!
 //! --model:
 //! - S07: positional then `--model` at end of argv → exit 1 (`003_model.md` EC-3)
-//! - S08: without `--model` → `--model` absent from command (`003_model.md` EC-7)
+//! - S08: without `--model` → built-in default `--model claude-opus-5-5` injected (`003_model.md` EC-7)
 //!
 //! --verbose:
 //! - S09: without `--verbose` → absent from command (`004_verbose.md` EC-2)
@@ -82,6 +82,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
+use claude_runner_core::DEFAULT_MODEL;
 use tempfile::TempDir;
 
 #[ test ]
@@ -139,16 +140,16 @@ fn s07_model_at_end_of_argv_rejected()
   );
 }
 
-// S08: without --model → --model absent from assembled command
+// S08: without --model → built-in default --model injected into assembled command
 #[ test ]
-fn s08_model_absent_from_default_command()
+fn s08_model_defaults_to_builtin_when_absent()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( "--model" ),
-    "without --model, assembled command must not contain --model. Got:\n{stdout}"
+    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "without --model, assembled command must carry the built-in default model. Got:\n{stdout}"
   );
 }
 

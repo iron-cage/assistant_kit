@@ -538,7 +538,8 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   // applied AFTER CLR_* env vars (tier 3) — apply_config_defaults' is_none() / !bool checks
   // ensure higher tiers are never overwritten. Task 408 removed the BUG-008 prefs.json
   // fallback that previously ran after this tier, since it was a no-op for anyone using
-  // config.toml's `model` key (set on `parsed.model` right here).
+  // config.toml's `model` key (set on `parsed.model` right here, falling back to the
+  // level-5 built-in DEFAULT_MODEL unless the Provider Gate withholds both).
   match config::load_config()
   {
     Ok( config ) =>

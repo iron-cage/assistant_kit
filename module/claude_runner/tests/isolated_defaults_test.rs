@@ -12,7 +12,7 @@
 //! disabling the watchdog.
 //!
 //! ## Fix Applied
-//! S1/S7: `ISOLATED_DEFAULT_MODEL = "opus"` + `REFRESH_DEFAULT_MODEL`;
+//! S1/S7: `DEFAULT_MODEL = "claude-opus-5-5"` + `REFRESH_DEFAULT_MODEL`;
 //!   `EffortLevel::Max` injected for isolated, `EffortLevel::Low` for refresh.
 //! S2: `timeout_secs == 0` → `deadline = None` (no watchdog).
 //! S3: `--no-session-persistence` prepended for both commands.
@@ -32,7 +32,7 @@
 #[ cfg( test ) ]
 mod isolated_defaults_test
 {
-  use claude_runner_core::{ ISOLATED_DEFAULT_MODEL, REFRESH_DEFAULT_MODEL };
+  use claude_runner_core::{ DEFAULT_MODEL, REFRESH_DEFAULT_MODEL };
   use std::process::Command;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -53,13 +53,13 @@ mod isolated_defaults_test
 
   // ── ISD-1 / ISD-2 : model constants ──────────────────────────────────────
 
-  /// ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"opus"`.
+  /// ISD-1: `DEFAULT_MODEL` constant equals `"claude-opus-5-5"`.
   #[ test ]
-  fn isd_01_isolated_default_model_is_opus()
+  fn isd_01_default_model_is_opus_5_5()
   {
     assert_eq!(
-      ISOLATED_DEFAULT_MODEL, "opus",
-      "ISOLATED_DEFAULT_MODEL must be the Opus capability alias (binary resolves to latest Opus)"
+      DEFAULT_MODEL, "claude-opus-5-5",
+      "DEFAULT_MODEL must be the explicit Opus 5.5 ID (the `opus` alias resolves per Claude release)"
     );
   }
 
@@ -349,6 +349,42 @@ mod isolated_defaults_test
     let _ = std::fs::remove_file( &creds );
   }
 
+  // ── ISD-14 : built-in default model reaches the assembled command ─────────
+
+  /// ISD-14: with no `--model`, no `CLR_MODEL`, and no config preference in either
+  /// tier, `clr isolated --dry-run` previews `--model claude-opus-5-5` (`DEFAULT_MODEL`).
+  ///
+  /// ISD-1 pins the constant alone; this pins the end-to-end path —
+  /// `IsolatedModel::Default` → `resolve_isolated_default_model()` returns `None` →
+  /// `model_id()` fallback — into the command the subprocess would actually receive.
+  #[ test ]
+  fn isd_14_isolated_dry_run_shows_default_model()
+  {
+    let tmp = tempfile::tempdir().expect( "create temp dir" );
+    let creds = temp_creds();
+    // cwd = HOME = empty temp dir → neither the project nor the user config tier
+    // can supply a preference.
+    let out = clr()
+      .current_dir( tmp.path() )
+      .env( "HOME", tmp.path() )
+      .env_remove( "CLR_MODEL" )
+      .env_remove( "CLR_CONFIG_DIR" )
+      .args( [ "isolated", "--creds", creds.to_str().unwrap(), "--dry-run", "msg" ] )
+      .output()
+      .expect( "spawn clr" );
+    assert_eq!(
+      out.status.code(),
+      Some( 0 ),
+      "expected exit 0 from --dry-run; stderr: {}", String::from_utf8_lossy( &out.stderr )
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout );
+    assert!(
+      stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+      "isolated preview must carry the built-in default model; got:\n{stdout}"
+    );
+    let _ = std::fs::remove_file( &creds );
+  }
+
   // ── BUG-485 : config model preference must reach every --model site ──────
 
   /// # Root Cause
@@ -358,7 +394,7 @@ mod isolated_defaults_test
   /// `--model`-prepend sites consuming the same `Default` value —
   /// `emit_credential_trace()`'s `--dry-run`/`--trace` preview and the `--file`
   /// real path (`run_isolated_with_stdin_file()`) — fell back to
-  /// `ISOLATED_DEFAULT_MODEL`, so the preview showed the wrong model and the two
+  /// `DEFAULT_MODEL`, so the preview showed the wrong model and the two
   /// real execution paths ran different models on identical inputs.
   ///
   /// # Why Not Caught
@@ -421,8 +457,8 @@ mod isolated_defaults_test
        model run_isolated_ext() would actually use. Got:\n{stdout}"
     );
     assert!(
-      !stdout.contains( &format!( "--model {ISOLATED_DEFAULT_MODEL}" ) ),
-      "BUG-485: the preview must not fall back to the hardcoded ISOLATED_DEFAULT_MODEL \
+      !stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+      "BUG-485: the preview must not fall back to the hardcoded DEFAULT_MODEL \
        when a config preference is set. Got:\n{stdout}"
     );
     let _ = std::fs::remove_file( &creds );

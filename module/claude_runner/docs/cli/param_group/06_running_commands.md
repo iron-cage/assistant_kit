@@ -32,7 +32,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--trace` | ✅ | ✅ | ✅ | ✅ | ✅ | emit env+command to stderr then execute |
 | `--no-compact-window` | ✅ | ✅ | ✅ | ✅ | ✅ | suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection |
 | **Model and effort** | | | | | | |
-| `--model` | ✅ | ✅ | ✅ | ✅ | default: `"sonnet"` | isolated default falls back to config tiers then `opus` alias; refresh uses `"sonnet"` constant |
+| `--model` | ✅ | ✅ | ✅ | ✅ | default: `"claude-sonnet-5"` | run/ask/topic/isolated fall back to config tiers then `claude-opus-5-5` (`DEFAULT_MODEL`) — withheld for run/ask/topic on a non-anthropic seat (Provider Gate); refresh uses the `REFRESH_DEFAULT_MODEL` constant |
 | `--effort` | ✅ user sets | ✅ user sets | ✅ user sets | ✅ user sets (default: `max`) | `low` * | refresh injects `low`; cannot override via flag |
 | `--no-effort-max` | ✅ | ✅ | ✅ | ✅ | ➖ | suppresses default `--effort max`; not available for refresh (fixed by design) |
 | `--no-chrome` | ✅ | ✅ | ✅ | ✅ | ➖ | suppresses `--chrome` injection; not available for refresh |
@@ -72,7 +72,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--max-sessions` | ✅ | ✅ | ✅ | ✅ | ➖ | concurrency gate; `isolated` uses 3-tier (CLI flag + `"max-sessions"` JSON key + `CLR_MAX_SESSIONS` env var; no config-file tier) |
 | **Injected subprocess env vars** | | | | | | |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `128,000` | `128,000` | `128,000` | `128,000` | `128,000` | always injected; `--max-tokens` overrides |
-| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` | `300,000` | `300,000` | `300,000` | `300,000` | always injected; `--no-compact-window` suppresses |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `400,000` | `400,000` | `400,000` | `400,000` | `400,000` | always injected; `--no-compact-window` suppresses |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` | `true` | always injected |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` | `false` | always injected |
 | `CLAUDE_CODE_BASH_TIMEOUT` | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` | always injected |
@@ -86,7 +86,7 @@ These parameters apply identically across all 5 running commands:
 | `--timeout` | Max subprocess wait time (default differs per command) |
 | `--trace` | Emit resolved env vars + command line to stderr before executing |
 | `--dry-run` | Emit resolved env vars + command line to stderr; do not spawn subprocess |
-| `--no-compact-window` | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection |
+| `--no-compact-window` | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` injection |
 | `--journal` | Enable journaling (`full`/`meta`/`off`) |
 | `--journal-dir` | Override journal output directory |
 
@@ -102,7 +102,7 @@ Complements Universal Params above by summarizing the opposite extreme — param
 
 ### Invariants
 
-1. All 5 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
+1. All 5 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` (opt-out via `--no-compact-window`).
 2. `--dry-run` and `--trace` use the same code path for all 5 commands — `emit_credential_trace` for `isolated`/`refresh`, `handle_dry_run` for `run`/`ask`/`topic`. Both emit WYSIWYG output matching actual subprocess arguments.
 3. `run`, `ask`, and `topic` are functionally identical except for `--topic`'s default — `ask` is a pure alias for `run`; `topic` diverges only in auto-generating `--topic`'s value. Formalized as a strict command_group (identical handler, identical parameter set save the one stated divergence) in [`command_group/01_run_ask.md`](../command_group/01_run_ask.md) — see that file for the Representation Absorption Test and default-divergence table backing this claim.
 4. `isolated` and `refresh` run in an isolated temp HOME; session persistence is always suppressed.

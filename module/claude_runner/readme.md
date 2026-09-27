@@ -162,9 +162,11 @@ Parameters resolve through five levels, highest precedence first:
 3. **`CLR_*` env var** — per-parameter environment variable fallback
 4. **Config file** — project `.clr.toml` (cwd), then user `~/.clr/config.toml` (or
    `$CLR_CONFIG_DIR/config.toml`); project wins when both set the same key
-5. **Built-in default**
+5. **Built-in default** — e.g. `--model claude-opus-5-5`, withheld on a non-anthropic seat (Provider
+   Gate in [docs/cli/config_param.md](docs/cli/config_param.md))
 
 ```sh
+clr --dry-run "task"                 # shows: claude ... --model claude-opus-5-5 ... (built-in default)
 echo 'model = "claude-opus-4-8"' > .clr.toml
 clr --dry-run "task"                 # shows: claude --model claude-opus-4-8 ...
 clr --model sonnet --dry-run "task"  # CLI wins; config value ignored

@@ -156,7 +156,7 @@ pub( super ) fn run_isolated_command
   //   run_isolated_ext()'s own consultation remains as a fallback for direct
   //   core-API callers; it is a no-op here since Default never reaches it anymore.
   // Root cause: the preference was consulted only inside run_isolated_ext(), so the
-  //   preview showed ISOLATED_DEFAULT_MODEL and the --file path ran it, while the
+  //   preview showed DEFAULT_MODEL and the --file path ran it, while the
   //   no-file real path used the configured preference — three sibling --model
   //   prepend sites, one consultation.
   // Pitfall: resolve shared inputs once, upstream of a multi-path fan-out — a

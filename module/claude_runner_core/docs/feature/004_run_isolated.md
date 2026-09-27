@@ -31,11 +31,12 @@ pub enum RunnerError {
     Io(String),
 }
 
-/// Short alias passed as --model for real user tasks; binary resolves to latest Opus.
-pub const ISOLATED_DEFAULT_MODEL: &str = "opus";
+/// Explicit model ID passed as --model for real user tasks — not the "opus" alias, which the
+/// binary resolves per release and per settings. Shared with claude_runner's run/ask/topic default.
+pub const DEFAULT_MODEL : &str = "claude-opus-5-5";
 
 pub enum IsolatedModel {
-    Default,           // prepends --model opus (binary resolves alias to latest Opus)
+    Default,           // prepends --model DEFAULT_MODEL, unless a config-file model resolves first
     KeepCurrent,       // no --model flag; Claude binary chooses
     Specific(String),  // prepends --model <id>
 }
@@ -47,7 +48,7 @@ impl IsolatedModel {
 }
 ```
 
-`IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.
+`IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `DEFAULT_MODEL` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.
 
 **Function signature:**
 
@@ -72,7 +73,7 @@ pub fn run_isolated(
     content instructs subprocess to respond immediately without extended thinking
     on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
-      ClaudeCommand::new().with_home(<temp>).with_args([--model opus, <args...>])
+      ClaudeCommand::new().with_home(<temp>).with_args([--model claude-opus-5-5, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped
@@ -142,14 +143,14 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 - **AC-37**: When `timeout_secs` elapses before the subprocess exits and no credentials were refreshed, `run_isolated()` kills the child process and returns `Err(RunnerError::TimeoutWithOutput { secs, partial_stdout })` where `partial_stdout` contains any output captured before the kill. When credentials were refreshed before the timeout fired, returns `Ok` so callers receive the refreshed credentials.
 - **AC-38**: The temp directory is removed in all code paths — success, timeout, and I/O error — with no temp-dir leak.
 - **AC-39**: `run_isolated()` does not call `Command::new("claude")` directly; it routes through `ClaudeCommand::with_home()` and the existing `execute()` path (single-execution-point invariant).
-- **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
+- **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types; `ISOLATED_CLAUDE_MD` constant |
-| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `ISOLATED_DEFAULT_MODEL`, `run_isolated` |
+| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `DEFAULT_MODEL`, `run_isolated` |
 | source | `src/command/mod.rs` | `ClaudeCommand` builder; `with_home()` method; chrome injection logic |
 | source | `src/command/params_core.rs` | `with_home_isolation()` method — chains `with_chrome(None)` to suppress chrome in refresh mode |
 | invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | `Command::new("claude")` must appear exactly once |

@@ -44,6 +44,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ make_session_for, run_cli, run_cli_with_env, run_dry, stdout_str };
+use claude_runner_core::DEFAULT_MODEL;
 use std::process::Command;
 
 #[ test ]
@@ -213,10 +214,12 @@ fn dry_run_without_message_shows_bare_command()
   let claude_home = tempfile::TempDir::new().expect( "create empty claude home" );
   let claude_home_str = claude_home.path().to_str().expect( "claude home path valid utf-8" );
   // Fix(BUG-008) isolation: `CLAUDE_HOME` alone does not isolate this assertion — the composed
-  //   command's `--model` term resolves out of `$HOME/.claude.json`, not `$CLAUDE_HOME`. Pointing
-  //   HOME at the same empty temp dir is the pattern already used at the `--continue` test below.
-  // Root cause: on a host whose `~/.claude.json` carries a `"model"` key, the bare invocation
-  //   gains `--model <id>` between `--effort` and `--print`, and this exact-string assertion fails.
+  //   command's `--model` term resolves out of `$HOME` (`~/.clr/config.toml`, plus the Provider
+  //   Gate's `~/.claude/settings.json`), not `$CLAUDE_HOME`. Pointing HOME at the same empty temp
+  //   dir is the pattern already used at the `--continue` test below.
+  // Root cause: on a host whose `$HOME` pins a model, the bare invocation's `--model <id>` term
+  //   between `--effort` and `--print` carries that pin instead of the built-in default, and this
+  //   exact-string assertion fails.
   // Pitfall: the container hides this — its `$HOME` has no such key, so the gap stays invisible
   //   until someone runs the suite on a real workstation via the `VERB_LAYER=l0` escape hatch.
   let out = run_cli_with_env(
@@ -225,8 +228,11 @@ fn dry_run_without_message_shows_bare_command()
   );
   let output = stdout_str( &out );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
+  let expected = format!(
+    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model {DEFAULT_MODEL} --print --output-format json"
+  );
   assert_eq!(
-    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    last_line, expected,
     "Bare --dry-run under non-TTY stdin must route to print mode (no message, no -c with no prior session). Got:\n{output}"
   );
 }
@@ -637,7 +643,7 @@ fn empty_positional_arg_produces_bare_command()
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
     .args( [ "--dry-run", "" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: keep a host `~/.clr/config.toml` pin from replacing the default --model
     .env( "CLAUDE_HOME", claude_home_str )
     .output()
     .expect( "Failed to invoke clr binary" );
@@ -650,7 +656,8 @@ fn empty_positional_arg_produces_bare_command()
   //   differentiator (empty positional must not leak as a degenerate "ultrathink " message,
   //   BUG-219) is the assertion immediately below, unaffected by this correction.
   assert_eq!(
-    last_line, "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    last_line,
+    format!( "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model {DEFAULT_MODEL} --print --output-format json" ),
     "empty positional arg must produce no-message command (no -c with no prior session). Got:\n{stdout}"
   );
   assert!(

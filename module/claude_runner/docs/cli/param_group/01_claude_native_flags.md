@@ -57,7 +57,7 @@ clr -p "Fix bug" --model sonnet --verbose
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
 | [`-p`/`--print`](../param/002_print.md) | bool | auto | Print mode selector | Print mode (default when message given, stdin is not a terminal, or `--file`/piped stdin content is present) |
-| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | — | Model selection | Model to use |
+| [`--model`](../param/003_model.md) | [`ModelName`](../type/04_model_name.md) | `claude-opus-5-5` | Model selection | Model to use |
 | [`--verbose`](../param/004_verbose.md) | bool | false | Verbosity toggle | Enable Claude verbose output |
 | [`--effort`](../param/017_effort.md) | [`EffortLevel`](../type/07_effort_level.md) | max | Effort override | Reasoning effort level (default: max) |
 | [`--json-schema`](../param/023_json_schema.md) | [`JsonSchemaText`](../type/10_json_schema_text.md) | — | Output structure constraint | JSON Schema for structured output |

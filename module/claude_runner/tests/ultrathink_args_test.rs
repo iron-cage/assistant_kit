@@ -26,6 +26,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
+use claude_runner_core::DEFAULT_MODEL;
 
 // T50: message is suffixed with "\n\nultrathink" by default
 //
@@ -162,7 +163,7 @@ fn t54_empty_positional_arg_ignored()
   let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--dry-run", "" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: keep a host `~/.clr/config.toml` pin from replacing the default --model
     .env( "CLAUDE_HOME", home )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
@@ -175,9 +176,11 @@ fn t54_empty_positional_arg_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // The built-in default `--model` sits between `--effort` and `--print`: the isolated HOME has
+  //   no `~/.claude/settings.json`, so the Provider Gate does not withhold it.
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    format!( "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model {DEFAULT_MODEL} --print --output-format json" ),
     "empty positional arg under non-TTY stdin must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
   assert!(
@@ -303,7 +306,7 @@ fn t57_empty_positional_after_double_dash_ignored()
   let home = empty_home.path().to_str().expect( "CLAUDE_HOME path valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "--dry-run", "--", "" ] )
-    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: keep a host `~/.clr/config.toml` pin from replacing the default --model
     .env( "CLAUDE_HOME", home )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
@@ -316,9 +319,11 @@ fn t57_empty_positional_after_double_dash_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // The built-in default `--model` sits between `--effort` and `--print`: the isolated HOME has
+  //   no `~/.claude/settings.json`, so the Provider Gate does not withhold it.
   assert_eq!(
     last_line,
-    "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --print --output-format json",
+    format!( "env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION claude --dangerously-skip-permissions --effort max --model {DEFAULT_MODEL} --print --output-format json" ),
     "empty arg after -- under non-TTY stdin must route to print mode (no -c with empty source storage). Got:\n{stdout}"
   );
   assert!(

@@ -21,7 +21,7 @@
 //! | T12 | `with_home_isolation()` suppresses `--chrome` (AC-41) | `describe()` omits `--chrome`        | no    |
 //! | T13 | isolated HOME is unique per invocation and `0700`     | two runs see distinct, private HOMEs | no (fake binary) |
 
-use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD };
+use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, DEFAULT_MODEL, ISOLATED_CLAUDE_MD };
 
 #[ cfg( unix ) ]
 mod fake_claude_bin;
@@ -247,27 +247,28 @@ fn t09_timeout_with_changed_credentials_result_type()
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
 /// T10: `IsolatedModel::model_id()` returns the correct `Option<&str>` for all
-/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"opus"`.
+/// three variants, and `DEFAULT_MODEL` equals `"claude-opus-5-5"`.
 ///
 /// Covers FT-1 through FT-4 from `tests/docs/feature/004_run_isolated.md`:
-/// - FT-1: `Default.model_id()` → `Some(ISOLATED_DEFAULT_MODEL)`
+/// - FT-1: `Default.model_id()` → `Some(DEFAULT_MODEL)`
 /// - FT-2: `KeepCurrent.model_id()` → `None` (no `--model` flag injected)
 /// - FT-3: `Specific("custom-model").model_id()` → `Some("custom-model")`
-/// - FT-4: `ISOLATED_DEFAULT_MODEL == "opus"` (Opus alias; binary resolves to latest Opus)
+/// - FT-4: `DEFAULT_MODEL == "claude-opus-5-5"` (explicit Opus 5.5 ID, not a release-dependent alias)
 #[ test ]
 fn t10_isolated_model_model_id_all_variants()
 {
-  // FT-4: constant value is the "opus" alias — the Claude binary resolves it to the latest Opus.
+  // FT-4: constant is the explicit Opus 5.5 ID — the `opus` alias resolves differently per
+  // Claude release and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/settings, so it would not pin a model.
   assert_eq!(
-    ISOLATED_DEFAULT_MODEL, "opus",
-    "ISOLATED_DEFAULT_MODEL must equal the Opus capability alias",
+    DEFAULT_MODEL, "claude-opus-5-5",
+    "DEFAULT_MODEL must equal the explicit Opus 5.5 model ID",
   );
 
-  // FT-1: Default → Some(ISOLATED_DEFAULT_MODEL).
+  // FT-1: Default → Some(DEFAULT_MODEL).
   assert_eq!(
     IsolatedModel::Default.model_id(),
-    Some( ISOLATED_DEFAULT_MODEL ),
-    "IsolatedModel::Default.model_id() must return Some(ISOLATED_DEFAULT_MODEL)",
+    Some( DEFAULT_MODEL ),
+    "IsolatedModel::Default.model_id() must return Some(DEFAULT_MODEL)",
   );
 
   // FT-2: KeepCurrent → None (caller wants no --model flag).
