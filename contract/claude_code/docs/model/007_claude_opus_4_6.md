@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Profile for `claude-opus-4-6` — legacy Opus model; was the former `ISOLATED_DEFAULT_MODEL` before upgrade to Opus 4.8.
+- **Purpose**: Profile for `claude-opus-4-6` — legacy Opus model; was the former `ISOLATED_DEFAULT_MODEL` (now `DEFAULT_MODEL`) before upgrade to Opus 4.8.
 - **Responsibility**: Documents this model's API ID, context window, max output, thinking support, availability, and historical workspace role.
 - **In Scope**: Model ID, alias, capabilities, historical workspace constant usage, availability status.
 - **Out of Scope**: Pricing (→ Anthropic docs); cloud platform IDs (→ Anthropic docs); model training details.
@@ -39,7 +39,7 @@ No longer assigned any workspace role. Callers using `IsolatedModel::Specific("c
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master model entity index |
-| doc | [003_claude_opus_4_8.md](003_claude_opus_4_8.md) | Current Opus (ISOLATED_DEFAULT_MODEL) |
+| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Current Opus (`DEFAULT_MODEL`) |
 | doc | [006_claude_opus_4_7.md](006_claude_opus_4_7.md) | Intermediate Opus generation |
-| source | `module/claude_runner_core/src/isolated.rs` | Historical ISOLATED_DEFAULT_MODEL site |
+| source | `module/claude_runner_core/src/isolated.rs` | Historical `ISOLATED_DEFAULT_MODEL` site (now `DEFAULT_MODEL`) |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live model listing |

@@ -38,6 +38,7 @@
 //! | T20 | `--trace` names the suppressed config model and the seat's pinned model  | Provider Gate |
 //! | T21 | stale `provider` pin alone no longer suppresses (MRE BUG-548)            | Provider Gate |
 //! | T22 | live seat env block withholds the built-in default model too             | Provider Gate |
+//! | T23 | no `HOME`, no `CLR_CONFIG_DIR` → no user tier (cwd `.clr/` not read)     | Test Injection |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -899,5 +900,41 @@ fn t22_seat_env_block_withholds_builtin_default_model()
   assert!(
     !stdout.contains( "--model" ),
     "T22: the built-in default model must be withheld while the seat env block is live. Got:\n{stdout}"
+  );
+}
+
+// ── T23: no HOME and no CLR_CONFIG_DIR → no user tier ───────────────────────────
+
+/// T23: with `HOME` and `CLR_CONFIG_DIR` both unset there is no user tier, so a
+/// `.clr/config.toml` under the cwd is not read and `--dry-run` shows the built-in
+/// default. The user tier comes from `claude_runner_core::user_config_path()` (BUG-007),
+/// which returns no path here. The `clr`-private resolver it replaced fell back to a
+/// cwd-relative `.clr/`, so any directory's `.clr/config.toml` acted as the user tier
+/// whenever `HOME` was missing.
+#[ test ]
+fn t23_no_home_no_override_reads_no_user_tier()
+{
+  let cwd = tempfile::TempDir::new().expect( "cwd" );
+  let stray_dir = cwd.path().join( ".clr" );
+  std::fs::create_dir_all( &stray_dir ).expect( "create cwd .clr dir" );
+  write_config_file( &stray_dir, "model = \"cwd-relative-model\"\n" );
+
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "--dry-run", "hi" ] )
+    .current_dir( cwd.path() )
+    .env_remove( "HOME" )
+    .env_remove( "CLR_CONFIG_DIR" )
+    .env_remove( "CLR_MODEL" )
+    .output()
+    .expect( "invoke clr" );
+  assert_eq!( exit_code( &out ), 0, "T23: must exit 0; stderr: {}", stderr_str( &out ) );
+  let stdout = stdout_str( &out );
+  assert!(
+    !stdout.contains( "cwd-relative-model" ),
+    "T23: with no HOME and no CLR_CONFIG_DIR, a cwd `.clr/config.toml` must not act as the user tier. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "T23: with no config tier the built-in default model applies. Got:\n{stdout}"
   );
 }

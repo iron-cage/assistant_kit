@@ -47,7 +47,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 
 ### AC-5: `effort::auto` + Opus → `low`
 
-- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-opus-4-8")`.
+- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-opus-5-5")`.
 - **When:** `resolve_effort` is called.
 - **Then:** Returns `Some("low")` — Opus supports extended thinking but isolated subprocesses
   use `.` keep-alive prompts; `low` prevents unnecessary extended thinking overhead.

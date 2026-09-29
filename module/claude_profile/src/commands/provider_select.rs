@@ -1,7 +1,8 @@
 //! `.provider.select` command handler — get, pin, or reset the global inference
 //! provider selection.
 //!
-//! Manages the `provider` key in `~/.clr/config.toml`'s user tier — the
+//! Manages the `provider` key in clr's user-tier `config.toml`
+//! (`$CLR_CONFIG_DIR/config.toml`, else `~/.clr/config.toml`) — the
 //! **sole write path** for the selected-provider config value anywhere in
 //! this workspace. No other command or code path may set or infer `provider`
 //! (no fallback chain, no auto-detection — the value is a plain global
@@ -14,6 +15,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use claude_core::toml_io::{ get_tiered, remove_user_tier, set_user_tier };
 use crate::output::{ OutputFormat, OutputOptions };
+use super::cmd_context::require_clr_config_path;
 
 const PROVIDER_KEY     : &str = "provider";
 const DEFAULT_PROVIDER : &str = "anthropic";
@@ -26,8 +28,8 @@ const DEFAULT_PROVIDER : &str = "anthropic";
 /// defaulting to `provider.select: anthropic` when never explicitly set —
 /// never an `(unset)`-style sentinel. Exit 0.
 ///
-/// **Set mode** (`id::VALUE`): writes `provider` to `~/.clr/config.toml`'s
-/// user tier, creates the file and parent directory when absent. Prints
+/// **Set mode** (`id::VALUE`): writes `provider` to clr's user-tier
+/// `config.toml`, creates the file and parent directory when absent. Prints
 /// `provider.select: VALUE (selected)`. Exit 0.
 ///
 /// **Reset mode** (`reset::1`): removes the `provider` key; preserves other
@@ -73,7 +75,8 @@ pub fn provider_select_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     }
   }
 
-  let config_path = resolve_config_path()?;
+  // User tier only — no project-tier merge for this command's get/set/reset semantics.
+  let config_path = require_clr_config_path()?;
 
   if let Some( ref provider_id ) = id_val
   {
@@ -102,15 +105,6 @@ pub fn provider_select_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-/// Resolve `~/.clr/config.toml` path (user tier; no project-tier merge for
-/// this command's get/set/reset semantics).
-fn resolve_config_path() -> Result< std::path::PathBuf, ErrorData >
-{
-  let home = std::env::var( "HOME" )
-    .map_err( |_| ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) )?;
-  Ok( std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
-}
-
 /// Read `provider` from `config.toml`'s user tier; `None` when absent or file missing.
 fn read_config_provider( path : &std::path::Path ) -> Option< String >
 {
@@ -124,7 +118,7 @@ fn set_config_provider( path : &std::path::Path, provider_id : &str ) -> Result<
   {
     std::fs::create_dir_all( parent ).map_err( | e | ErrorData::new(
       ErrorCode::InternalError,
-      format!( "failed to create .clr directory: {e}" ),
+      format!( "failed to create config directory {}: {e}", parent.display() ),
     ) )?;
   }
   set_user_tier( path, PROVIDER_KEY, provider_id ).map_err( | e | ErrorData::new(

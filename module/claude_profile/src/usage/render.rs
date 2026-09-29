@@ -22,17 +22,22 @@ pub use super::render_tsv::render_tsv;
 
 // ── Provider resolution ────────────────────────────────────────────────────────
 
-/// Resolve the globally selected inference provider from `~/.clr/config.toml`'s
-/// user tier for Gate 10 (Feature 072) — defaults to `"anthropic"` when unset,
-/// the file is absent, or `HOME` cannot be resolved. Reads directly via
+/// Resolve the globally selected inference provider from clr's user-tier
+/// `config.toml` for Gate 10 (Feature 072) — the file
+/// `claude_runner_core::user_config_path()` locates (`$CLR_CONFIG_DIR/config.toml`,
+/// else `~/.clr/config.toml`). Defaults to `"anthropic"` when the key is unset, the
+/// file is absent, or neither variable is set. Reads directly via
 /// `claude_core::toml_io`, structurally independent of `.provider.select`'s
 /// own routine (`commands::provider_select`) — the sole write path for this key.
 /// Sole definition — `api.rs` imports it from here (was duplicated verbatim there).
 pub( crate ) fn resolve_selected_provider() -> String
 {
-  std::env::var( "HOME" )
-    .ok()
-    .map( |home| std::path::PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
+  // Fix(BUG-560): read the pin from the same file `.provider.select` writes.
+  // Root cause: this reader hand-built `$HOME/.clr/config.toml`, so a pin written under
+  //   `CLR_CONFIG_DIR` was invisible here and Gate 10 rotated across every provider.
+  // Pitfall: a reader that silently defaults ("anthropic") hides a wrong path — the pin
+  //   test must assert the rotation target, not just exit 0.
+  claude_runner_core::user_config_path()
     .and_then( |path| claude_core::toml_io::get_tiered( None, &path, "provider" ) )
     .unwrap_or_else( || "anthropic".to_string() )
 }

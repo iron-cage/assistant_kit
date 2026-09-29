@@ -4,14 +4,14 @@
 
 ### Scope
 
-- **Purpose**: Provide a `clp .model.select` command to get or pin the subprocess model used by `clr run`, `clr ask`, `clr isolated`, and `clr refresh` via a `model` key in `~/.clr/config.toml`.
+- **Purpose**: Provide a `clp .model.select` command to get or pin the subprocess model used by `clr run`, `clr ask`, and `clr isolated` via a `model` key in `~/.clr/config.toml`.
 - **Responsibility**: Documents the `.model.select` command, its three operating modes (get/set/reset), the `id::`, `reset::`, and `format::` parameters, the `~/.clr/config.toml` `model` key it manages (format: [claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md)), and the clr integration that reads this same key from `claude_runner`'s CLI dispatch and from `claude_runner_core::resolve_isolated_default_model()`.
-- **In Scope**: `.model.select` command; get mode (no `id::`, no `reset::`) reading `model` from `~/.clr/config.toml`'s user tier; set mode (`id::VALUE`) writing `model` to `~/.clr/config.toml`'s user tier; reset mode (`reset::1`) removing the `model` key; full model ID values only (no shorthand mapping — use `.models` output); `format::text` and `format::json` in get mode (JSON output key stays `subprocess_model` — this command's own CLI-visible contract, independent of the backing store's key name); `~/.clr/config.toml` file and `.clr` directory creation when absent on first write; clr reading the `model` key via two independent consumers (`claude_runner`'s `--model` CLI resolution and `claude_runner_core::resolve_isolated_default_model()`) and using it in place of `ISOLATED_DEFAULT_MODEL`/hardcoded default when set.
+- **In Scope**: `.model.select` command; get mode (no `id::`, no `reset::`) reading `model` from `~/.clr/config.toml`'s user tier; set mode (`id::VALUE`) writing `model` to `~/.clr/config.toml`'s user tier; reset mode (`reset::1`) removing the `model` key; full model ID values only (no shorthand mapping — use `.models` output); `format::text` and `format::json` in get mode (JSON output key stays `subprocess_model` — this command's own CLI-visible contract, independent of the backing store's key name); `~/.clr/config.toml` file and `.clr` directory creation when absent on first write; clr reading the `model` key via two independent consumers (`claude_runner`'s `--model` CLI resolution and `claude_runner_core::resolve_isolated_default_model()`) and using it in place of the built-in `DEFAULT_MODEL` when set.
 - **Out of Scope**: Interactive session model in `settings.json` (→ Feature 035); touch/refresh subprocess model control (→ Feature 026 `imodel::` — intentionally separate, quota-adaptive); model discovery (→ Feature 068); subprocess effort level (→ algorithm/008); project-tier `.clr.toml` reads/writes by `.model.select` itself (it manages only the user tier — the project tier is merged in separately by the two consumers described under "clr integration").
 
 ### Design
 
-`.model.select` manages the `model` key in `~/.clr/config.toml`'s user tier for clr task-execution subprocesses (`clr run`, `clr ask`, `clr isolated`, `clr refresh`). This preference adds a user-settable override layer above `ISOLATED_DEFAULT_MODEL` without affecting the existing `imodel::` mechanism for touch/refresh subprocesses.
+`.model.select` manages the `model` key in `~/.clr/config.toml`'s user tier for clr task-execution subprocesses (`clr run`, `clr ask`, `clr isolated`). This preference adds a user-settable override layer above the built-in `DEFAULT_MODEL` without affecting the existing `imodel::` mechanism for touch/refresh subprocesses.
 
 **Preference storage:**
 
@@ -20,7 +20,7 @@
 model = "claude-opus-4-8"
 ```
 
-`.model.select` reads and writes only this file's user tier — it never touches the project-level `.clr.toml` file itself (that file participates only in the two read-side consumers described below). The file and its parent `.clr` directory are created on first set. When `model` is absent or `~/.clr/config.toml` does not exist, `clr` falls back to `ISOLATED_DEFAULT_MODEL` or the hardcoded CLI default, depending on the consumer.
+`.model.select` reads and writes only this file's user tier — it never touches the project-level `.clr.toml` file itself (that file participates only in the two read-side consumers described below). The file and its parent `.clr` directory are created on first set. When `model` is absent or `~/.clr/config.toml` does not exist, `clr` falls back to the built-in `DEFAULT_MODEL` (`"claude-opus-5-5"`) — the same constant for both consumers.
 
 **Get mode** (no `id::`, no `reset::1`):
 
@@ -38,10 +38,10 @@ Removes the `model` key from `~/.clr/config.toml`'s user tier. Preserves other k
 
 **clr integration:**
 
-The `model` key `.model.select` writes is read independently by two consumers, each with its own precedence chain — both resolve the same `~/.clr/config.toml` user-tier value when no higher tier overrides it:
+The `model` key `.model.select` writes is read independently by two consumers, each with its own precedence chain. Both locate the user-tier file through `claude_runner_core::user_config_path()` — `$CLR_CONFIG_DIR/config.toml` when that override is set and non-empty, else `~/.clr/config.toml` (BUG-007) — so they resolve the same value when no higher tier overrides it:
 
-1. **`claude_runner`'s own `--model` CLI resolution** — `dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) call `config::load_config()` + `config::apply_config_defaults()` (`claude_runner/src/cli/config.rs`) as the 4th of 5 precedence tiers: explicit `--model` flag → `--args-file`/stdin JSON → `CLR_MODEL` env var → config-file tier → hardcoded default. The config-file tier merges project `.clr.toml` (higher precedence) over user `~/.clr/config.toml` (lower precedence) on the `model` key before filling in whichever `CliArgs` fields are still unset.
-2. **`claude_runner_core::resolve_isolated_default_model()`** (`claude_runner_core/src/isolated.rs`) — consulted by `run_isolated_ext()`'s `IsolatedModel::Default` match arm, which `dispatch_isolated()` (`clr isolated`) always passes (there is no `--model` CLI flag on `isolated`). A simpler, independent 2-tier lookup over the same `model` key: project `.clr.toml` → user `~/.clr/config.toml` → `None` if neither is set, in which case `IsolatedModel::model_id()` supplies `ISOLATED_DEFAULT_MODEL` (`"opus"`).
+1. **`claude_runner`'s own `--model` CLI resolution** — `dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) call `config::load_config()` + `config::apply_config_defaults()` (`claude_runner/src/cli/config.rs`) as the 4th of 5 precedence tiers: explicit `--model` flag → `--args-file`/stdin JSON → `CLR_MODEL` env var → config-file tier → built-in `DEFAULT_MODEL` (`"claude-opus-5-5"`), with the last two withheld on a non-anthropic seat ([Provider Gate](../../../claude_runner/docs/cli/config_param.md#provider-gate)). The config-file tier merges project `.clr.toml` (higher precedence) over user `~/.clr/config.toml` (lower precedence) on the `model` key before filling in whichever `CliArgs` fields are still unset.
+2. **`claude_runner_core::resolve_isolated_default_model()`** (`claude_runner_core/src/isolated.rs`) — consulted for `clr isolated`'s `IsolatedModel::Default`, i.e. when no model arrived through `--model`, an `--args-file` `"model"` key or `CLR_MODEL` (full cascade: [config_param.md](../../../claude_runner/docs/cli/config_param.md)). A simpler, independent 2-tier lookup over the same `model` key: project `.clr.toml` → user `config.toml` → `None` if neither is set, in which case `IsolatedModel::model_id()` supplies `DEFAULT_MODEL` (`"claude-opus-5-5"`). Unlike the first consumer it's never withheld by the Provider Gate.
 
 The preference applies to `run`, `ask`, and `isolated`. `refresh` always uses `REFRESH_DEFAULT_MODEL`; see below.
 
@@ -86,7 +86,7 @@ Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` 
 |------|--------------|
 | `src/commands/model_select.rs` | `.model.select` command handler |
 | `src/registry.rs` | Registration of `.model.select` command and parameters |
-| `module/claude_runner_core/src/isolated.rs` | `resolve_isolated_default_model()` — reads the `model` key; falls back to `ISOLATED_DEFAULT_MODEL` |
+| `module/claude_runner_core/src/isolated.rs` | `resolve_isolated_default_model()` — reads the `model` key; `DEFAULT_MODEL` is the fallback |
 | `module/claude_runner/src/cli/config.rs` | `load_config()` / `apply_config_defaults()` — reads the `model` key as the CLI's config-file tier |
 
 ### Tests

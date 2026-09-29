@@ -4,8 +4,9 @@
 //! prior snapshot but no longer running).
 //!
 //! State lives at `CLR_PS_STATE_DIR` (env override) or `$HOME/.clr/ps` by
-//! default, mirroring `config.rs`'s `user_config_dir()` 2-tier resolution
-//! shape. All I/O here is best-effort: a missing, unreadable, or malformed
+//! default — the same env-var-then-`HOME` order as
+//! `claude_runner_core::user_config_path()`'s `config.toml` lookup.
+//! All I/O here is best-effort: a missing, unreadable, or malformed
 //! snapshot file must never abort `clr ps` itself — it just means no prior
 //! state to compare against, exactly like a first-ever invocation.
 
@@ -63,9 +64,10 @@ fn unix_now() -> u64
 
 // Resolve the directory for `clr ps`'s snapshot state file.
 //
-// Mirrors config.rs's user_config_dir() 2-tier shape (env var > $HOME
-// default; no CLI-arg tier, since snapshot tracking is always-on, not
-// user-configurable per invocation).
+// Same env-var-then-$HOME order as claude_runner_core::user_config_path()
+// (no CLI-arg tier, since snapshot tracking is always-on, not
+// user-configurable per invocation). Unlike that resolver, an unset or empty
+// HOME still lands on a relative `.clr/ps` here.
 fn ps_state_dir() -> std::path::PathBuf
 {
   if let Ok( v ) = std::env::var( "CLR_PS_STATE_DIR" )

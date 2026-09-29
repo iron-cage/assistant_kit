@@ -73,6 +73,7 @@
 //! `docs/api/` for the signature contract, `docs/invariant/` for what must hold.
 
 mod command;
+mod config_path;
 mod control;
 pub mod fanout;
 mod exit_code;
@@ -84,6 +85,7 @@ pub mod ps_table;
 pub mod session_dir;
 
 pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW };
+pub use crate::config_path::{ user_config_path, user_config_path_from };
 pub use crate::control::ControlSession;
 pub use crate::exit_code::signal_exit_code;
 pub use crate::fanout::{ run_bounded, FanoutOutcome, SPAWN_FAILED_EXIT_CODE };
@@ -121,7 +123,8 @@ pub use crate::isolated::run_isolated_ext;
 /// Re-export of [`crate::isolated::resolve_isolated_default_model`].
 ///
 /// Resolves `IsolatedModel::Default`'s model preference across both tiers:
-/// project `.clr.toml` → user `~/.clr/config.toml`.
+/// project `.clr.toml` → the user `config.toml` located by [`user_config_path`]
+/// (`$CLR_CONFIG_DIR/config.toml`, else `~/.clr/config.toml`).
 /// Returns `None` if nothing is set at either tier. Used by `run_isolated_ext()`'s
 /// `IsolatedModel::Default` match arm.
 #[ cfg( feature = "enabled" ) ]

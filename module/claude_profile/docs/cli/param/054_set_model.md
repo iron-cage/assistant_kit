@@ -10,7 +10,7 @@ Explicitly writes a Claude Code session model to `~/.claude/settings.json`. When
 
 | Value | Model ID written to `settings.json` | Effect |
 |-------|--------------------------------------|--------|
-| `opus` | `claude-opus-4-8` | Force Opus session model |
+| `opus` | `claude-opus-5-5` | Force Opus session model |
 | `sonnet` | `claude-sonnet-5` | Force Sonnet session model |
 | `haiku` | `claude-haiku-4-5-20251001` | Force Haiku session model |
 | `default` | *(removes `model` key)* | Revert to Claude Code's built-in default |

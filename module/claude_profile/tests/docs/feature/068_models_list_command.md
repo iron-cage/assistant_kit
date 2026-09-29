@@ -10,7 +10,7 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `offline::1` — stdout contains `claude-opus-4-8` | `ft01_offline_contains_opus` |
+| FT-01 | AC-01 | `offline::1` — stdout contains `claude-opus-5-5` and `claude-opus-4-8` | `ft01_offline_contains_opus` |
 | FT-02 | AC-02 | `offline::1` — stdout contains `claude-sonnet-5` | `ft02_offline_contains_sonnet` |
 | FT-03 | AC-03 | `offline::1` — stdout contains `claude-haiku-4-5-20251001` | `ft03_offline_contains_haiku` |
 | FT-04 | AC-04 | `offline::1 format::table` — output has `ID` header | `ft04_offline_table_has_header` |
@@ -34,11 +34,11 @@
 
 ---
 
-### FT-01: Offline mode contains `claude-opus-4-8`
+### FT-01: Offline mode contains `claude-opus-5-5` and `claude-opus-4-8`
 
 - **Given:** Any environment (no network needed).
 - **When:** `clp .models offline::1`
-- **Then:** Stdout contains `claude-opus-4-8`. Exits 0.
+- **Then:** Stdout contains `claude-opus-5-5` and `claude-opus-4-8`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `ft01_offline_contains_opus`
 - **Source:** [068_models_list_command.md AC-01](../../../docs/feature/068_models_list_command.md)

@@ -15,14 +15,14 @@ Select the Claude model for isolated subprocess keep-alive pings (`touch::`, `re
 
 #### Entry Point
 
-`src/usage/subprocess.rs:29-59` — `resolve_model(account_quota, imodel_param)`
+`src/usage/subprocess.rs:33-65` — `resolve_model(account_quota, imodel_param)`
 
 #### Decision Table
 
 | `imodel_param` | `seven_day_sonnet` | `resets_at` | `100 - utilization` | Selected Model |
 |---|---|---|---|---|
 | `"sonnet"` | — | — | — | `claude-sonnet-5` (forced) |
-| `"opus"` | — | — | — | `claude-opus-4-8` (forced) |
+| `"opus"` | — | — | — | `claude-opus-5-5` (forced) |
 | `"haiku"` | — | — | — | `claude-haiku-4-5-20251001` (forced) |
 | `"keep"` | — | — | — | `KeepCurrent` (no `--model` flag) |
 | `"auto"` | `None` | — | — | `claude-haiku-4-5-20251001` (no Sonnet tier) |
@@ -36,7 +36,7 @@ Select the Claude model for isolated subprocess keep-alive pings (`touch::`, `re
 fn resolve_model(aq, imodel_param):
   match imodel_param:
     "sonnet" → Specific("claude-sonnet-5")
-    "opus"   → Specific("claude-opus-4-8")
+    "opus"   → Specific("claude-opus-5-5")
     "haiku"  → Specific("claude-haiku-4-5-20251001")
     "keep"   → KeepCurrent
     "auto"   →

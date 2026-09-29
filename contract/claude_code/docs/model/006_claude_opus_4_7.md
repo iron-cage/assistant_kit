@@ -30,7 +30,7 @@ Introduced a new tokenizer — the same text produces roughly 30% more tokens co
 
 ### Workspace Usage
 
-Not assigned any workspace role. Workspace constants (`ISOLATED_DEFAULT_MODEL`) were updated from `claude-opus-4-6` to `claude-opus-4-8`, skipping Opus 4.7. Callers may pass `IsolatedModel::Specific("claude-opus-4-7")` if 4.7-specific behavior is required.
+Not assigned any workspace role. The Opus default constant (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`) went from `claude-opus-4-6` to `claude-opus-4-8`, skipping Opus 4.7. Callers may pass `IsolatedModel::Specific("claude-opus-4-7")` if 4.7-specific behavior is required.
 
 ### Cross-References
 

@@ -42,7 +42,7 @@ unrelated keys across write and reset operations.
 
 - **Given:** No `~/.clr/prefs.json` exists, or the file exists without a `subprocess_model` key
 - **When:** `clp .model.select` (get form) is invoked, or `claude_runner_core/src/isolated.rs` resolves the subprocess model
-- **Then:** The preference is treated as no preference — `clp .model.select` reports `(unset)`; readers fall back to `ISOLATED_DEFAULT_MODEL`. No error, no panic.
+- **Then:** The preference is treated as no preference — `clp .model.select` reports `(unset)`; readers fall back to the built-in default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`). No error, no panic.
 - **Source fn:** `it01_get_unset_no_file` (model_select_test.rs)
 - **Source:** [docs/schema/008_clr_prefs_json.md §Empty file / absent file / null field](../../../docs/schema/008_clr_prefs_json.md)
 

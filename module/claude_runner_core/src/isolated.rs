@@ -211,9 +211,11 @@ pub fn run_isolated
 }
 
 /// Resolve `IsolatedModel::Default`'s model preference across both tiers, in order:
-/// project `.clr.toml` → user `~/.clr/config.toml`. Returns `None` if nothing is
-/// set at either tier — callers fall back to [`DEFAULT_MODEL`] via
-/// `IsolatedModel::model_id()`, unchanged from today's behavior.
+/// project `.clr.toml` → the user `config.toml` located by
+/// [`crate::user_config_path`] (`$CLR_CONFIG_DIR/config.toml`, else
+/// `~/.clr/config.toml`). Returns `None` if nothing is set at either tier, or when
+/// there is no user tier at all (neither variable set) — callers fall back to
+/// [`DEFAULT_MODEL`] via `IsolatedModel::model_id()`.
 ///
 /// Task 410 retired the prior `~/.clr/prefs.json` fallback tier (and the
 /// `read_subprocess_model_pref()` function that read it) once `.model.select`
@@ -223,8 +225,13 @@ pub fn run_isolated
 #[ inline ]
 pub fn resolve_isolated_default_model() -> Option< String >
 {
-  let home         = std::env::var( "HOME" ).ok()?;
-  let user_path    = std::path::Path::new( &home ).join( ".clr" ).join( "config.toml" );
+  // Fix(BUG-007): locate the user tier through the shared `user_config_path()` resolver.
+  // Root cause: this function built `$HOME/.clr/config.toml` by hand, so `CLR_CONFIG_DIR`
+  //   relocated `clr run`'s config tier but never `clr isolated`'s default-model lookup —
+  //   the two commands read different files under the same environment.
+  // Pitfall: every reader and writer of the user `config.toml` must go through
+  //   `user_config_path()`; a second hand-built `$HOME/.clr` join re-splits the file.
+  let user_path    = crate::config_path::user_config_path()?;
   let project_path = std::path::Path::new( ".clr.toml" );
   claude_core::toml_io::get_tiered( Some( project_path ), &user_path, "model" )
 }

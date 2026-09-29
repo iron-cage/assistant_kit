@@ -13,7 +13,7 @@
 
 | Field | Type | Default | Purpose | Written by | Read by |
 |-------|------|---------|---------|------------|---------|
-| `subprocess_model` | `string \| null` | *(absent)* | Full model ID for clr run/ask/isolated/refresh subprocesses; absent = use `ISOLATED_DEFAULT_MODEL` | `clp .model.select id::VALUE` | `claude_runner_core/src/isolated.rs` |
+| `subprocess_model` | `string \| null` | *(absent)* | Full model ID for clr run/ask/isolated subprocesses (refresh always pinned `REFRESH_DEFAULT_MODEL`); absent = use the built-in default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`) | `clp .model.select id::VALUE` | `claude_runner_core/src/isolated.rs` |
 
 **File location:** `~/.clr/prefs.json`
 
@@ -21,7 +21,7 @@ The `~/.clr/` directory is already created by clr for the journal. `prefs.json` 
 
 **Extra fields:** Readers (clr) MUST tolerate unknown fields for forward compatibility. Writers (clp) MUST preserve unknown fields when updating.
 
-**Empty file / absent file / null field:** All treated as no preference; clr falls back to `ISOLATED_DEFAULT_MODEL`.
+**Empty file / absent file / null field:** All treated as no preference; clr falls back to the built-in default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`).
 
 ### Example
 

@@ -27,7 +27,7 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `execution_output_test.rs` | Test ExecutionOutput struct fields and Display formatting |
 | `skip_permissions_test.rs` | Test skip_permissions flag and --dangerously-skip-permissions arg |
 | `session_dir_tests.rs` | Test SessionManager directory creation and Strategy string parsing |
-| `process_test.rs` | Process scanner: `/proc` scan, signal sending (TC-061–TC-070) |
+| `process_test.rs` | Process scanner: `/proc` scan, signal sending (TC-061–TC-071) |
 | `dry_run_test.rs` | Test dry_run mode and describe_compact() output (TSK-071) |
 | `io_params_test.rs` | Test I/O parameter builder methods (TSK-072) |
 | `tool_dir_params_test.rs` | Test tool and directory parameter builder methods (TSK-073) |
@@ -39,7 +39,8 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
-| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T7) |
+| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T10, BUG-007) |
+| `config_path_test.rs` | Test `user_config_path()` decision table over `CLR_CONFIG_DIR` × `HOME` (T01–T11, BUG-007/BUG-560) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
 | `stdin_file_test.rs` | Test stdin content materialization to temp file (`with_stdin_content`) |
@@ -55,13 +56,13 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
 | `fixtures/sdk_control_capture/` | Real captured Agent SDK wire evidence for the 25 `Query` control methods (task 415 Phase 0) |
 
-## Organization (43 test files)
+## Organization (45 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 
 ### Scope
 
-This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (43 test files):
+This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (45 test files):
 
 **In Scope:**
 - Builder pattern API (4 test files):

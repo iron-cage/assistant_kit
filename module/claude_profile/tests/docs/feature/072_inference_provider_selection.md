@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for the `inference_provider` account field, the `.provider.select` global config command, and Gate 10's rotation-eligibility constraint.
 - **Source**: `docs/feature/072_inference_provider_selection.md`
-- **Covers**: AC-01 through AC-16
+- **Covers**: AC-01 through AC-18
 
 ### Test Cases
 
@@ -26,6 +26,8 @@
 | FT-14 | AC-14 | `provider = "kimi"` selected; mixed-provider account list; rotation never selects `anthropic`-tagged account, `force::1` included | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_mismatch_not_bypassed_by_force_equivalent` |
 | FT-15 | AC-15 | No selection made (default `anthropic`); account tagged `inference_provider: "kimi"` never selected by rotation | `test_cc_gate10_provider_mismatch_skips_account`, `test_cc_gate10_empty_and_explicit_anthropic_are_equivalent` |
 | FT-16 | AC-16 | `.provider.select` get-mode value unaffected by which account is currently active | `t18_provider_select_get_ignores_active_account_provider` |
+| FT-17 | AC-17 | `CLR_CONFIG_DIR` set → `.provider.select` set/get and Gate 10 all use `$CLR_CONFIG_DIR/config.toml`, `HOME` optional | `t20_provider_select_set_and_get_honor_clr_config_dir`, `t21_provider_select_get_without_home_reads_clr_config_dir`, `t22_usage_rotate_gate10_reads_pin_through_clr_config_dir` |
+| FT-18 | AC-18 | Neither `CLR_CONFIG_DIR` nor `HOME` set → `.provider.select id::kimi` exits 2 naming both | `t23_provider_select_no_home_no_override_exits_2_naming_both` |
 
 ### Notes
 
@@ -217,3 +219,25 @@
 - **Exit:** 0
 - **Source fn:** `t18_provider_select_get_ignores_active_account_provider` (in `tests/cli/account_provider_test.rs`)
 - **Source:** [072_inference_provider_selection.md AC-16](../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### FT-17: `CLR_CONFIG_DIR` relocates the `provider` pin for writer and reader (BUG-560)
+
+- **Given:** `CLR_CONFIG_DIR=<dir>`. `t20`: `HOME` a temp dir. `t21`: `HOME` removed, `<dir>/config.toml` has `provider = "kimi"`. `t22`: `HOME` holds current/`alpha` (anthropic)/`beta` (`kimi`) accounts with quota caches; the pin exists only in `<dir>/config.toml`.
+- **When:** `t20`: `clp .provider.select id::kimi`, then get. `t21`: `clp .provider.select`. `t22`: `clp .usage rotate::1 dry::1 sort::name`.
+- **Then:** `t20` writes `<dir>/config.toml` and no `config.toml` under `HOME`; get prints `provider.select: kimi`. `t21` prints `provider.select: kimi`. `t22` reports `would switch to 'beta@test.com'`, never `alpha@test.com`.
+- **Exit:** 0
+- **Source fn:** `t20_provider_select_set_and_get_honor_clr_config_dir`, `t21_provider_select_get_without_home_reads_clr_config_dir`, `t22_usage_rotate_gate10_reads_pin_through_clr_config_dir` (in `tests/cli/account_provider_test.rs`)
+- **Source:** [072_inference_provider_selection.md AC-17](../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### FT-18: No config location → `.provider.select` exits 2 (BUG-560)
+
+- **Given:** `CLR_CONFIG_DIR` and `HOME` both removed.
+- **When:** `clp .provider.select id::kimi`
+- **Then:** stderr names both `CLR_CONFIG_DIR` and `HOME`; nothing is written.
+- **Exit:** 2
+- **Source fn:** `t23_provider_select_no_home_no_override_exits_2_naming_both` (in `tests/cli/account_provider_test.rs`)
+- **Source:** [072_inference_provider_selection.md AC-18](../../../docs/feature/072_inference_provider_selection.md)

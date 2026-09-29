@@ -618,6 +618,22 @@ pub const ROTATION_HEADROOM_THRESHOLD : f64 = 15.0;
 /// [`AccountQuota::is_no_subscription`]. Displayed verbatim as the row's reason string.
 pub const NO_SUBSCRIPTION_REASON : &str = "no subscription";
 
+// ── Model shorthand table ─────────────────────────────────────────────────────
+//
+// The only place clp spells a model ID. `map_model_shorthand` (session `set_model::` /
+// `.model model::`), `resolve_model` (subprocess `imodel::`), `resolve_effort`'s Haiku
+// check and the registry help text all read these, so a model bump is one edit here.
+
+/// Full model ID behind the `opus` shorthand — `set_model::opus`, `.model model::opus`
+/// and `imodel::opus` all resolve to it.
+pub const OPUS_MODEL_ID : &str = "claude-opus-5-5";
+
+/// Full model ID behind the `sonnet` shorthand, and `imodel::auto`'s Sonnet pick.
+pub const SONNET_MODEL_ID : &str = "claude-sonnet-5";
+
+/// Full model ID behind the `haiku` shorthand, and `imodel::auto`'s keep-alive fallback.
+pub const HAIKU_MODEL_ID : &str = "claude-haiku-4-5-20251001";
+
 /// Map a model shorthand to its full model ID.
 ///
 /// Returns `Some(Some(model_id))` for `opus`, `sonnet`, `haiku`;
@@ -625,16 +641,16 @@ pub const NO_SUBSCRIPTION_REASON : &str = "no subscription";
 /// `None` for unknown values.
 ///
 /// Shared by `validate_set_model` (`.account.use` / `.usage` `set_model::` parameter)
-/// and the `.model` command handler. The model-ID table lives here exactly once.
+/// and the `.model` command handler. The IDs come from the shorthand table above.
 // `Option<Option<T>>` is intentional: tri-state (known model / remove key / unknown input).
 #[ allow( clippy::option_option ) ]
 pub fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
 {
   match s
   {
-    "opus"    => Some( Some( "claude-opus-4-8" ) ),
-    "sonnet"  => Some( Some( "claude-sonnet-5" ) ),
-    "haiku"   => Some( Some( "claude-haiku-4-5-20251001" ) ),
+    "opus"    => Some( Some( OPUS_MODEL_ID ) ),
+    "sonnet"  => Some( Some( SONNET_MODEL_ID ) ),
+    "haiku"   => Some( Some( HAIKU_MODEL_ID ) ),
     "default" => Some( None ),
     _         => None,
   }

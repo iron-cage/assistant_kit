@@ -463,4 +463,73 @@ mod isolated_defaults_test
     );
     let _ = std::fs::remove_file( &creds );
   }
+
+  // ── BUG-007 : `CLR_CONFIG_DIR` must redirect `isolated`'s user tier too ────
+
+  /// # Root Cause
+  /// `resolve_isolated_default_model()` (`claude_runner_core::isolated`) built the
+  /// user tier as `$HOME/.clr/config.toml` itself and never read `CLR_CONFIG_DIR`.
+  /// The override was honored only by `config.rs`'s private `user_config_dir()`, so
+  /// with the override set `clr run` read `$CLR_CONFIG_DIR/config.toml` while
+  /// `clr isolated` read `$HOME/.clr/config.toml`.
+  ///
+  /// # Why Not Caught
+  /// ISD-14 removes `CLR_CONFIG_DIR` and BUG-485's test uses the project tier, so no
+  /// isolated test ever set the override. `config_file_test.rs` T10 sets it, but only
+  /// for `clr run`.
+  ///
+  /// # Fix Applied
+  /// `claude_runner_core::user_config_path()` is the one resolver for the user
+  /// `config.toml`. `resolve_isolated_default_model()` and `discover_config_paths()`
+  /// both call it, and `user_config_dir()` is gone.
+  ///
+  /// # Prevention
+  /// This test gives `HOME` and `CLR_CONFIG_DIR` different models, so an isolated path
+  /// that reads `HOME` alone previews the wrong one. The resolver's own decision table
+  /// is `claude_runner_core/tests/config_path_test.rs`.
+  ///
+  /// # Pitfall
+  /// An env override implemented inside one consumer redirects that consumer only.
+  /// The file's other readers keep agreeing with each other, not with the override,
+  /// and the split shows up only when the override is set.
+  // test_kind: bug_reproducer(BUG-007)
+  #[ test ]
+  fn bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir()
+  {
+    let home = tempfile::tempdir().expect( "create temp HOME" );
+    let home_clr = home.path().join( ".clr" );
+    std::fs::create_dir_all( &home_clr ).expect( "create HOME/.clr" );
+    std::fs::write( home_clr.join( "config.toml" ), "model = \"home-model\"\n" )
+      .expect( "write HOME config.toml" );
+    let override_dir = tempfile::tempdir().expect( "create temp CLR_CONFIG_DIR" );
+    std::fs::write( override_dir.path().join( "config.toml" ), "model = \"override-model\"\n" )
+      .expect( "write override config.toml" );
+    // Empty cwd → no project `.clr.toml`, so only the user tier can supply the model.
+    let project = tempfile::tempdir().expect( "create empty project dir" );
+    let creds = temp_creds();
+    let out = clr()
+      .current_dir( project.path() )
+      .env( "HOME", home.path() )
+      .env( "CLR_CONFIG_DIR", override_dir.path() )
+      .env_remove( "CLR_MODEL" )
+      .args( [ "isolated", "--creds", creds.to_str().unwrap(), "--dry-run", "msg" ] )
+      .output()
+      .expect( "spawn clr" );
+    let _ = std::fs::remove_file( &creds );
+    assert_eq!(
+      out.status.code(),
+      Some( 0 ),
+      "expected exit 0 from --dry-run; stderr: {}", String::from_utf8_lossy( &out.stderr )
+    );
+    let stdout = String::from_utf8_lossy( &out.stdout );
+    assert!(
+      stdout.contains( "--model override-model" ),
+      "BUG-007: with CLR_CONFIG_DIR set, `clr isolated` must read the user tier from \
+       $CLR_CONFIG_DIR/config.toml, the file `clr run` reads. Got:\n{stdout}"
+    );
+    assert!(
+      !stdout.contains( "--model home-model" ),
+      "BUG-007: $HOME/.clr/config.toml must not be read while CLR_CONFIG_DIR is set. Got:\n{stdout}"
+    );
+  }
 }

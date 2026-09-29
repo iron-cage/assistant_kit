@@ -10,7 +10,7 @@
 
 | IT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| IT-01 | AC-01 | `offline::1` — stdout contains `claude-opus-4-8` | `it01_offline_contains_opus` |
+| IT-01 | AC-01 | `offline::1` — stdout contains `claude-opus-5-5` and `claude-opus-4-8` | `it01_offline_contains_opus` |
 | IT-02 | AC-02 | `offline::1` — stdout contains `claude-sonnet-5` | `it02_offline_contains_sonnet` |
 | IT-03 | AC-03 | `offline::1` — stdout contains `claude-haiku-4-5-20251001` | `it03_offline_contains_haiku` |
 | IT-04 | AC-04 | `offline::1 format::table` — output has `ID` header | `it04_offline_table_has_header` |
@@ -32,11 +32,11 @@
 
 ---
 
-### IT-01: Offline mode contains `claude-opus-4-8`
+### IT-01: Offline mode contains `claude-opus-5-5` and `claude-opus-4-8`
 
 - **Given:** Any environment (no network needed).
 - **When:** `clp .models offline::1`
-- **Then:** Stdout contains `claude-opus-4-8`. Exits 0.
+- **Then:** Stdout contains `claude-opus-5-5` and `claude-opus-4-8`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `it01_offline_contains_opus`
 - **Source:** [068_models_list_command.md AC-01](../../../../docs/feature/068_models_list_command.md)

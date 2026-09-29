@@ -33,7 +33,7 @@ Available on the Claude API, Claude Platform on AWS, Amazon Bedrock, Google Clou
 
 ### Workspace Usage
 
-Not currently assigned a workspace role (constants in `module/claude_runner_core/src/isolated.rs` use `claude-opus-4-8`). `claude-fable-5` is a candidate for `ISOLATED_DEFAULT_MODEL` reassignment if Opus 4.8 is retired before Fable 5 becomes the standard high-capability choice. See `012_workspace_defaults.md`.
+Not currently assigned a workspace role (`DEFAULT_MODEL` in `module/claude_runner_core/src/isolated.rs` is `claude-opus-5-5`). `claude-fable-5` is a candidate for `DEFAULT_MODEL` reassignment if Fable becomes the standard high-capability choice over Opus. See `012_workspace_defaults.md`.
 
 ### Cross-References
 
@@ -42,4 +42,4 @@ Not currently assigned a workspace role (constants in `module/claude_runner_core
 | doc | [readme.md](readme.md) | Master model entity index |
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment for workspace callers |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live model listing and capabilities |
-| doc | [003_claude_opus_4_8.md](003_claude_opus_4_8.md) | Current ISOLATED_DEFAULT_MODEL assignment |
+| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Current `DEFAULT_MODEL` assignment |

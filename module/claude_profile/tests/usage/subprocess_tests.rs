@@ -345,14 +345,14 @@ fn it_imodel_sonnet_explicit()
   assert_eq!( model_id, "claude-sonnet-5", "imodel::sonnet must always return claude-sonnet-5" );
 }
 
-/// EC-7: `imodel::opus` always returns `IsolatedModel::Specific("claude-opus-4-8")`.
+/// EC-7: `imodel::opus` always returns `IsolatedModel::Specific("claude-opus-5-5")`.
 #[ test ]
 fn it_imodel_opus_explicit()
 {
   let aq       = mk_aq_no_sonnet_data();
   let model    = resolve_model( &aq, SubprocessModel::Opus );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
-  assert_eq!( model_id, "claude-opus-4-8", "imodel::opus must always return claude-opus-4-8" );
+  assert_eq!( model_id, "claude-opus-5-5", "imodel::opus must always return claude-opus-5-5" );
 }
 
 /// EC-8: `imodel::keep` returns `IsolatedModel::KeepCurrent` — no `--model` flag.
@@ -470,7 +470,7 @@ fn ac6_auto_active_sonnet_nearly_exhausted_selects_haiku()
 fn it_effort_high_explicit()
 {
   let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-5-5".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::High ), Some( "high" ) );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::High ), Some( "high" ) );
@@ -482,7 +482,7 @@ fn it_effort_high_explicit()
 fn it_effort_max_explicit()
 {
   let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-5-5".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Max ), Some( "max" ) );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::Max ), Some( "max" ) );
@@ -494,7 +494,7 @@ fn it_effort_max_explicit()
 fn it_effort_auto_uniform_low()
 {
   let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-5-5".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Auto ), Some( "low" ), "auto+sonnet must be low" );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::Auto ), Some( "low" ), "auto+opus must be low" );

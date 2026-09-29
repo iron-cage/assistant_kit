@@ -19,6 +19,29 @@ pub( crate ) fn require_claude_paths() -> Result< crate::ClaudePaths, ErrorData 
   }
 }
 
+/// Resolve clr's user-tier `config.toml` — the file `.model scope::subprocess` and
+/// `.provider.select` read and write — through `claude_runner_core::user_config_path()`
+/// (`$CLR_CONFIG_DIR/config.toml`, else `$HOME/.clr/config.toml`).
+///
+/// # Errors
+///
+/// Returns `InternalError` (exit 2) naming both variables when neither is set and
+/// non-empty — there is no user tier to read or write, and a cwd-relative guess
+/// would create `.clr/` wherever the process started.
+pub( crate ) fn require_clr_config_path() -> Result< std::path::PathBuf, ErrorData >
+{
+  // Fix(BUG-560): one shared resolver for every clp reader/writer of clr's config.toml.
+  // Root cause: `.model` and `.provider.select` each hand-built `$HOME/.clr/config.toml`,
+  //   ignoring `CLR_CONFIG_DIR`, so clp wrote a file clr never read; with `HOME=""` the
+  //   join was relative and created `.clr/config.toml` under the cwd.
+  // Pitfall: `env::var( "HOME" )` is `Ok( "" )` for an empty HOME — only the core
+  //   resolver's non-empty filter turns that into "no user tier".
+  claude_runner_core::user_config_path().ok_or_else( || ErrorData::new(
+    ErrorCode::InternalError,
+    "cannot locate clr config.toml: set CLR_CONFIG_DIR or HOME".to_string(),
+  ) )
+}
+
 /// Resolve the credential store path via `PersistPaths`.
 pub( crate ) fn require_credential_store() -> Result< std::path::PathBuf, ErrorData >
 {

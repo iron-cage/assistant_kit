@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BUG-007: `clr isolated` ignored `CLR_CONFIG_DIR` when resolving its default model**
+  - `resolve_isolated_default_model()` hand-built `$HOME/.clr/config.toml`, so with `CLR_CONFIG_DIR` set `clr run` and `clr isolated` read different user-tier files under the same environment
+  - Both now go through `claude_runner_core::user_config_path()`: `$CLR_CONFIG_DIR/config.toml` when set and non-empty, else `$HOME/.clr/config.toml`, else no user tier
+  - Behavior change: with `HOME` unset or empty and no override, `clr run`/`ask`/`topic` and `clr isolated` no longer read a cwd-relative `.clr/config.toml` — there's simply no user tier
+  - The runner's private `user_config_dir()` copy in `src/cli/config.rs` is gone
+  - Tests: `claude_runner_core` `tests/config_path_test.rs` (T01–T11), `tests/isolated_model_resolution_test.rs` (T8–T10); `claude_runner` `tests/isolated_defaults_test.rs` (`bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir`), `tests/config_file_test.rs` (T23)
+
 - **BUG-429: `max_output_tokens` builder default of 200,000 exceeded every current-tier model's real sync max-output ceiling**
   - `ClaudeCommand::new()` default lowered from `200_000` to `128_000` (`claude_runner_core/src/command/mod.rs`)
   - Model capability catalog (`contract/claude_code/docs/model/`) confirms no current-tier model (Sonnet 5, Opus 4.8, Fable 5) supports a 200k sync output ceiling
@@ -125,6 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency upgrade: `test_tools ^0.17 → ^0.18`** — API-compatible; no code changes required
 
 ### Added
+
+- **`claude_runner_core::user_config_path()` / `user_config_path_from()`** — the single resolver for clr's user-tier `config.toml` (BUG-007); `claude_profile` uses it too (BUG-560)
 
 - **`clr topic [OPTIONS] [MESSAGE]` — named, session-isolated workspace subcommand** (TSK-521)
   - Alias of `run`/`ask` that changes only `--subdir`'s default: auto-generates a slug from `MESSAGE` (lowercase, non-alphanumeric runs collapsed to `-`, truncated to 40 chars word-boundary-aware) when `--subdir` is omitted, disambiguated against existing subdirectories via a `-2`/`-3`... counter

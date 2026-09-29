@@ -400,7 +400,7 @@ clp .account.use name::alice@home.com force::1        # bypass G5 (ownership) an
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print timestamped `account.use` diagnostic lines to stderr: credential read, quota fetch, model resolution, subprocess dispatch |
-| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-8`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
+| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-5-5`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 | `force::` | `bool` | `0` | Bypass G5 (ownership) unless owned or unclaimed; bypass G9 (`claim_lock`) unless clear. Each gate is bypassed independently — one `force::1` satisfies both |
 
 **Algorithm (9 steps):**

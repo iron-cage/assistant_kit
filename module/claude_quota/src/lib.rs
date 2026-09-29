@@ -1120,6 +1120,17 @@ pub struct ModelInfo
 /// Derived from `contract/claude_code/docs/model/readme.md`.
 /// Use [`fetch_models`] for a live, authoritative listing.
 pub const STATIC_MODELS : &[ ModelInfo ] = &[
+  // Real limits, not the conservative ones the older rows carry: the v2.1.283 binary's
+  // model catalog lists 1M context and 128k max output (default and upper).
+  ModelInfo
+  {
+    id               : "claude-opus-5-5",
+    display_name     : "Claude Opus 5.5",
+    created_at       : None,
+    max_input_tokens : Some( 1_000_000 ),
+    max_tokens       : Some( 128_000 ),
+    capabilities     : &[],
+  },
   ModelInfo
   {
     id               : "claude-opus-4-8",

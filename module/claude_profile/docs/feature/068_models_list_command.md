@@ -4,7 +4,7 @@
 
 - **Purpose**: Provide a `clp .models` command to list available Claude API models with their capabilities, fetched from the live `GET /v1/models` endpoint or from a static embedded catalog.
 - **Responsibility**: Documents the `.models` command, its two data sources (live API and static catalog), the `fetch_models()` HTTP function in `claude_quota`, the `format::`, `offline::`, and `name::` parameters, and the `ModelInfo` response type.
-- **In Scope**: `.models` command; live mode (default) fetching `GET /v1/models` via `fetch_models()` in `claude_quota` using the current account's OAuth token; offline mode (`offline::1`) returning the static `STATIC_MODELS` constant; `format::table` (default), `format::json`, `format::text`; `name::` substring filter on model ID (case-insensitive); `ModelInfo` deserialization from API response; `STATIC_MODELS` constant embedding the 5-entry catalog from `contract/claude_code/docs/model/readme.md`.
+- **In Scope**: `.models` command; live mode (default) fetching `GET /v1/models` via `fetch_models()` in `claude_quota` using the current account's OAuth token; offline mode (`offline::1`) returning the static `STATIC_MODELS` constant; `format::table` (default), `format::json`, `format::text`; `name::` substring filter on model ID (case-insensitive); `ModelInfo` deserialization from API response; `STATIC_MODELS` constant embedding the 6-entry catalog from `contract/claude_code/docs/model/readme.md`.
 - **Out of Scope**: Model selection for clr subprocesses (→ Feature 035 `scope::subprocess`; formerly Feature 069 `.model.select`, retired); interactive session model writes (→ Feature 035); subprocess model effort control (→ Feature 026); pricing or cloud platform IDs (→ Anthropic docs).
 
 ### Design
@@ -17,7 +17,7 @@ Obtains the active account's OAuth token from `claude_profile_core::account`, th
 
 **Offline mode** (`offline::1`):
 
-Returns `STATIC_MODELS` — a `&'static [ModelInfo]` constant embedded in `claude_quota` containing the 5 documented models from the workspace model catalog. No network call is made. Useful when running without an active credential or for scripted comparisons.
+Returns `STATIC_MODELS` — a `&'static [ModelInfo]` constant embedded in `claude_quota` containing 6 documented models from the workspace model catalog. No network call is made. Useful when running without an active credential or for scripted comparisons.
 
 **`name::` filter:**
 
@@ -52,10 +52,11 @@ The `capabilities` field is used to derive the `Ext Think` column in table forma
 
 **Static catalog** (`STATIC_MODELS` constant in `claude_quota/src/lib.rs`):
 
-Derived from `contract/claude_code/docs/model/readme.md`. Contains 5 entries, all with `created_at: None` (static entries carry no creation timestamp) and conservative static context/max-output values:
+Derived from `contract/claude_code/docs/model/readme.md`. Contains 6 entries, all with `created_at: None` (static entries carry no creation timestamp). The five original rows carry conservative context/max-output values, below those models' real limits. The `claude-opus-5-5` row carries its real limits, read from the v2.1.283 binary's model catalog ([model/014](../../../../contract/claude_code/docs/model/014_claude_opus_5_5.md)):
 
 | ID | Display Name | Max Input | Max Output | Capabilities |
 |----|---------------|-----------|------------|--------------|
+| `claude-opus-5-5` | Claude Opus 5.5 | 1,000,000 | 128,000 | — |
 | `claude-opus-4-8` | Claude Opus 4.8 | 200,000 | 32,000 | `extended-thinking` |
 | `claude-sonnet-5` | Claude Sonnet 5 | 200,000 | 64,000 | — |
 | `claude-haiku-4-5-20251001` | Claude Haiku 4.5 | 200,000 | 32,000 | — |
@@ -64,7 +65,7 @@ Derived from `contract/claude_code/docs/model/readme.md`. Contains 5 entries, al
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .models offline::1` — stdout contains `claude-opus-4-8`. Exits 0.
+- **AC-01**: `clp .models offline::1` — stdout contains `claude-opus-5-5` (the current default Opus) and `claude-opus-4-8`. Exits 0.
 - **AC-02**: `clp .models offline::1` — stdout contains `claude-sonnet-5`. Exits 0.
 - **AC-03**: `clp .models offline::1` — stdout contains `claude-haiku-4-5-20251001`. Exits 0.
 - **AC-04**: `clp .models offline::1 format::table` — output has header row with `ID` column. Exits 0.

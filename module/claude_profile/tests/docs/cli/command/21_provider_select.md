@@ -4,7 +4,7 @@
 
 - **Purpose**: Integration test cases for the `.provider.select` global inference provider selection command.
 - **Source**: `docs/cli/command/009_provider.md`, `docs/feature/072_inference_provider_selection.md`
-- **Covers**: AC-07 through AC-13, AC-16
+- **Covers**: AC-07 through AC-13, AC-16 through AC-18
 
 ### Test Cases
 
@@ -22,6 +22,8 @@
 | IT-10 | AC-13 | `format::json` with selection set → JSON output keyed `provider` | `t12_provider_select_json_format` |
 | IT-11 | — | `.provider.select` appears in `clp .help` | `dot04_all_visible_commands_present` (`tests/cli/dot_test.rs` — asserts via `clp .`, not `clp .help` literally; equivalent, see `docs/cli/command_group/readme.md`'s Note on Group 15) |
 | IT-12 | AC-09 | `id::` (empty) → exits 1 with non-empty required in stderr | `t10_provider_select_empty_id_exits_1` |
+| IT-13 | AC-17 | `CLR_CONFIG_DIR` set → set/get use `$CLR_CONFIG_DIR/config.toml`, with or without `HOME` | `t20_provider_select_set_and_get_honor_clr_config_dir`, `t21_provider_select_get_without_home_reads_clr_config_dir` |
+| IT-14 | AC-18 | Neither `CLR_CONFIG_DIR` nor `HOME` set → exits 2, stderr names both | `t23_provider_select_no_home_no_override_exits_2_naming_both` |
 
 ### Notes
 
@@ -180,3 +182,25 @@
 - **Exit:** 1
 - **Source fn:** `t10_provider_select_empty_id_exits_1`
 - **Source:** [072_inference_provider_selection.md AC-09](../../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### IT-13: `CLR_CONFIG_DIR` relocates the backing file
+
+- **Given:** `CLR_CONFIG_DIR=<dir>`; `HOME` a temp dir (`t20`) or removed with `<dir>/config.toml` pre-seeded `provider = "kimi"` (`t21`).
+- **When:** `clp .provider.select id::kimi` then `clp .provider.select` (`t20`); `clp .provider.select` (`t21`)
+- **Then:** The pin lands in `<dir>/config.toml`, nothing under `HOME`; get prints `provider.select: kimi`.
+- **Exit:** 0
+- **Source fn:** `t20_provider_select_set_and_get_honor_clr_config_dir`, `t21_provider_select_get_without_home_reads_clr_config_dir`
+- **Source:** [072_inference_provider_selection.md AC-17](../../../../docs/feature/072_inference_provider_selection.md)
+
+---
+
+### IT-14: No config location exits 2
+
+- **Given:** `CLR_CONFIG_DIR` and `HOME` both removed.
+- **When:** `clp .provider.select id::kimi`
+- **Then:** Exits 2. Stderr names `CLR_CONFIG_DIR` and `HOME`.
+- **Exit:** 2
+- **Source fn:** `t23_provider_select_no_home_no_override_exits_2_naming_both`
+- **Source:** [072_inference_provider_selection.md AC-18](../../../../docs/feature/072_inference_provider_selection.md)

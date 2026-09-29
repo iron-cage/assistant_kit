@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`opus` shorthand now resolves to `claude-opus-5-5`** (was `claude-opus-4-8`)
+  - Affects `.model model::opus`, `set_model::opus` on `.account.use`/`.usage`, and
+    `imodel::opus` for touch/refresh subprocesses; `sonnet` and `haiku` are unchanged
+  - The model IDs now live once, as `OPUS_MODEL_ID`/`SONNET_MODEL_ID`/`HAIKU_MODEL_ID` in
+    `src/usage/types.rs`; `map_model_shorthand()`, `resolve_model()`, `resolve_effort()`'s
+    Haiku check and the `set_model::`/`imodel::` help text all read them
+  - `.models offline::1` lists `claude-opus-5-5` first (catalog: `claude_quota::STATIC_MODELS`)
+  - Explicit full IDs are untouched: a `settings.json` or `config.toml` already pinned to
+    `claude-opus-4-8` keeps it until rewritten
+
 - **Per-account credential store consolidated from 5 files to 2**
   - Previous satellite files `{name}.claude.json`, `{name}.settings.json`, `{name}.roles.json`,
     and `{name}.profile.json` merged into a single `{name}.json`
@@ -112,6 +122,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All four opt-in (default off); show `N/A` when source file absent or field missing
 
 ### Fixed
+
+- **clr `config.toml` readers and writers honor `CLR_CONFIG_DIR`** (BUG-560)
+  - `.model scope::subprocess`, `.provider.select` and `.usage` Gate 10 each hand-built
+    `$HOME/.clr/config.toml`, so with `CLR_CONFIG_DIR` set clp wrote a file `clr` never read,
+    and a pin written under the override was invisible to Gate 10
+  - All three now resolve through `claude_runner_core::user_config_path()`
+    (`$CLR_CONFIG_DIR/config.toml`, else `$HOME/.clr/config.toml`) via `require_clr_config_path()`
+    in `src/commands/cmd_context.rs`
+  - Behavior change: with neither `CLR_CONFIG_DIR` nor `HOME` set, `.model scope::subprocess`
+    and `.provider.select` exit 2 with `cannot locate clr config.toml: set CLR_CONFIG_DIR or HOME`
+    (previously `HOME environment variable not set`); with `HOME=""` they no longer create a
+    cwd-relative `.clr/config.toml`
+  - Directory-creation failures now read `failed to create config directory <path>: …`
+  - Tests: `tests/cli/model_test.rs` (T24–T28), `tests/cli/account_provider_test.rs` (t20–t23)
 
 - **Touch-flag cache writes routed to the credential store** (BUG-488)
   - `apply_post_switch_touch` wrote `last_touch_at`/`touch_idle` to `~/.claude/{name}.json`

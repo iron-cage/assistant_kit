@@ -8,6 +8,8 @@
 //! Maps function names to the Test Matrix rows in
 //! `task/claude_profile/436_inference_provider_cli_and_gate10.md` (t01–t16) and
 //! `task/claude_profile/533_close_provider_stack_test_coverage_gaps.md` (t17–t19).
+//! t20–t23 pin the `provider` key's location rule (BUG-560): `$CLR_CONFIG_DIR/config.toml`
+//! when set, else `$HOME/.clr/config.toml`, else no file at all (exit 2).
 //!
 //! | Function | Row | Condition | P/N |
 //! |----------|-----|-----------|-----|
@@ -26,13 +28,17 @@
 //! | `t17_provider_select_reset_without_config_idempotent` | 533-T1 | `reset::1`, no `config.toml` ever created → exit 0 twice, identical output, no file created | P |
 //! | `t18_provider_select_get_ignores_active_account_provider` | 533-T2 | active account carries `kimi`, no `provider` key → get prints `anthropic` | P |
 //! | `t19_save_host_tags_inference_provider_combined_default_column` | 533-T3 | `host::`+`tags::`+`inference_provider::` in one save → 3 fields written, `Provider` shown by default | P |
+//! | `t20_provider_select_set_and_get_honor_clr_config_dir` | BUG-560 | `HOME` + `CLR_CONFIG_DIR` → set writes the override file, get reads it, nothing under `HOME` | P |
+//! | `t21_provider_select_get_without_home_reads_clr_config_dir` | BUG-560 | `HOME` unset, pin in the override → get prints it | P |
+//! | `t22_usage_rotate_gate10_reads_pin_through_clr_config_dir` | BUG-560 | kimi pin only in the override → offline `rotate::1 dry::1 sort::name` picks the kimi account | P |
+//! | `t23_provider_select_no_home_no_override_exits_2_naming_both` | BUG-560 | neither `HOME` nor `CLR_CONFIG_DIR` → `id::kimi` exits 2, stderr names both | N |
 
 use crate::cli_runner::
 {
-  run_cs_with_env,
+  run_cs_with_env, run_cs_with_env_removing,
   stdout, stderr, assert_exit,
   write_credentials, write_account, account_exists,
-  write_account_inference_provider,
+  write_account_inference_provider, write_account_quota_cache,
   read_account_meta,
   credential_store_dir,
   FAR_FUTURE_MS,
@@ -396,4 +402,102 @@ fn t19_save_host_tags_inference_provider_combined_default_column()
   let text = stdout( &out2 );
   assert!( text.contains( "Provider: kimi" ),
     "T19: default .accounts (no cols::) must show Provider 'kimi', got:\n{text}" );
+}
+
+// ── T20–T22: `CLR_CONFIG_DIR` relocates the `provider` pin (BUG-560) ────────────
+
+/// T20: with `CLR_CONFIG_DIR` set, `.provider.select id::kimi` writes
+/// `$CLR_CONFIG_DIR/config.toml`, a later get reads it back, and nothing is written
+/// under `HOME`. Root cause and fix: `model_test.rs` T24 (BUG-560).
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t20_provider_select_set_and_get_honor_clr_config_dir()
+{
+  let home_dir     = TempDir::new().unwrap();
+  let override_dir = TempDir::new().unwrap();
+  let env = [
+    ( "HOME", home_dir.path().to_str().unwrap() ),
+    ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ),
+  ];
+
+  let out = run_cs_with_env( &[ ".provider.select", "id::kimi" ], &env );
+  assert_exit( &out, 0 );
+  let written = std::fs::read_to_string( override_dir.path().join( "config.toml" ) )
+    .expect( "T20: $CLR_CONFIG_DIR/config.toml must be created" );
+  assert!( written.contains( "provider" ) && written.contains( "kimi" ),
+    "T20: provider = \"kimi\" must be persisted to the override file, got:\n{written}" );
+  assert!( read_clr_config( home_dir.path() ).is_none(),
+    "T20: nothing may be written under HOME while CLR_CONFIG_DIR is set" );
+
+  let out2 = run_cs_with_env( &[ ".provider.select" ], &env );
+  assert_exit( &out2, 0 );
+  assert_eq!( stdout( &out2 ), "provider.select: kimi\n",
+    "T20: get must read the pin back from the override file, got:\n{}", stdout( &out2 ) );
+}
+
+/// T21: with `HOME` unset, get mode reads the pin from `$CLR_CONFIG_DIR/config.toml`.
+/// Root cause and fix: `model_test.rs` T24 (BUG-560).
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t21_provider_select_get_without_home_reads_clr_config_dir()
+{
+  let override_dir = TempDir::new().unwrap();
+  std::fs::write( override_dir.path().join( "config.toml" ), "provider = \"kimi\"\n" ).unwrap();
+
+  let out = run_cs_with_env_removing(
+    &[ ".provider.select" ],
+    &[ ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ) ],
+    &[ "HOME" ],
+  );
+  assert_exit( &out, 0 );
+  assert_eq!( stdout( &out ), "provider.select: kimi\n",
+    "T21: get must not need HOME when CLR_CONFIG_DIR is set, got:\n{}", stdout( &out ) );
+}
+
+/// T22: Gate 10 reads the `provider` pin through `CLR_CONFIG_DIR`. The pin exists only in
+/// the override file, so offline `.usage rotate::1 dry::1 sort::name` must pick the kimi
+/// account `beta` over the alphabetically-first anthropic account `alpha`. Reading the
+/// empty `HOME` file instead selects `anthropic` and picks `alpha`.
+/// Root cause and fix: `model_test.rs` T24 (BUG-560).
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t22_usage_rotate_gate10_reads_pin_through_clr_config_dir()
+{
+  let home_dir     = TempDir::new().unwrap();
+  let override_dir = TempDir::new().unwrap();
+  write_credentials( home_dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( home_dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( home_dir.path(), "alpha@test.com",   "max", "tier-alpha",   FAR_FUTURE_MS, false );
+  write_account( home_dir.path(), "beta@test.com",    "max", "tier-beta",    FAR_FUTURE_MS, false );
+  write_account_inference_provider( home_dir.path(), "beta@test.com", "kimi" );
+  write_account_quota_cache( home_dir.path(), "alpha@test.com", 20.0, 30.0, None );
+  write_account_quota_cache( home_dir.path(), "beta@test.com",  20.0, 30.0, None );
+  std::fs::write( override_dir.path().join( "config.toml" ), "provider = \"kimi\"\n" ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "dry::1", "sort::name" ],
+    &[
+      ( "HOME", home_dir.path().to_str().unwrap() ),
+      ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ),
+    ],
+  );
+  assert_exit( &out, 0 );
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!( combined.contains( "would switch to 'beta@test.com'" ),
+    "T22: the kimi pin in $CLR_CONFIG_DIR/config.toml must make Gate 10 pick beta, got:\n{combined}" );
+  assert!( !combined.contains( "would switch to 'alpha@test.com'" ),
+    "T22: alpha (anthropic) must be skipped while kimi is pinned, got:\n{combined}" );
+}
+
+/// T23: with neither `CLR_CONFIG_DIR` nor `HOME` set, `.provider.select` has no file to
+/// read or write — exit 2, and stderr names both variables so either can be set to fix it.
+/// Same resolver and error as `model_test.rs` T27.
+#[ test ]
+fn t23_provider_select_no_home_no_override_exits_2_naming_both()
+{
+  let out = run_cs_with_env_removing( &[ ".provider.select", "id::kimi" ], &[], &[ "HOME" ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!( err.contains( "CLR_CONFIG_DIR" ) && err.contains( "HOME" ),
+    "T23: stderr must name both CLR_CONFIG_DIR and HOME, got:\n{err}" );
 }

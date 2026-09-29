@@ -67,14 +67,15 @@ a model to a tier default names a model that must have a profile here.
 | [010](010_claude_opus_4_5.md) | claude-opus-4-5 | `claude-opus-4-5-20251101` | Opus | 200k | 64k | Yes | No | legacy |
 | [011](011_claude_opus_4_1.md) | claude-opus-4-1 | `claude-opus-4-1-20250805` | Opus | 200k | 32k | Yes | No | deprecated (retire: 2026-08-05) |
 | [012](012_workspace_defaults.md) | Workspace Defaults | — | — | — | — | — | — | active |
-| [013](013_claude_opus_5.md) | claude-opus-5 | `claude-opus-5` | Opus | 1M | unverified | unverified | unverified | **current default Opus** (v2.1.219+) |
+| [013](013_claude_opus_5.md) | claude-opus-5 | `claude-opus-5` | Opus | 1M | unverified | unverified | unverified | superseded as default (v2.1.280); default Opus v2.1.219–v2.1.279 |
+| [014](014_claude_opus_5_5.md) | claude-opus-5-5 | `claude-opus-5-5` | Opus | 1M | 128k | No | Yes | **current default Opus** (v2.1.280+); workspace `DEFAULT_MODEL` |
 
 † 300k via Batch API with `output-300k-2026-03-24` beta
 ‡ Opus 4.7 introduced a new tokenizer: same text → ~30% more tokens vs pre-4.7 models; claude-fable-5 and claude-mythos-5 share this tokenizer.
 
 Opus 5's `unverified` cells are deliberate: no first-party source cited in this collection states its max output or thinking support, and carrying a predecessor's values forward would manufacture a fact. See [`013_claude_opus_5.md`](013_claude_opus_5.md).
 
-**Total doc instances**: 13
+**Total doc instances**: 14
 
 ### Cross-Collection Dependencies
 
@@ -82,5 +83,5 @@ Opus 5's `unverified` cells are deliberate: no first-party source cited in this 
 - `endpoint/011_v1_models.md` — wire contract for live model listing via `GET /v1/models`
 
 **Workspace source**:
-- `module/claude_runner_core/src/isolated.rs` — `ISOLATED_DEFAULT_MODEL`, `REFRESH_DEFAULT_MODEL` constants
+- `module/claude_runner_core/src/isolated.rs` — `DEFAULT_MODEL`, `REFRESH_DEFAULT_MODEL` constants
 - `module/claude_quota/src/lib.rs` — `fetch_rate_limits()` probe model constant

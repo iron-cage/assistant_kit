@@ -26,13 +26,13 @@
 
 ### Workspace Usage
 
-**No longer what `ISOLATED_DEFAULT_MODEL` resolves to.** The constant is the CLI alias `"opus"`, and since v2.1.219 that alias resolves to `claude-opus-5` — see [`013_claude_opus_5.md`](013_claude_opus_5.md).
+**No longer a workspace default.** The former `ISOLATED_DEFAULT_MODEL` held the CLI alias `"opus"`, which resolved here until v2.1.219 moved it to `claude-opus-5` ([`013_claude_opus_5.md`](013_claude_opus_5.md)). That supersession was the alias design working — the constant didn't change; what it pointed at did. The constant has since been replaced by a pinned ID:
 
 ```
-ISOLATED_DEFAULT_MODEL = "opus"   // CLI alias; resolves to "claude-opus-5" since v2.1.219
+DEFAULT_MODEL = "claude-opus-5-5"   // pinned full ID — not an alias
 ```
 
-Rationale for using an alias rather than a pinned ID: isolated subprocess runs handle high-complexity user tasks (reasoning, code generation, analysis) where capability is primary and latency secondary, and the alias auto-tracks the latest Opus with no code change. This supersession is that design working — the constant did not change; what it points at did.
+See [`014_claude_opus_5_5.md`](014_claude_opus_5_5.md) for why the alias was dropped.
 
 The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` must be updated whenever Anthropic promotes a new model to the `opus` alias. That column had gone stale against v2.1.219 until this revision, which is the concrete cost of the alias indirection: nothing in the source breaks, so nothing prompts the doc update.
 
@@ -47,7 +47,7 @@ The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assign
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master model entity index |
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment and update policy |
-| source | `module/claude_runner_core/src/isolated.rs` | `ISOLATED_DEFAULT_MODEL` constant |
+| source | `module/claude_runner_core/src/isolated.rs` | Historical `ISOLATED_DEFAULT_MODEL` site (now `DEFAULT_MODEL`) |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live model capabilities |
 | doc | [013_claude_opus_5.md](013_claude_opus_5.md) | Current default Opus; what the `opus` alias resolves to now |
 | doc | [001_claude_fable_5.md](001_claude_fable_5.md) | Next-tier model above Opus 4.8 |

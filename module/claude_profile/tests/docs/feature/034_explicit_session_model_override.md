@@ -10,7 +10,7 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `set_model::opus` writes `claude-opus-4-8` to `settings.json` | ✅ `ft01_set_model_opus_writes_full_id` |
+| FT-01 | AC-01 | `set_model::opus` writes `claude-opus-5-5` to `settings.json` | ✅ `ft01_set_model_opus_writes_full_id` |
 | FT-02 | AC-02 | `set_model::sonnet` writes `claude-sonnet-5` to `settings.json` | ✅ `ft02_set_model_sonnet_writes_full_id` |
 | FT-03 | AC-03 | `set_model::haiku` writes `claude-haiku-4-5-20251001` to `settings.json` | ✅ `ft03_set_model_haiku_writes_full_id` |
 | FT-04 | AC-04 | `set_model::default` removes `model` key; other keys preserved | ✅ `ft04_set_model_default_removes_key_preserves_others` |
@@ -31,11 +31,11 @@
 
 ---
 
-### FT-01: `set_model::opus` writes `claude-opus-4-8` to `settings.json`
+### FT-01: `set_model::opus` writes `claude-opus-5-5` to `settings.json`
 
 - **Given:** An account `alice` in the credential store. `~/.claude/settings.json` exists (may have existing keys).
 - **When:** `clp .account.use name::alice set_model::opus` (or `clp .usage set_model::opus`)
-- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-8"`. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-5-5"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft01_set_model_opus_writes_full_id`
 - **Source:** [034_explicit_session_model_override.md AC-01](../../../docs/feature/034_explicit_session_model_override.md)

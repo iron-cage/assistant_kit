@@ -11,7 +11,7 @@ fan-out primitive for running many child commands at once.
 |------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, metadata |
 | `src/` | Builder pattern implementation: `ClaudeCommand`, types, process scanner |
-| `tests/` | Builder API, migration validation, verification framework (44 test files) |
+| `tests/` | Builder API, migration validation, verification framework (45 test files) |
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
 | `../../../../agent_kit/task/claude_runner_core/` | Crate task registry — External Layout (see `agent_kit/task/`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |

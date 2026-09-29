@@ -6,10 +6,10 @@ Unified session + subprocess model and effort management command.
 
 ### Command: 18. `.model`
 
-Get or set the model and effort level for either of the two persisted model/effort stores this workspace maintains, selected by `scope::`: the Claude Code interactive session (`~/.claude/settings.json`, `scope::session`, default) or the clr subprocess-execution preference (`~/.clr/config.toml`'s user tier, `scope::subprocess`). Without any of `model::`/`effort_level::`/`reset_model::`/`reset_effort_level::`, prints both current values for the selected scope together with the resolved absolute file path. **Absorbs the former `.model.select` command** — see Command 20 below for its retirement stub.
+Get or set the model and effort level for either of the two persisted model/effort stores this workspace maintains, selected by `scope::`: the Claude Code interactive session (`~/.claude/settings.json`, `scope::session`, default) or the clr subprocess-execution preference (the user-tier `config.toml` clr itself reads — `$CLR_CONFIG_DIR/config.toml` when that override is set and non-empty, else `~/.clr/config.toml` — `scope::subprocess`). Without any of `model::`/`effort_level::`/`reset_model::`/`reset_effort_level::`, prints both current values for the selected scope together with the resolved absolute file path. **Absorbs the former `.model.select` command** — see Command 20 below for its retirement stub.
 
 -- **Parameters:** [`scope::`](../param/075_scope.md), [`model::`](../param/076_model_value.md), [`effort_level::`](../param/077_effort_level.md), [`reset_model::`](../param/078_reset_model.md), [`reset_effort_level::`](../param/079_reset_effort_level.md), [`format::`](../param/002_format.md)
--- **Exit:** 0 (success) | 1 (usage: unknown `scope::` value; unknown `model::`/`effort_level::` value for the selected scope; `model::`+`reset_model::1` together; `effort_level::`+`reset_effort_level::1` together; empty `model::` on `scope::subprocess`) | 2 (runtime: HOME not set)
+-- **Exit:** 0 (success) | 1 (usage: unknown `scope::` value; unknown `model::`/`effort_level::` value for the selected scope; `model::`+`reset_model::1` together; `effort_level::`+`reset_effort_level::1` together; empty `model::` on `scope::subprocess`) | 2 (runtime: `scope::session` with `HOME` unset or empty; `scope::subprocess` with neither `CLR_CONFIG_DIR` nor `HOME` set — stderr names both)
 
 **Syntax:**
 
@@ -29,7 +29,7 @@ clp .model model::opus reset_effort_level::1               # combine: set model 
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `scope::` | `enum` | `session` | Backing store selector: `session` (`~/.claude/settings.json`) or `subprocess` (`~/.clr/config.toml` user tier) |
+| `scope::` | `enum` | `session` | Backing store selector: `session` (`~/.claude/settings.json`) or `subprocess` (`~/.clr/config.toml` user tier, or `$CLR_CONFIG_DIR/config.toml`) |
 | `model::` | `string` | *(omit)* | Model to write for the selected scope: `opus`/`sonnet`/`haiku`/`default` (session, shorthand) or any non-empty full model ID (subprocess) |
 | `effort_level::` | `string` | *(omit)* | Effort to write for the selected scope: `low`/`normal`/`high`/`max` (session) or `low`/`medium`/`high`/`max` (subprocess — note `medium`, not `normal`) |
 | `reset_model::` | `bool` | `0` | Remove the model key for the selected scope; mutually exclusive with `model::` |
@@ -44,7 +44,7 @@ clp .model model::opus reset_effort_level::1               # combine: set model 
 | Yes | write — apply each present action independently against `scope::`'s store; actions may combine freely across the model/effort concepts (never within the same concept's set+reset pair) |
 
 **Algorithm (get, 3 steps):**
-1. Resolve `scope::` to its absolute path (`ClaudePaths::settings_file()` for `session`; `resolve_subprocess_config_path()` for `subprocess`)
+1. Resolve `scope::` to its absolute path (`ClaudePaths::settings_file()` for `session`; `require_clr_config_path()` → `claude_runner_core::user_config_path()` for `subprocess`)
 2. Read model + effort keys for that scope: `get_session_model()`+`get_session_effort()` (session) or `toml_io::get_tiered()` against `model`/`effort` keys (subprocess)
 3. Render `scope`, absolute `path`, `model`, `effort_level` together in requested `format::`; absent values print `(unset)` (text) or `null` (JSON)
 

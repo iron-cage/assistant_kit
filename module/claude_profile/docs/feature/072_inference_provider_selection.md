@@ -11,6 +11,8 @@
 
 **Why a global scalar, not a filter or fallback chain:** account rotation already has many relative, per-call-site gates (ownership, force bypass, claim lock). Provider selection is deliberately different in kind — it is a single piece of standing user intent ("I am currently working with provider X") that must hold across every rotation decision until the user explicitly changes it. Modeling it as a filter parameter or a derived/fallback value (e.g. "use whichever provider the current account has") would let rotation silently drift across providers as accounts come and go — exactly the failure this feature exists to prevent. So `provider` lives in `~/.clr/config.toml`'s user tier (the same tiered flat-TOML store `.model scope::subprocess` already uses for `model`/`effort`, Feature 035), read once per rotation decision and never derived.
 
+**Where the file lives:** the writer (`.provider.select`) and the reader (Gate 10's `resolve_selected_provider()`) both locate it through `claude_runner_core::user_config_path()`: `$CLR_CONFIG_DIR/config.toml` when that override is set and non-empty, else `$HOME/.clr/config.toml`. A shared resolver is what keeps a pin written under the override visible to rotation (BUG-560). With neither variable set, `.provider.select` exits 2 naming both, and Gate 10 compares against the default `anthropic`.
+
 **Why `inference_provider` defaults to `"anthropic"` without being written:** mirrors the existing `backend` field's absent-means-`anthropic` convention (Feature 071) rather than the `host`/`role` metadata labels' write-empty-string convention. Every account created before this feature, and every account saved without `inference_provider::`, has no `inference_provider` key in `{name}.json` at all — readers (`.accounts`/`.usage` rendering, Gate 10) treat that absence as `"anthropic"`. This avoids a one-time migration pass over every existing account file and keeps the common case (single-provider users) free of a redundant explicit tag.
 
 **Why no allow-list:** `inference_provider` is a free-form label, matching the validation-lightness of `host::`/`role::` (also free-form metadata) rather than `backend::` (a closed `AccountBackend` enum). The set of providers a user might tag accounts with is open-ended and not `clp`'s concern to enumerate — `.provider.select id::` accepts the same free-form strings for the same reason. The only validation on either surface is non-empty.
@@ -24,7 +26,7 @@
 | Property | Type | Storage | Purpose | Set via | Governs |
 |---|---|---|---|---|---|
 | `inference_provider` | `String` | `{name}.json` / `Account` / `AccountQuota` | Tags an account with the provider it authenticates against | `.account.save inference_provider::` | `.accounts` default identity column; Gate 10 comparison operand |
-| `provider` | `String` (TOML key) | `~/.clr/config.toml` user tier | The single active global provider | `.provider.select id::` | Gate 10 comparison operand; `.provider.select` get-mode read value; `clr`'s config-tier Provider Gate (non-anthropic value suppresses config `model`/`fallback_model`) |
+| `provider` | `String` (TOML key) | `~/.clr/config.toml` user tier (`$CLR_CONFIG_DIR/config.toml` when that override is set) | The single active global provider | `.provider.select id::` | Gate 10 comparison operand; `.provider.select` get-mode read value. Not read by `clr`: its config-tier Provider Gate keys on the seat's live `env.ANTHROPIC_MODEL` in `~/.claude/settings.json` (BUG-548), and `clr`'s config loader ignores this key |
 
 ### Acceptance Criteria
 
@@ -44,12 +46,14 @@
 - **AC-14**: With `provider` selected as `kimi` in `~/.clr/config.toml`, and a mixed account list containing both `inference_provider: "anthropic"` and `inference_provider: "kimi"` accounts, `clp .usage rotate::1` (or auto-rotation) never selects an `anthropic`-tagged account as the next/current target, regardless of `force::1`.
 - **AC-15**: With no `provider` ever selected (default `anthropic` in effect), an account with an explicit `inference_provider: "kimi"` tag is never selected by rotation, even though no other gate excludes it — Gate 10 fires using the default `anthropic` comparison value exactly as it would for an explicit selection.
 - **AC-16**: `clp .provider.select` never derives its value from any account's `inference_provider` field, current or otherwise — it is a pure read of `~/.clr/config.toml`'s `provider` key, unaffected by which account is currently active.
+- **AC-17**: With `CLR_CONFIG_DIR` set and non-empty, `.provider.select` reads and writes `$CLR_CONFIG_DIR/config.toml` — with or without `HOME` — writes no `config.toml` under `HOME`, and Gate 10 reads the pin from that same file (BUG-560).
+- **AC-18**: With neither `CLR_CONFIG_DIR` nor `HOME` set, `clp .provider.select id::kimi` exits 2 and stderr names both variables (BUG-560).
 
 ### Bugs
 
 | ID | Summary | Status |
 |----|---------|--------|
-| *(none)* | | |
+| BUG-560 | `.provider.select` and Gate 10 built `$HOME/.clr/config.toml` by hand, ignoring `CLR_CONFIG_DIR` — fixed by routing both through `claude_runner_core::user_config_path()` (AC-17, AC-18) | 📦 Executed |
 
 ### Features
 
@@ -91,7 +95,7 @@
 |------|--------------|
 | [schema/002_account_json.md](../schema/002_account_json.md) | `inference_provider` field in `{name}.json` |
 | [../../claude_core/docs/api/002_toml_io.md](../../../claude_core/docs/api/002_toml_io.md) | `~/.clr/config.toml`'s tiered flat-TOML format storing the `provider` key |
-| [../../claude_runner/docs/cli/config_param.md](../../../claude_runner/docs/cli/config_param.md) | Consumer — `clr`'s Provider Gate ignores config-tier `model`/`fallback_model` when `provider` is non-anthropic |
+| [../../claude_runner/docs/cli/config_param.md](../../../claude_runner/docs/cli/config_param.md) | `CLR_CONFIG_DIR` and the user-tier `config.toml` this key shares. `clr` itself ignores `provider` — its Provider Gate keys on the seat's live `env.ANTHROPIC_MODEL` (BUG-548) |
 
 ### Sources
 
@@ -101,6 +105,8 @@
 | `src/usage/types.rs` | `AccountQuota` struct — new `inference_provider: String` field, populated from `{name}.json` at fetch time |
 | `src/commands/account_ops.rs` | `account_save_routine()` — new parsing for `inference_provider::`, non-empty validation |
 | `src/commands/accounts_render.rs` | New `inference_provider` column rendering for `.accounts` table/json output — default identity set member |
+| `src/commands/cmd_context.rs` | `require_clr_config_path()` — the `config.toml` location `.provider.select` reads/writes, via `claude_runner_core::user_config_path()` (BUG-560) |
+| `src/usage/render.rs` | `resolve_selected_provider()` — Gate 10's read of the `provider` pin through the same resolver (BUG-560) |
 | `src/commands/provider_select.rs` (new) | `.provider.select` command handler — get/set/reset dispatch mirroring `src/commands/model.rs`'s `scope::subprocess` branch (formerly mirrored the now-retired `src/commands/model_select.rs`) |
 | `src/usage/sort_next.rs` | `find_first_eligible()` — new Gate 10 check immediately after the existing `claim_lock` check (Gate 9); unconditional, not part of the `extra` closure |
 | `src/registry.rs` | New `.provider.select` command registration (Command 21) |
@@ -112,6 +118,7 @@
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_provider_test.rs` | AC-01–AC-13, AC-16 — `inference_provider::` write/omit/empty-reject, default `Provider` column + `cols::-inference_provider` opt-out + JSON always-includes, `.provider.select` get/set/reset/mutual-exclusion/JSON format, no-config `reset::1` idempotence (`t17`), get-mode never derives from the active account (`t18`), combined `host::`/`tags::`/`inference_provider::` save (`t19`) |
+| `tests/cli/account_provider_test.rs` | AC-17–AC-18 — `CLR_CONFIG_DIR` location rule: set/get through the override with and without `HOME` (`t20`, `t21`), Gate 10 reading the pin through it (`t22`), exit 2 naming both variables when neither is set (`t23`) |
 | `tests/usage/sort_next_tests_b.rs` | AC-14–AC-15 — Gate 10 (`test_cc_gate10_*`): provider-mismatch exclusion, no force-equivalent bypass, empty ≡ explicit `anthropic` default |
 | `tests/usage/fetch_tests.rs` | `ft06_072` — `AccountQuota.inference_provider` threaded from `{name}.json` at fetch time, empty default when absent |
 | `claude_profile_core/tests/account_backend_test.rs` | `ft01`–`ft05_072` — domain-level `save()`/`list()`: write-when-given, preserve-on-`None`, absent-writes-no-key, list threading |

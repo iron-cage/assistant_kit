@@ -9,7 +9,7 @@
 //!
 //! | ID    | Test Function                          | Condition                                                        | P/N |
 //! |-------|----------------------------------------|------------------------------------------------------------------|-----|
-//! | IT-01 | `it01_offline_contains_opus`           | `offline::1` — stdout contains `claude-opus-4-8`                | P   |
+//! | IT-01 | `it01_offline_contains_opus`           | `offline::1` — stdout contains `claude-opus-5-5` and `claude-opus-4-8` | P |
 //! | IT-02 | `it02_offline_contains_sonnet`         | `offline::1` — stdout contains `claude-sonnet-5`                 | P   |
 //! | IT-03 | `it03_offline_contains_haiku`          | `offline::1` — stdout contains `claude-haiku-4-5-20251001`      | P   |
 //! | IT-04 | `it04_offline_table_has_header`        | `offline::1 format::table` — first line contains `ID`            | P   |
@@ -19,7 +19,7 @@
 //! | IT-08 | `it08_name_filter_no_match`            | `offline::1 name::zz_no_match` — empty output; exits 0          | P   |
 //! | IT-09 | `it09_models_in_help_output`           | `.models` appears in `clp .help` output                         | P   |
 //! | IT-10 | `it10_name_filter_substring`           | `offline::1 name::claude-opus` — substring match; haiku/sonnet absent | P |
-//! | FT-01 | `ft01_offline_contains_opus`           | `offline::1` — stdout contains `claude-opus-4-8`                | P   |
+//! | FT-01 | `ft01_offline_contains_opus`           | `offline::1` — stdout contains `claude-opus-5-5` and `claude-opus-4-8` | P |
 //! | FT-02 | `ft02_offline_contains_sonnet`         | `offline::1` — stdout contains `claude-sonnet-5`                 | P   |
 //! | FT-03 | `ft03_offline_contains_haiku`          | `offline::1` — stdout contains `claude-haiku-4-5-20251001`      | P   |
 //! | FT-04 | `ft04_offline_table_has_header`        | `offline::1 format::table` — first line contains `ID`            | P   |
@@ -34,13 +34,16 @@ use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
 // ── IT: Integration Tests ─────────────────────────────────────────────────────
 
-/// IT-01 (AC-01): `clp .models offline::1` — stdout contains `claude-opus-4-8`. Exit 0.
+/// IT-01 (AC-01): `clp .models offline::1` — stdout contains `claude-opus-5-5` (the current
+/// default Opus, `claude_runner_core::DEFAULT_MODEL`) and `claude-opus-4-8`. Exit 0.
 #[ test ]
 fn it01_offline_contains_opus()
 {
   let out  = run_cs( &[ ".models", "offline::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  assert!( text.contains( "claude-opus-5-5" ),
+    "IT-01: expected stdout to contain 'claude-opus-5-5'; got: {text:?}" );
   assert!( text.contains( "claude-opus-4-8" ),
     "IT-01: expected stdout to contain 'claude-opus-4-8'; got: {text:?}" );
 }
@@ -185,13 +188,16 @@ fn it10_name_filter_substring()
 
 // ── FT: Feature Tests ─────────────────────────────────────────────────────────
 
-/// FT-01 (AC-01): `clp .models offline::1` — stdout contains `claude-opus-4-8`. Exit 0.
+/// FT-01 (AC-01): `clp .models offline::1` — stdout contains `claude-opus-5-5` and
+/// `claude-opus-4-8`. Exit 0.
 #[ test ]
 fn ft01_offline_contains_opus()
 {
   let out  = run_cs( &[ ".models", "offline::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  assert!( text.contains( "claude-opus-5-5" ),
+    "FT-01: expected stdout to contain 'claude-opus-5-5'; got: {text:?}" );
   assert!( text.contains( "claude-opus-4-8" ),
     "FT-01: expected stdout to contain 'claude-opus-4-8'; got: {text:?}" );
 }

@@ -10,7 +10,7 @@ Writes the model key for the store selected by `scope::`. New for Feature 035, r
 
 | `scope::` | Accepted values | Written as |
 |-----------|------------------|------------|
-| `session` (default) | `opus`, `sonnet`, `haiku`, `default` | Mapped via `map_model_shorthand()` to a full model ID (`opus` → `claude-opus-4-8`, etc.); `default` removes the `model` key instead of writing one |
+| `session` (default) | `opus`, `sonnet`, `haiku`, `default` | Mapped via `map_model_shorthand()` to a full model ID (`opus` → `claude-opus-5-5`, etc.); `default` removes the `model` key instead of writing one |
 | `subprocess` | Any non-empty full model ID string (no allow-list — run `.models` to discover valid IDs) | Written verbatim to the `model` key |
 
 **Validation:** `scope::session` validates against the closed 4-value shorthand set via `map_model_shorthand()` — unknown values are rejected. `scope::subprocess` validates only that the value is non-empty — no live API check; an invalid full model ID is accepted here and only rejected later, by the Claude API, when `clr` actually invokes it.

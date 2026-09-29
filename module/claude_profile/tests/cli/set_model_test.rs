@@ -10,7 +10,7 @@
 //!
 //! | ID    | Test Function                                         | Condition                                                        | P/N |
 //! |-------|-------------------------------------------------------|------------------------------------------------------------------|-----|
-//! | FT-01 | `ft01_set_model_opus_writes_full_id`                  | `.account.use set_model::opus` → `claude-opus-4-8`               | P   |
+//! | FT-01 | `ft01_set_model_opus_writes_full_id`                  | `.account.use set_model::opus` → `claude-opus-5-5`               | P   |
 //! | FT-02 | `ft02_set_model_sonnet_writes_full_id`                | `.account.use set_model::sonnet` → `claude-sonnet-5`           | P   |
 //! | FT-03 | `ft03_set_model_haiku_writes_full_id`                 | `.account.use set_model::haiku` → `claude-haiku-4-5-20251001`    | P   |
 //! | FT-04 | `ft04_set_model_default_removes_key_preserves_others` | `default` removes `model`; unrelated keys preserved              | P   |
@@ -19,7 +19,7 @@
 //! | FT-07 | `ft07_set_model_bad_value_exits_1`                    | `set_model::bad` → exit 1, stderr names all 4 valid values       | N   |
 //! | FT-08 | `ft08_set_model_appears_in_help_output`               | `.account.use.help` and `.usage.help` both show `set_model`      | P   |
 //! | FT-09 | `ft09_set_model_no_set_model_key_in_json`             | `format::json` output has no `set_model` key                     | P   |
-//! | EC-1  | `ec1_set_model_opus_accepted_no_unrecognized_error`   | accepted; no "unrecognized" in stderr; writes `claude-opus-4-8`  | P   |
+//! | EC-1  | `ec1_set_model_opus_accepted_no_unrecognized_error`   | accepted; no "unrecognized" in stderr; writes `claude-opus-5-5`  | P   |
 //! | EC-2  | `ec2_set_model_sonnet_accepted_writes_full_id`        | accepted; writes `claude-sonnet-5`                             | P   |
 //! | EC-3  | `ec3_set_model_haiku_accepted_writes_full_id`         | accepted; writes `claude-haiku-4-5-20251001`                     | P   |
 //! | EC-4  | `ec4_set_model_default_accepted_removes_key`          | accepted; removes `model` key from `settings.json`               | P   |
@@ -61,7 +61,7 @@ fn read_settings_model( home : &std::path::Path ) -> Option< String >
 
 // ── FT: Feature Tests ─────────────────────────────────────────────────────────
 
-/// FT-01 (AC-01): `set_model::opus` writes `"claude-opus-4-8"` to `settings.json`. Exit 0.
+/// FT-01 (AC-01): `set_model::opus` writes `"claude-opus-5-5"` to `settings.json`. Exit 0.
 #[ test ]
 fn ft01_set_model_opus_writes_full_id()
 {
@@ -78,8 +78,8 @@ fn ft01_set_model_opus_writes_full_id()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-8" ),
-    "set_model::opus must write `claude-opus-4-8` to settings.json, got: {model:?}\nstdout: {}\nstderr: {}",
+    Some( "claude-opus-5-5" ),
+    "set_model::opus must write `claude-opus-5-5` to settings.json, got: {model:?}\nstdout: {}\nstderr: {}",
     stdout( &out ), stderr( &out ),
   );
 }
@@ -295,7 +295,7 @@ fn ft09_set_model_no_set_model_key_in_json()
 // ── EC: Edge Cases ────────────────────────────────────────────────────────────
 
 /// EC-1: `set_model::opus` accepted — no "unrecognized" error in stderr;
-/// writes `claude-opus-4-8`. Exit 0.
+/// writes `claude-opus-5-5`. Exit 0.
 #[ test ]
 fn ec1_set_model_opus_accepted_no_unrecognized_error()
 {
@@ -317,8 +317,8 @@ fn ec1_set_model_opus_accepted_no_unrecognized_error()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-8" ),
-    "set_model::opus must write `claude-opus-4-8`, got: {model:?}",
+    Some( "claude-opus-5-5" ),
+    "set_model::opus must write `claude-opus-5-5`, got: {model:?}",
   );
 }
 
@@ -548,8 +548,8 @@ fn cc3_usage_set_model_format_json_also_writes_settings()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-8" ),
-    "`.usage set_model::opus format::json` must write `claude-opus-4-8` to settings.json even when ~/.claude/ was absent; got: {model:?}\nstderr: {}",
+    Some( "claude-opus-5-5" ),
+    "`.usage set_model::opus format::json` must write `claude-opus-5-5` to settings.json even when ~/.claude/ was absent; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
 }
@@ -671,7 +671,7 @@ fn cc8_usage_set_model_creates_dir_when_absent()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-8" ),
+    Some( "claude-opus-5-5" ),
     "`.usage set_model::opus` must write settings.json even when `~/.claude/` was absent; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
@@ -705,7 +705,7 @@ fn cc9_set_model_recovers_from_malformed_settings_json()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-8" ),
+    Some( "claude-opus-5-5" ),
     "malformed `settings.json` must be treated as `{{}}` — `set_model::opus` must still \
      write the model key; got: {model:?}\nstderr: {}",
     stderr( &out ),

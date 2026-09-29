@@ -52,8 +52,9 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 
 /// Run the binary with explicit environment overrides (added to inherited env).
 ///
-/// `PRO` is always removed so the binary falls back to `HOME` for credential
-/// store resolution — prevents the host `$PRO` from overriding the test HOME.
+/// `PRO` and `CLR_CONFIG_DIR` are always removed so the binary resolves its
+/// stores from the test `HOME`; a test that needs `CLR_CONFIG_DIR` passes it in
+/// `env`, which is applied after the removals.
 ///
 /// # Panics
 ///
@@ -68,9 +69,12 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
   //   tests that only set HOME inherited $PRO from the runner, causing the binary to operate on
   //   the real production credential store instead of the test-supplied temp dir.
   // Pitfall: cmd.env("HOME", ...) alone is not enough for isolation — $PRO must also be removed.
+  // `CLR_CONFIG_DIR` is the same case for clr's `config.toml` since BUG-560: an inherited value
+  //   would move `.model scope::subprocess`, `.provider.select` and Gate 10 off the test HOME.
   let mut cmd = Command::new( BIN );
   cmd.args( args );
   cmd.env_remove( "PRO" );
+  cmd.env_remove( "CLR_CONFIG_DIR" );
   for ( k, v ) in env { cmd.env( k, v ); }
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
@@ -92,6 +96,7 @@ pub fn run_cs_with_env_removing( args : &[ &str ], env : &[ ( &str, &str ) ], re
   let mut cmd = Command::new( BIN );
   cmd.args( args );
   cmd.env_remove( "PRO" );
+  cmd.env_remove( "CLR_CONFIG_DIR" );
   for name in remove { cmd.env_remove( name ); }
   for ( k, v ) in env { cmd.env( k, v ); }
   cmd.output().expect( "failed to execute claude_profile binary" )
@@ -120,15 +125,17 @@ pub fn run_cs_in_dir(
   cmd.args( args );
   cmd.current_dir( cwd );
   cmd.env_remove( "PRO" );
+  cmd.env_remove( "CLR_CONFIG_DIR" );
   for name in remove { cmd.env_remove( name ); }
   for ( k, v ) in env { cmd.env( k, v ); }
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
 
-/// Run the binary with HOME and PRO removed from the environment.
+/// Run the binary with HOME, PRO and `CLR_CONFIG_DIR` removed from the environment.
 ///
-/// Removes both `HOME` and `PRO` so the binary cannot locate any credential
-/// store — tests the "no home directory configured" error path.
+/// Removes `HOME` and `PRO` so the binary cannot locate any credential store, and
+/// `CLR_CONFIG_DIR` so it cannot locate clr's `config.toml` either — tests the
+/// "no home directory configured" error path.
 ///
 /// # Panics
 ///
@@ -146,6 +153,7 @@ pub fn run_cs_without_home( args : &[ &str ] ) -> Output
   .args( args )
   .env_remove( "HOME" )
   .env_remove( "PRO" )
+  .env_remove( "CLR_CONFIG_DIR" )
   .output()
   .expect( "failed to execute claude_profile binary" )
 }

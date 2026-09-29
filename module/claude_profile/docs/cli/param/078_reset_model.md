@@ -20,13 +20,13 @@ Removes the model key from the store selected by `scope::`. New for Feature 035,
 
 ```bash
 clp .model reset_model::1                        # session: remove model key
-clp .model scope::subprocess reset_model::1       # subprocess: revert to ISOLATED_DEFAULT_MODEL
+clp .model scope::subprocess reset_model::1       # subprocess: revert to DEFAULT_MODEL
 clp .model reset_model::1 effort_level::high       # combine with an unrelated set in one call
 ```
 
 **Notes:**
 - `reset_model::1` and `reset_effort_level::1` ([079_reset_effort_level.md](079_reset_effort_level.md)) are independent — either or both may be present on a single call, and either may be combined with the *other* concept's set parameter (e.g. `reset_model::1 effort_level::high`).
-- On `scope::subprocess`, after reset `clr run/ask/isolated` uses `ISOLATED_DEFAULT_MODEL` (workspace constant in `claude_runner_core/src/isolated.rs`, currently `"opus"`) — identical post-reset behavior to the retired `.model.select reset::1`.
+- On `scope::subprocess`, after reset `clr run/ask/isolated` use `DEFAULT_MODEL` (workspace constant in `claude_runner_core/src/isolated.rs`, currently `"claude-opus-5-5"`) unless a project `.clr.toml` or a higher tier (`--model`, `CLR_MODEL`) still sets one — identical post-reset behavior to the retired `.model.select reset::1`.
 - On `scope::session`, after reset Claude Code falls back to its own built-in default model selection — identical post-reset behavior to the retired `.model set::default`.
 - Preserves all other keys in the target file.
 

@@ -49,22 +49,21 @@ clp .models name::claude-opus     # filter by ID substring
 **Examples:**
 
 ```bash
-clp .models offline::1
-# ID                          Display Name       Context  Max Out  Ext Think
-# claude-opus-4-8             Claude Opus 4.8    1M       128k     No
-# claude-sonnet-5             Claude Sonnet 5    1M       128k     No
-# claude-haiku-4-5-20251001   Claude Haiku 4.5   200k     64k      Yes
-
-clp .models offline::1 name::haiku
-# claude-haiku-4-5-20251001   Claude Haiku 4.5   200k     64k      Yes
-
-clp .models offline::1 format::json
-# [{"id":"claude-opus-4-8","display_name":"Claude Opus 4.8",...}, ...]
-
 clp .models offline::1 format::text
+# claude-opus-5-5
 # claude-opus-4-8
 # claude-sonnet-5
 # claude-haiku-4-5-20251001
+# claude-opus-4-5-20251101
+# claude-sonnet-4-5-20250929
+
+clp .models offline::1 name::haiku format::table
+# ID                        | Display Name     | Context | Max Out | Ext Think
+# ------------------------- + ---------------- + ------- + ------- + ----------
+# claude-haiku-4-5-20251001 | Claude Haiku 4.5 | 200K    | 32K     | no
+
+clp .models offline::1 format::json
+# [{"id":"claude-opus-5-5","display_name":"Claude Opus 5.5","created_at":null,"max_input_tokens":1000000,"max_tokens":128000,"capabilities":[]}, ...]
 ```
 
 **Notes:**

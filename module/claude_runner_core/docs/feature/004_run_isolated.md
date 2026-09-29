@@ -50,6 +50,16 @@ impl IsolatedModel {
 
 `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `DEFAULT_MODEL` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.
 
+**Default-model resolution:** `IsolatedModel::Default` first asks `resolve_isolated_default_model()` for a configured `model` key — project `.clr.toml` in the cwd, then the user `config.toml` — and injects `DEFAULT_MODEL` only when neither tier sets one. The user file's location comes from `user_config_path()` (`src/config_path.rs`), the single resolver shared with `claude_runner`'s config tier and `claude_profile`'s config commands:
+
+| `CLR_CONFIG_DIR` | `HOME` | User `config.toml` |
+|------------------|--------|--------------------|
+| set, non-empty | any | `$CLR_CONFIG_DIR/config.toml` |
+| unset or empty | set, non-empty | `$HOME/.clr/config.toml` |
+| unset or empty | unset or empty | none — no user tier, never a cwd-relative `.clr/config.toml` |
+
+With no user tier, `resolve_isolated_default_model()` returns `None` without consulting the project file either, so `DEFAULT_MODEL` applies.
+
 **Function signature:**
 
 ```rust
@@ -144,13 +154,17 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 - **AC-38**: The temp directory is removed in all code paths — success, timeout, and I/O error — with no temp-dir leak.
 - **AC-39**: `run_isolated()` does not call `Command::new("claude")` directly; it routes through `ClaudeCommand::with_home()` and the existing `execute()` path (single-execution-point invariant).
 - **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
+- **AC-43**: `resolve_isolated_default_model()` reads the user tier from the path `user_config_path()` returns — `$CLR_CONFIG_DIR/config.toml` whenever that override is set and non-empty, even with `HOME` unset — and a project `.clr.toml` `model` still wins over it (BUG-007; `tests/isolated_model_resolution_test.rs` T8–T10, `tests/config_path_test.rs` T01–T11).
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types; `ISOLATED_CLAUDE_MD` constant |
-| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `DEFAULT_MODEL`, `run_isolated` |
+| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `DEFAULT_MODEL`, `run_isolated`, `user_config_path` |
+| source | `src/config_path.rs` | `user_config_path()` — user-tier `config.toml` location read by `resolve_isolated_default_model()` |
+| test | `tests/isolated_model_resolution_test.rs` | Default-model tier resolution, including `CLR_CONFIG_DIR` (T4–T10) |
+| test | `tests/config_path_test.rs` | `user_config_path()` decision table over `CLR_CONFIG_DIR` × `HOME` |
 | source | `src/command/mod.rs` | `ClaudeCommand` builder; `with_home()` method; chrome injection logic |
 | source | `src/command/params_core.rs` | `with_home_isolation()` method — chains `with_chrome(None)` to suppress chrome in refresh mode |
 | invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | `Command::new("claude")` must appear exactly once |

@@ -32,7 +32,10 @@ pub( crate ) use api::{
   attempt_expired_token_refresh,
   PreSwitchOutcome,
 };
-pub( crate ) use types::{ validate_set_model, map_model_shorthand };
+pub( crate ) use types::{
+  validate_set_model, map_model_shorthand,
+  OPUS_MODEL_ID, SONNET_MODEL_ID, HAIKU_MODEL_ID,
+};
 pub( crate ) use fetch_cache::read_cached_quota;
 // Fix(audit-accounts-no-color): shared with `.accounts` (commands/accounts.rs), which
 // registers no_color:: but previously never applied it — sole emoji→plain mapping.

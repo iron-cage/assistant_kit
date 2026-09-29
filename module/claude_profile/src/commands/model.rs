@@ -2,20 +2,20 @@
 //!
 //! Routes on `scope::` between two persisted stores: the Claude Code interactive
 //! session (`~/.claude/settings.json`, `scope::session`, default) and the clr
-//! subprocess-execution preference (`~/.clr/config.toml` user tier, `scope::subprocess`).
+//! subprocess-execution preference (clr's user-tier `config.toml` —
+//! `$CLR_CONFIG_DIR/config.toml`, else `~/.clr/config.toml` — `scope::subprocess`).
 //! Absorbs the former `.model.select` command (Feature 035) — see `model_select.rs`
 //! for its retirement stub.
 
 use core::fmt::Write;
-use std::path::PathBuf;
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use claude_core::toml_io::{ get_tiered, remove_user_tier, set_user_tier };
 use crate::output::{ OutputFormat, OutputOptions };
-use super::cmd_context::require_claude_paths;
-use crate::usage::map_model_shorthand;
+use super::cmd_context::{ require_claude_paths, require_clr_config_path };
+use crate::usage::{ map_model_shorthand, OPUS_MODEL_ID };
 
 const SESSION_EFFORT_VALUES    : &[ &str ] = &[ "low", "normal", "high", "max" ];
 const SUBPROCESS_EFFORT_VALUES : &[ &str ] = &[ "low", "medium", "high", "max" ];
@@ -143,16 +143,6 @@ fn validate_mutual_exclusion( args : &ModelArgs ) -> Result< (), ErrorData >
   Ok( () )
 }
 
-// ── Path resolution ───────────────────────────────────────────────────────────
-
-/// Resolve `~/.clr/config.toml` path (user tier; no project-tier merge).
-fn resolve_subprocess_config_path() -> Result< PathBuf, ErrorData >
-{
-  let home = std::env::var( "HOME" )
-    .map_err( |_| ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) )?;
-  Ok( PathBuf::from( home ).join( ".clr" ).join( "config.toml" ) )
-}
-
 // ── Get mode ──────────────────────────────────────────────────────────────────
 
 /// Get mode: read model + effort for `scope`, render together with resolved path.
@@ -167,7 +157,7 @@ fn model_get( scope : &str, format : OutputFormat ) -> Result< OutputData, Error
   }
   else
   {
-    let path   = resolve_subprocess_config_path()?;
+    let path   = require_clr_config_path()?;
     let model  = get_tiered( None, &path, "model" );
     let effort = get_tiered( None, &path, "effort" );
     ( path, model, effort )
@@ -253,14 +243,15 @@ fn session_apply( args : &ModelArgs, out : &mut String ) -> Result< (), ErrorDat
   Ok( () )
 }
 
-/// Apply write actions against `scope::subprocess` (`~/.clr/config.toml` user tier).
+/// Apply write actions against `scope::subprocess` (clr's user-tier `config.toml`,
+/// located by `require_clr_config_path()`).
 fn subprocess_apply( args : &ModelArgs, out : &mut String ) -> Result< (), ErrorData >
 {
-  let path = resolve_subprocess_config_path()?;
+  let path = require_clr_config_path()?;
   if let Some( parent ) = path.parent()
   {
     std::fs::create_dir_all( parent ).map_err( | e | ErrorData::new(
-      ErrorCode::InternalError, format!( "failed to create .clr directory: {e}" ),
+      ErrorCode::InternalError, format!( "failed to create config directory {}: {e}", parent.display() ),
     ) )?;
   }
   subprocess_apply_model( args, &path, out )?;
@@ -278,7 +269,7 @@ fn subprocess_apply_model( args : &ModelArgs, path : &std::path::Path, out : &mu
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentMissing,
-        "model:: must be non-empty on scope::subprocess — pass a full model ID (e.g. claude-opus-4-8)".to_string(),
+        format!( "model:: must be non-empty on scope::subprocess — pass a full model ID (e.g. {OPUS_MODEL_ID})" ),
       ) );
     }
     set_user_tier( path, "model", val ).map_err( | e | ErrorData::new(

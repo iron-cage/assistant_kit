@@ -26,7 +26,7 @@
 
 ### Workspace Usage
 
-**`REFRESH_DEFAULT_MODEL`** — pinned directly to this model's full ID in `module/claude_runner_core/src/isolated.rs`, not a CLI alias. It is passed via `IsolatedModel::Specific`, the same pinned-ID path used for any exact model selection — contrast `ISOLATED_DEFAULT_MODEL`, which genuinely is the `"opus"` alias resolved via `IsolatedModel::Default`.
+**`REFRESH_DEFAULT_MODEL`** — pinned directly to this model's full ID in `module/claude_runner_core/src/isolated.rs`, not a CLI alias. It is passed via `IsolatedModel::Specific`, the same pinned-ID path used for any exact model selection. `DEFAULT_MODEL` (`claude-opus-5-5`, via `IsolatedModel::Default`) makes the same pinned-ID choice; its predecessor `ISOLATED_DEFAULT_MODEL` was the `"opus"` alias.
 
 Rationale: credential refresh invocations send a trivial `"."` prompt to force an OAuth token exchange. Sonnet 5 is fast and quota-efficient. Using Opus would waste allowance on a no-op request where output is discarded.
 

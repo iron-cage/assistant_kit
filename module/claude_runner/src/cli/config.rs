@@ -99,31 +99,22 @@ fn seat_env_model() -> Option< String >
     .filter( | v | !v.is_empty() )
 }
 
-/// Resolve the user-level config directory: `$CLR_CONFIG_DIR` if set and
-/// non-empty, else `$HOME/.clr`, else `.clr` (mirrors `resolve_journal_dir`'s
-/// `HOME`-fallback style in `mod.rs`).
-fn user_config_dir() -> PathBuf
-{
-  if let Ok( v ) = std::env::var( "CLR_CONFIG_DIR" )
-  {
-    if !v.is_empty() { return PathBuf::from( v ); }
-  }
-  std::env::var( "HOME" )
-    .map_or_else( | _ | PathBuf::from( ".clr" ), | h | PathBuf::from( h ).join( ".clr" ) )
-}
-
 /// Discover the project-level and user-level config file paths.
 ///
 /// Returns `(project_path, user_path)` — each `Some` only if the file actually
 /// exists on disk. Project-level is `.clr.toml` in the current directory;
-/// user-level is `config.toml` under `user_config_dir()`.
+/// user-level is whatever `claude_runner_core::user_config_path()` resolves
+/// (`$CLR_CONFIG_DIR/config.toml`, else `$HOME/.clr/config.toml`, else no user tier).
 pub( crate ) fn discover_config_paths() -> ( Option< PathBuf >, Option< PathBuf > )
 {
   let project = PathBuf::from( ".clr.toml" );
   let project = if project.is_file() { Some( project ) } else { None };
 
-  let user = user_config_dir().join( "config.toml" );
-  let user = if user.is_file() { Some( user ) } else { None };
+  // Fix(BUG-007): share core's resolver instead of a private `user_config_dir()` copy.
+  // Root cause: the private copy honored `CLR_CONFIG_DIR` but `clr isolated`'s lookup in
+  //   core did not, and with `HOME` unset the copy fell back to a cwd-relative `.clr/`.
+  // Pitfall: `None` means "no user tier" — never substitute a relative `.clr/config.toml`.
+  let user = claude_runner_core::user_config_path().filter( | p | p.is_file() );
 
   ( project, user )
 }

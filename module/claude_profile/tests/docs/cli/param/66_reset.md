@@ -2,7 +2,7 @@
 
 > **Narrowed scope** (Feature 035/Task 465): EC-01 through EC-10 below test `reset::` as `.model.select`'s original reset-mode selector against `~/.clr/config.toml`'s `model` key — that role is retired; `.model.select` now returns a migration-error stub unconditionally, regardless of `reset::` (see [20_model_select.md](../command/20_model_select.md)). `reset::` remains live, but exclusively as `.provider.select`'s reset-mode selector against the `provider` key — current coverage: [21_provider_select.md](../command/21_provider_select.md) (IT-05, IT-06, IT-08, IT-09), backed by `account_provider_test.rs` (`t09_provider_select_reset_preserves_model_key`, `t11_provider_select_id_and_reset_mutually_exclusive`). See [docs/cli/param/066_reset.md](../../../../docs/cli/param/066_reset.md)'s own "Narrowed scope" note. Cases below are retained for historical reference only — their cited function names no longer exist in the test suite.
 
-**Behavioral Divergence Pair:** EC-01 ↔ EC-02 — `reset::1` removes the `model` key from `~/.clr/config.toml`'s user tier — an observable file-state change reverting clr subprocess selection to `ISOLATED_DEFAULT_MODEL`; `reset::0` (default) is a no-op for reset — mode on `.model.select` is instead determined purely by `id::` presence, and no key is touched.
+**Behavioral Divergence Pair:** EC-01 ↔ EC-02 — `reset::1` removes the `model` key from `~/.clr/config.toml`'s user tier — an observable file-state change reverting clr subprocess selection to the built-in default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`); `reset::0` (default) is a no-op for reset — mode on `.model.select` is instead determined purely by `id::` presence, and no key is touched.
 
 ### Test Case Index
 
@@ -29,7 +29,7 @@
 
 - **Given:** `~/.clr/config.toml` contains `model = "claude-opus-4-8"`
 - **When:** `clp .model.select reset::1`
-- **Then:** Exits 0. `~/.clr/config.toml` no longer contains the `model` key. `clr run/ask/isolated/refresh` subsequently uses `ISOLATED_DEFAULT_MODEL`.
+- **Then:** Exits 0. `~/.clr/config.toml` no longer contains the `model` key. `clr run/ask/isolated` subsequently use the built-in default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`); `refresh` never read the key.
 - **Exit:** 0
 - **Source:** [param/066_reset.md](../../../../docs/cli/param/066_reset.md), [command/007_model.md](../../../../docs/cli/command/007_model.md)
 

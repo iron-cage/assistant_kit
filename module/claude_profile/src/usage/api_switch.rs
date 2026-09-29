@@ -273,9 +273,10 @@ pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static s
 /// Apply the Sonnet→Opus (or Opus→Sonnet) session model override based on quota utilization.
 ///
 /// Called AFTER `switch_account()` for every fetch-succeeded case — both idle and
-/// already-active accounts. When `seven_day_sonnet` remaining is below 15% and the
-/// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`
-/// to `claude-opus-4-8`.
+/// already-active accounts. When `seven_day_sonnet` remaining is below `OPUS_OVERRIDE_THRESHOLD` (10%) and the
+/// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`'s
+/// `model` to the `"opus"` shorthand (`override_session_model_to_opus`), which Claude
+/// Code resolves to its current Opus model.
 ///
 /// # Limitation (BUG-226)
 ///

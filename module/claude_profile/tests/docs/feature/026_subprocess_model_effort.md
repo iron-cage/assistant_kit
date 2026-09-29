@@ -17,7 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-03 | `imodel::auto` selects sonnet at util boundary and `son_idle=true` | AC-01 | Unit |
 | FT-04 | `imodel::auto` selects haiku when quota data absent | AC-01 | Unit |
 | FT-05 | `imodel::sonnet` always injects `--model claude-sonnet-5` | AC-02 | Unit |
-| FT-06 | `imodel::opus` always injects `--model claude-opus-4-8` | AC-03 | Unit |
+| FT-06 | `imodel::opus` always injects `--model claude-opus-5-5` | AC-03 | Unit |
 | FT-07 | `imodel::keep` injects no `--model` flag | AC-04 | Unit |
 | FT-08 | `effort::auto` + sonnet → `--effort low` | AC-05 | Unit |
 | FT-09 | `effort::auto` + opus → `--effort low` | AC-05 | Unit |
@@ -139,11 +139,11 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-06: `imodel::opus` always injects `--model claude-opus-4-8`
+### FT-06: `imodel::opus` always injects `--model claude-opus-5-5`
 
 - **Given:** Account quota data with no Sonnet tier tracked (`mk_aq_no_sonnet_data()` — `seven_day_sonnet=None`, would produce Haiku under `auto`); `imodel::opus`.
 - **When:** `resolve_model(&aq, SubprocessModel::Opus)`
-- **Then:** Returns `IsolatedModel::Specific("claude-opus-4-8")`. Quota state is ignored; explicit value always wins.
+- **Then:** Returns `IsolatedModel::Specific("claude-opus-5-5")`. Quota state is ignored; explicit value always wins.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_opus_explicit` (in `subprocess_tests.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-03](../../../docs/feature/026_subprocess_model_effort.md)
@@ -174,8 +174,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-09: `effort::auto` + resolved model=opus → subprocess receives `--effort low`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-8")`; `effort::auto`. Same parameter as FT-08 — same `low` result regardless of model.
-- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-8"), "auto")`
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-5-5")`; `effort::auto`. Same parameter as FT-08 — same `low` result regardless of model.
+- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-5-5"), "auto")`
 - **Then:** Returns `Some("low")`. The arg slice contains `["--effort", "low"]`. Same as FT-08: `effort::auto` always produces `low` regardless of whether the model is Sonnet or Opus.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_uniform_low` (in `tests/usage/subprocess_tests.rs` — unified test covering both Sonnet and Opus paths)
@@ -196,8 +196,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-11: `effort::high` always injects `--effort high`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-8")` (would produce `low` under `auto`); `effort::high`.
-- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-8"), "high")`
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-5-5")` (would produce `low` under `auto`); `effort::high`.
+- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-5-5"), "high")`
 - **Then:** Returns `Some("high")`. Explicit value overrides the model-independent `auto` default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_high_explicit` (in `subprocess_tests.rs`)

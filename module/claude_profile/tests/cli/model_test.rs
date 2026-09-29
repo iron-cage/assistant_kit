@@ -5,9 +5,11 @@
 //! ## Test Matrix
 //!
 //! Maps function names to the Test Matrix rows in
-//! `task/claude_profile/465_unified_model_command_scope_routing.md`.
+//! `task/claude_profile/465_unified_model_command_scope_routing.md` (T01–T22).
 //! `.model.select`'s own retirement stub (T23) is covered separately in
-//! `model_select_test.rs`.
+//! `model_select_test.rs`. T24–T28 pin the subprocess store's location
+//! rule (BUG-560): `$CLR_CONFIG_DIR/config.toml` when set, else
+//! `$HOME/.clr/config.toml`, else an error naming both.
 //!
 //! | Function | Row | Condition | P/N |
 //! |----------|-----|-----------|-----|
@@ -33,8 +35,13 @@
 //! | `t20_combine_within_subprocess_scope_preserves_keys`    | T20 | `scope::subprocess model::... effort_level::max` → both written, other keys preserved | P |
 //! | `t21_json_format_shape`                                 | T21 | `format::json` (fresh HOME) → JSON shape matches spec | P |
 //! | `t22_subprocess_creates_missing_dir_and_file`           | T22 | `scope::subprocess model::VALUE` (fresh HOME) → creates `.clr/` + `config.toml` | P |
+//! | `t24_get_subprocess_honors_clr_config_dir`              | T24 | `HOME` and `CLR_CONFIG_DIR` hold different models → get shows the override's file and model | P |
+//! | `t25_set_subprocess_writes_clr_config_dir`              | T25 | set with both set → writes `$CLR_CONFIG_DIR/config.toml`, nothing under `HOME` | P |
+//! | `t26_clr_config_dir_works_without_home`                 | T26 | `HOME` unset, `CLR_CONFIG_DIR` set → get succeeds from the override | P |
+//! | `t27_no_home_no_override_exits_2_naming_both`           | T27 | neither set → exit 2, stderr names `CLR_CONFIG_DIR` and `HOME` | N |
+//! | `t28_empty_home_no_override_writes_nothing_under_cwd`   | T28 | `HOME=""`, no override, set → exit 2, no `.clr/` under cwd | N |
 
-use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit };
+use crate::cli_runner::{ run_cs_with_env, run_cs_with_env_removing, run_cs_in_dir, stdout, stderr, assert_exit };
 use tempfile::TempDir;
 
 /// Read `~/.clr/config.toml` from a temp home directory; `None` if absent.
@@ -134,7 +141,7 @@ fn t03_get_invalid_scope_exits_1()
 fn t04_set_model_session_each_shorthand()
 {
   let cases = [
-    ( "opus",   "claude-opus-4-8" ),
+    ( "opus",   "claude-opus-5-5" ),
     ( "sonnet", "claude-sonnet-5" ),
     ( "haiku",  "claude-haiku-4-5-20251001" ),
   ];
@@ -425,7 +432,7 @@ fn t19_combine_across_concepts()
   assert_exit( &out, 0 );
 
   let settings = read_settings_json( dir.path() );
-  assert_eq!( settings[ "model" ], serde_json::json!( "claude-opus-4-8" ), "T19: model must be set, got:\n{settings}" );
+  assert_eq!( settings[ "model" ], serde_json::json!( "claude-opus-5-5" ), "T19: model must be set, got:\n{settings}" );
   assert!( settings.get( "effortLevel" ).is_none(), "T19: effortLevel must be reset, got:\n{settings}" );
 }
 
@@ -491,4 +498,158 @@ fn t22_subprocess_creates_missing_dir_and_file()
 
   assert!( dir.path().join( ".clr" ).is_dir(), "T22: .clr/ directory must be created" );
   assert!( dir.path().join( ".clr" ).join( "config.toml" ).is_file(), "T22: config.toml must be created" );
+}
+
+// ── T24–T28: `CLR_CONFIG_DIR` relocates the subprocess store (BUG-560) ──────────
+
+/// Write `<dir>/config.toml` with raw TOML `content`.
+fn write_config_toml( dir : &std::path::Path, content : &str )
+{
+  std::fs::create_dir_all( dir ).unwrap();
+  std::fs::write( dir.join( "config.toml" ), content ).unwrap();
+}
+
+/// T24: with `CLR_CONFIG_DIR` set, `.model scope::subprocess` reads
+/// `$CLR_CONFIG_DIR/config.toml`, the file `clr` reads, not `$HOME/.clr/config.toml`.
+///
+/// # Root Cause
+///
+/// `model.rs:148-154` and `provider_select.rs:105-112` each built `$HOME/.clr/config.toml`
+/// themselves, and `render.rs:31-38` did the same for Gate 10. None read `CLR_CONFIG_DIR`,
+/// which clr's own resolver honors, so with the override set clp read and wrote a file
+/// clr wasn't using.
+///
+/// # Why Not Caught
+///
+/// Every clp test isolated through a temp `HOME` alone, where both locations coincide.
+/// The override is documented in the runner crate, and no clp test or doc named it.
+///
+/// # Fix Applied
+///
+/// `cmd_context::require_clr_config_path()` replaces both command-local resolvers and
+/// `resolve_selected_provider()` reads through the same source:
+/// `claude_runner_core::user_config_path()`, the resolver `clr` uses. Tracked as BUG-560.
+///
+/// # Prevention
+///
+/// T24-T26 point the override and `HOME` at different directories, so a site that still
+/// builds the path from `HOME` fails instead of passing by coincidence. The shared test
+/// helpers remove an inherited `CLR_CONFIG_DIR` so HOME-only tests stay isolated.
+///
+/// # Pitfall
+///
+/// A temp `HOME` isolates only code that reads `HOME`. When an override can relocate a
+/// file, point the override and `HOME` at different places, or every site passes
+/// whichever one it reads.
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t24_get_subprocess_honors_clr_config_dir()
+{
+  let home_dir     = TempDir::new().unwrap();
+  let override_dir = TempDir::new().unwrap();
+  write_config_toml( &home_dir.path().join( ".clr" ), "model = \"home-model\"\n" );
+  write_config_toml( override_dir.path(), "model = \"override-model\"\n" );
+
+  let out = run_cs_with_env(
+    &[ ".model", "scope::subprocess" ],
+    &[
+      ( "HOME", home_dir.path().to_str().unwrap() ),
+      ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ),
+    ],
+  );
+  assert_exit( &out, 0 );
+
+  let expected_path = override_dir.path().join( "config.toml" ).display().to_string();
+  assert_eq!(
+    stdout( &out ),
+    format!( "scope: subprocess ({expected_path})\nmodel: override-model\neffort_level: (unset)\n" ),
+    "T24: get must read the CLR_CONFIG_DIR file",
+  );
+}
+
+/// T25: `.model scope::subprocess model::VALUE` with `CLR_CONFIG_DIR` set writes
+/// `$CLR_CONFIG_DIR/config.toml` and creates nothing under `HOME`. See T24 for BUG-560.
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t25_set_subprocess_writes_clr_config_dir()
+{
+  let home_dir     = TempDir::new().unwrap();
+  let override_dir = TempDir::new().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".model", "scope::subprocess", "model::claude-haiku-4-5" ],
+    &[
+      ( "HOME", home_dir.path().to_str().unwrap() ),
+      ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ),
+    ],
+  );
+  assert_exit( &out, 0 );
+
+  let expected_path = override_dir.path().join( "config.toml" ).display().to_string();
+  assert_eq!(
+    stdout( &out ),
+    format!( "model: claude-haiku-4-5  →  {expected_path} (subprocess)\n" ),
+    "T25: confirmation must name the CLR_CONFIG_DIR file",
+  );
+  let written = std::fs::read_to_string( override_dir.path().join( "config.toml" ) )
+    .expect( "T25: $CLR_CONFIG_DIR/config.toml must be created" );
+  assert!( written.contains( "claude-haiku-4-5" ), "T25: model must be persisted, got:\n{written}" );
+  // `HOME/.clr/` itself may exist — clp's telemetry journal lives in `$HOME/.clr/journal/`.
+  assert!( read_clr_config( home_dir.path() ).is_none(),
+    "T25: no config.toml may be written under HOME while CLR_CONFIG_DIR is set" );
+}
+
+/// T26: with `HOME` unset, a set `CLR_CONFIG_DIR` still locates the subprocess store.
+/// See T24 for BUG-560.
+// test_kind: bug_reproducer(BUG-560)
+#[ test ]
+fn t26_clr_config_dir_works_without_home()
+{
+  let override_dir = TempDir::new().unwrap();
+  write_config_toml( override_dir.path(), "model = \"override-model\"\n" );
+
+  let out = run_cs_with_env_removing(
+    &[ ".model", "scope::subprocess" ],
+    &[ ( "CLR_CONFIG_DIR", override_dir.path().to_str().unwrap() ) ],
+    &[ "HOME" ],
+  );
+  assert_exit( &out, 0 );
+
+  let expected_path = override_dir.path().join( "config.toml" ).display().to_string();
+  assert_eq!(
+    stdout( &out ),
+    format!( "scope: subprocess ({expected_path})\nmodel: override-model\neffort_level: (unset)\n" ),
+    "T26: get must not need HOME when CLR_CONFIG_DIR is set",
+  );
+}
+
+/// T27: with neither `CLR_CONFIG_DIR` nor `HOME` set there is no subprocess store:
+/// exit 2, and stderr names both variables so either can be set to fix it.
+#[ test ]
+fn t27_no_home_no_override_exits_2_naming_both()
+{
+  let out = run_cs_with_env_removing( &[ ".model", "scope::subprocess" ], &[], &[ "HOME" ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!( err.contains( "CLR_CONFIG_DIR" ) && err.contains( "HOME" ),
+    "T27: stderr must name both CLR_CONFIG_DIR and HOME, got:\n{err}" );
+}
+
+/// T28: an empty `HOME` with no `CLR_CONFIG_DIR` locates no store either. Set mode exits
+/// 2 and writes nothing under the cwd, where `PathBuf::from( "" )` would have put a
+/// relative `.clr/config.toml`.
+#[ test ]
+fn t28_empty_home_no_override_writes_nothing_under_cwd()
+{
+  let cwd = TempDir::new().unwrap();
+
+  let out = run_cs_in_dir(
+    &[ ".model", "scope::subprocess", "model::claude-haiku-4-5" ],
+    &[ ( "HOME", "" ) ],
+    &[],
+    cwd.path(),
+  );
+  assert_exit( &out, 2 );
+  assert!( !cwd.path().join( ".clr" ).exists(),
+    "T28: an empty HOME must not turn into a cwd-relative .clr/config.toml" );
 }

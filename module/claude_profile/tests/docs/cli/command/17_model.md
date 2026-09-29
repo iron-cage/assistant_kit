@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: CLI-level integration test cases for the unified `scope::`-routed `.model` get/set/reset command — syntax forms, parameter dispatch, and output shape.
-- **Source**: `docs/cli/command/007_model.md` (primary — Command 18), `docs/feature/035_model_command.md` (secondary — behavioral contract, AC-01 through AC-27)
-- **Covers**: AC-01 through AC-27 (AC-28 — `claude_profile_core::account::remove_session_effort()` — is task 464's own deliverable; not re-verified here)
+- **Source**: `docs/cli/command/007_model.md` (primary — Command 18), `docs/feature/035_model_command.md` (secondary — behavioral contract, AC-01 through AC-27, AC-29, AC-30)
+- **Covers**: AC-01 through AC-27, AC-29, AC-30 (AC-28 — `claude_profile_core::account::remove_session_effort()` — is task 464's own deliverable; not re-verified here)
 
 ### Test Cases
 
@@ -13,7 +13,7 @@
 | IT-01 | AC-01 | `.model` (no params) → `scope::` defaults `session`, both fields shown | ✅ `t01_get_default_scope_is_session` |
 | IT-02 | AC-02 | `.model scope::subprocess` → get mode, config.toml path shown | ✅ `t02_get_subprocess_scope` |
 | IT-03 | AC-03 | `.model scope::bad` → exit 1, names `session`/`subprocess` | ✅ `t03_get_invalid_scope_exits_1` |
-| IT-04 | AC-04 | `.model model::opus` → shorthand resolves to `claude-opus-4-8` | ✅ `t04_set_model_session_each_shorthand` |
+| IT-04 | AC-04 | `.model model::opus` → shorthand resolves to `claude-opus-5-5` | ✅ `t04_set_model_session_each_shorthand` |
 | IT-05 | AC-05 | `.model model::sonnet` → shorthand resolves to `claude-sonnet-5` | ✅ `t04_set_model_session_each_shorthand` |
 | IT-06 | AC-06 | `.model model::haiku` → shorthand resolves to `claude-haiku-4-5-20251001` | ✅ `t04_set_model_session_each_shorthand` |
 | IT-07 | AC-07 | `.model model::default` → removes `model` key from settings.json | ✅ `t05_set_model_session_default_removes_key` |
@@ -37,6 +37,8 @@
 | IT-25 | AC-25 | Absolute path disclosure across every mode | ✅ cross-cutting, see Notes |
 | IT-26 | AC-26 | `.model` listed once in `clp .help`; `.model.select` no longer a distinct row | ✅ `dot04_all_visible_commands_present` / `dot05_exactly_fourteen_command_rows` / `dot13_model_select_hidden_from_listing` (`tests/cli/dot_test.rs`) |
 | IT-27 | AC-27 | No inline I/O duplication — reuses shared primitives | ✅ architectural constraint, verified by code review |
+| IT-29 | AC-29 | `CLR_CONFIG_DIR` set → `.model scope::subprocess` get/set use `$CLR_CONFIG_DIR/config.toml`, `HOME` optional | ✅ `t24_get_subprocess_honors_clr_config_dir` / `t25_set_subprocess_writes_clr_config_dir` / `t26_clr_config_dir_works_without_home` |
+| IT-30 | AC-30 | Neither `CLR_CONFIG_DIR` nor `HOME` usable → exit 2 naming both, nothing under cwd | ✅ `t27_no_home_no_override_exits_2_naming_both` / `t28_empty_home_no_override_writes_nothing_under_cwd` |
 
 ### Notes
 
@@ -87,7 +89,7 @@
 
 - **Given:** Fresh `HOME`.
 - **When:** `clp .model model::opus`
-- **Then:** Resolves via the shorthand table to `claude-opus-4-8`, written to `settings.json`. Exit 0.
+- **Then:** Resolves via the shorthand table to `claude-opus-5-5`, written to `settings.json`. Exit 0.
 - **Exit:** 0
 - **Source fn:** ✅ `t04_set_model_session_each_shorthand`
 - **Source:** [007_model.md — Command 18](../../../../docs/cli/command/007_model.md)
@@ -274,7 +276,7 @@
 
 - **Given:** `settings.json` contains `{"effortLevel":"max"}`.
 - **When:** `clp .model model::opus reset_effort_level::1`
-- **Then:** `model::` and `reset_effort_level::` target different concepts — both apply in one call. `"model":"claude-opus-4-8"` written, `"effortLevel"` removed. Exit 0.
+- **Then:** `model::` and `reset_effort_level::` target different concepts — both apply in one call. `"model":"claude-opus-5-5"` written, `"effortLevel"` removed. Exit 0.
 - **Exit:** 0
 - **Source fn:** ✅ `t19_combine_across_concepts`
 - **Source:** [007_model.md — Command 18](../../../../docs/cli/command/007_model.md)
@@ -343,4 +345,26 @@
 - **Then:** All reads/writes go through `claude_profile_core::account::*` (session) or `claude_core::toml_io::*` (subprocess) — no inline re-implementation.
 - **Exit:** n/a
 - **Source fn:** ✅ architectural constraint, verified by code review
+- **Source:** [007_model.md — Command 18](../../../../docs/cli/command/007_model.md)
+
+---
+
+### IT-29: `CLR_CONFIG_DIR` relocates the subprocess store
+
+- **Given:** `CLR_CONFIG_DIR=<dir>`; `HOME` a temp dir or removed.
+- **When:** `clp .model scope::subprocess` / `clp .model scope::subprocess model::claude-haiku-4-5`
+- **Then:** Output names `<dir>/config.toml`; the set form writes that file and nothing under `HOME`.
+- **Exit:** 0
+- **Source fn:** ✅ `t24_get_subprocess_honors_clr_config_dir` / `t25_set_subprocess_writes_clr_config_dir` / `t26_clr_config_dir_works_without_home`
+- **Source:** [007_model.md — Command 18](../../../../docs/cli/command/007_model.md)
+
+---
+
+### IT-30: No config location → exit 2
+
+- **Given:** `CLR_CONFIG_DIR` unset; `HOME` unset or empty.
+- **When:** `clp .model scope::subprocess [model::claude-haiku-4-5]`
+- **Then:** stderr names `CLR_CONFIG_DIR` and `HOME`; no `.clr/` under the cwd.
+- **Exit:** 2
+- **Source fn:** ✅ `t27_no_home_no_override_exits_2_naming_both` / `t28_empty_home_no_override_writes_nothing_under_cwd`
 - **Source:** [007_model.md — Command 18](../../../../docs/cli/command/007_model.md)

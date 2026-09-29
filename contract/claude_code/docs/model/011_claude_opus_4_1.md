@@ -34,7 +34,7 @@ Any `IsolatedModel::Specific("claude-opus-4-1-20250805")` or `IsolatedModel::Spe
 
 ### Workspace Usage
 
-Not assigned any workspace role. This model was never the `ISOLATED_DEFAULT_MODEL` — workspace constants went from `claude-opus-4-6` directly to `claude-opus-4-8`.
+Not assigned any workspace role. This model was never the workspace Opus default (then `ISOLATED_DEFAULT_MODEL`, now `DEFAULT_MODEL`) — it went from `claude-opus-4-6` directly to `claude-opus-4-8`.
 
 ### Cross-References
 

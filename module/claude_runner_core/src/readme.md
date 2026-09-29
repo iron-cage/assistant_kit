@@ -8,6 +8,7 @@ This directory contains the core implementation of the `claude_runner_core` crat
 |------|----------------|
 | `lib.rs` | Crate entry point and public API surface |
 | `command/` | ClaudeCommand builder split into per-tier parameter modules |
+| `config_path.rs` | Locate the user-tier clr `config.toml` (`CLR_CONFIG_DIR`, `HOME`) |
 | `control.rs` | Bidirectional control-protocol session over stream-json stdio |
 | `exit_code.rs` | Classify subprocess exit codes/stderr into `ErrorKind` |
 | `fanout.rs` | Run many child commands with a fixed concurrency bound, in input order |
@@ -17,7 +18,7 @@ This directory contains the core implementation of the `claude_runner_core` crat
 | `ps_table.rs` | Render a `ProcessInfo` slice as a table (feature `ps_table`) |
 | `session_dir.rs` | Directory-based session isolation for invocations |
 
-## Organization (10 entries)
+## Organization (11 entries)
 
 Files organized by responsibility following Rust module conventions.
 
@@ -31,6 +32,7 @@ src/
 │   ├── params_core.rs  # Tier 1 critical parameters
 │   ├── params_security.rs  # Tier 2 security-sensitive parameters
 │   └── params_extended.rs  # Tier 3+ optional parameters
+├── config_path.rs      # user_config_path(): user-tier clr config.toml location
 ├── control.rs          # Bidirectional control-protocol session (stream-json)
 ├── exit_code.rs        # Exit-code/stderr → ErrorKind classification
 ├── fanout.rs           # run_bounded(): N children at once, results in input order
@@ -76,6 +78,6 @@ Comprehensive test suite in `tests/` directory:
 - Execution output (1 test file): ExecutionOutput struct and Display
 - Skip permissions (1 test file): --dangerously-skip-permissions flag
 - Manual execution (2 test files): real Claude binary tests (skipped in CI)
-- **Total**: 43 test files, all passing; see tests/readme.md for the complete Responsibility Table
+- **Total**: 45 test files, all passing; see tests/readme.md for the complete Responsibility Table
 
 See `tests/readme.md` for complete test documentation.

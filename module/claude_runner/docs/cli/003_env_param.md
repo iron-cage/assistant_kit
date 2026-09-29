@@ -344,23 +344,33 @@ parameter spec (type, default, since, description, behavioral contract).
 
 ### Env Param 7: `CLR_CONFIG_DIR` — Config File Discovery
 
-Overrides the default user-level config directory used by `config.rs` when discovering
-`config.toml`. Mirrors the `CLR_GATE_DIR` pattern (Env Param 5): a test-injection point,
-not a user-facing feature in its own right.
+Overrides the directory holding clr's user-level `config.toml`, for every tool that reads
+or writes that file. Mirrors the `CLR_GATE_DIR` pattern (Env Param 5): a test-injection
+point, not a user-facing feature in its own right.
 
 - **Type:** directory path (string)
 - **Default:** `$HOME/.clr`
-- **Commands affected:** `run` / `ask` (`load_config()` in `config.rs` is called only from
-  `dispatch_run()`); project-level `.clr.toml` discovery in the current directory is
-  unaffected by this variable
-- **Mechanism:** read by `user_config_dir()` in `config.rs`; an unset or empty value falls
-  back to `$HOME/.clr`
+- **Commands affected:**
+  - `run` / `ask` / `topic`: the config tier (`load_config()`, called from `dispatch_run()`)
+  - `isolated`: the default-model lookup (`resolve_isolated_default_model()`)
+  - `clp .model scope::subprocess`, `clp .provider.select`, and `clp .usage`'s Gate 10
+
+  Project-level `.clr.toml` discovery in the current directory is unaffected.
+- **Mechanism:** `claude_runner_core::user_config_path()` is the one resolver all of them
+  call (BUG-007, BUG-560):
+  - a non-empty value gives `$CLR_CONFIG_DIR/config.toml`;
+  - otherwise a non-empty `HOME` gives `$HOME/.clr/config.toml`;
+  - with neither there's no user tier. `clr` reads none, and clp's config commands exit 2
+    naming both variables. There's no cwd-relative fallback.
 - **Primary use:** test isolation — override in tests to point user-level config discovery
   at a temp dir, preventing cross-test contamination from a real `~/.clr/config.toml`
+- **Verify:** `CLR_CONFIG_DIR=/tmp/c clp .model scope::subprocess` prints
+  `scope: subprocess (/tmp/c/config.toml)`, and `clr isolated --creds <creds> --dry-run x`
+  previews the `model` set in that file.
 
 | Variable | Default | Type | Notes |
 |----------|---------|------|-------|
-| `CLR_CONFIG_DIR` | `$HOME/.clr` | path | Overrides user-level `config.toml` directory for `config.rs`; project `.clr.toml` discovery is separate and unaffected |
+| `CLR_CONFIG_DIR` | `$HOME/.clr` | path | Relocates the user-level `config.toml` for `run`/`ask`/`topic`, `isolated` and clp's config commands alike; project `.clr.toml` discovery is separate and unaffected |
 
 **No precedence rule** — this variable is always applied (there is no corresponding CLI flag).
 

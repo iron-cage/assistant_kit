@@ -20,11 +20,11 @@
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 11 + 1 index |
 | `subcommand` | CLI subcommands of the `claude` binary — 12 listed in `claude --help`, 7 functional but hidden from it | [subcommand/readme.md](subcommand/readme.md) | 19 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 (index-only) |
-| `model` | Claude API model catalog: known model IDs, capabilities, and workspace selection defaults | [model/readme.md](model/readme.md) | 13 |
+| `model` | Claude API model catalog: known model IDs, capabilities, and workspace selection defaults | [model/readme.md](model/readme.md) | 14 |
 | `version` | Claude Code release changelog: one doc instance per published release version | [version/readme.md](version/readme.md) | 116 |
 | `pattern` | Reusable design-pattern documentation: official version-pinning landscape | [pattern/readme.md](pattern/readme.md) | 1 |
 
-**Total doc instances**: 486 — 485 as of the 2026-08-27 snapshot (38 behavior + 3 storage + 4 filesystem + 10 jsonl + 19 envelope + 23 attachment + 10 system_event + 3 envelope_class + 3 settings + 7 format + 3 taxonomy + 159 param + 43 tool + 11 endpoint + 19 subcommand + 0 fault + 13 model + 116 version + 1 pattern), plus 1 added afterward via independent local evidence rather than the original scan ([`attachment/024_budget_usd.md`](attachment/024_budget_usd.md)). Plus one unnumbered auxiliary index, `endpoint/account_field_index.md`, which is a cross-endpoint field dictionary rather than an instance and is excluded from the count.
+**Total doc instances**: 487 — 485 as of the 2026-08-27 snapshot (38 behavior + 3 storage + 4 filesystem + 10 jsonl + 19 envelope + 23 attachment + 10 system_event + 3 envelope_class + 3 settings + 7 format + 3 taxonomy + 159 param + 43 tool + 11 endpoint + 19 subcommand + 0 fault + 13 model + 116 version + 1 pattern), plus 2 added afterward: [`attachment/024_budget_usd.md`](attachment/024_budget_usd.md) via independent local evidence rather than the original scan, and [`model/014_claude_opus_5_5.md`](model/014_claude_opus_5_5.md) from the v2.1.283 binary's baked model catalog. Plus one unnumbered auxiliary index, `endpoint/account_field_index.md`, which is a cross-endpoint field dictionary rather than an instance and is excluded from the count.
 
 One collection holds no numbered instances: `fault` is **index-only by design** — its readme is itself the complete fault table, and its rows link out to `docs/error/` in the workspace root rather than to local instances; a zero here is correct, not a gap.
 
@@ -35,9 +35,9 @@ cd contract/claude_code/docs
 for d in */; do printf '%-12s %3d\n' "${d%/}" "$(ls "$d" | grep -cE '^[0-9]{3}_')"; done
 ```
 
-That loop counts strictly-numbered files and totals **485**; `behavior` reports
+That loop counts strictly-numbered files and totals **486**; `behavior` reports
 37 rather than the 38 above, because `016h_b16h_tools_system_prompt.md` carries a
-suffixed number. Adding it back gives the 486 stated. `grep -P` is not available
+suffixed number. Adding it back gives the 487 stated. `grep -P` is not available
 on every platform, which is why the expression above uses POSIX classes.
 
 ## Master Doc Instances Table
@@ -270,7 +270,7 @@ on every platform, which is why the expression above uses POSIX classes.
 >
 > `version` instances (116 files) use NNN_vX_Y_Z.md naming and are enumerated in their master file: [version/readme.md](version/readme.md).
 
-### model/ (13 instances)
+### model/ (14 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -286,7 +286,8 @@ on every platform, which is why the expression above uses POSIX classes.
 | 010 | claude-opus-4-5 | [model/010_claude_opus_4_5.md](model/010_claude_opus_4_5.md) |
 | 011 | claude-opus-4-1 | [model/011_claude_opus_4_1.md](model/011_claude_opus_4_1.md) |
 | 012 | Workspace Defaults | [model/012_workspace_defaults.md](model/012_workspace_defaults.md) |
-| 013 | claude-opus-5 *(current default Opus)* | [model/013_claude_opus_5.md](model/013_claude_opus_5.md) |
+| 013 | claude-opus-5 *(default Opus v2.1.219–v2.1.279)* | [model/013_claude_opus_5.md](model/013_claude_opus_5.md) |
+| 014 | claude-opus-5-5 *(current default Opus)* | [model/014_claude_opus_5_5.md](model/014_claude_opus_5_5.md) |
 
 ### pattern/ (1 instance)
 

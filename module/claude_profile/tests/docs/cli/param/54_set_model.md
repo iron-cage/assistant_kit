@@ -6,7 +6,7 @@ Edge case coverage for the `set_model::` parameter on `.account.use` and `.usage
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `set_model::opus` accepted; writes `claude-opus-4-8` to `settings.json` | Behavioral Divergence |
+| EC-1 | `set_model::opus` accepted; writes `claude-opus-5-5` to `settings.json` | Behavioral Divergence |
 | EC-2 | `set_model::sonnet` accepted; writes `claude-sonnet-5` to `settings.json` | ✅ Valid Value |
 | EC-3 | `set_model::haiku` accepted; writes `claude-haiku-4-5-20251001` to `settings.json` | ✅ Valid Value |
 | EC-4 | `set_model::default` accepted; removes `model` key from `settings.json` | Behavioral Divergence |
@@ -16,11 +16,11 @@ Edge case coverage for the `set_model::` parameter on `.account.use` and `.usage
 
 ---
 
-### EC-1: `set_model::opus` accepted; writes `claude-opus-4-8`
+### EC-1: `set_model::opus` accepted; writes `claude-opus-5-5`
 
 - **Given:** Account `alice` in the credential store.
 - **When:** `clp .account.use name::alice set_model::opus`
-- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-opus-4-8"`. No error about unrecognized parameter.
+- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-opus-5-5"`. No error about unrecognized parameter.
 - **Exit:** 0
 - **Source fn:** ✅ `ec1_set_model_opus_accepted_no_unrecognized_error`
 - **Source:** [param/054_set_model.md](../../../../docs/cli/param/054_set_model.md)
