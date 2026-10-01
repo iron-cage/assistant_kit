@@ -201,48 +201,46 @@ IT-1 is the inverse: it explicitly removes claude from PATH to force the exit 2 
 
 ---
 
----
-
 ### IT-9: Matching custom marker → label in brackets (v::1)
 
-- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":""}`.
+- **Given:** isolated HOME with `.local/bin/claude` → `2.1.220` (a symlink; only its target filename is read) and `version-markers.json` containing `{"name":"team-pin","value":"2.1.220","description":""}`.
 - **When:**
   `clv .version.show v::1`
 - **Then:** Exit 0; stdout contains `[team-pin]`.
-- **Isolation:** Skipped if exit 2 (claude not installed)
+- **Isolation:** the test's own HOME pins the installed version; nothing is read from the inherited HOME (BUG-580)
 - **Exit:** 0
 
 ---
 
 ### IT-10: No matching markers → no brackets in output (v::1)
 
-- **Given:** claude installed; isolated HOME with no `version-markers.json` (or empty markers file).
+- **Given:** isolated HOME with `.local/bin/claude` → `2.1.220` and no `version-markers.json`.
 - **When:**
   `clv .version.show v::1`
-- **Then:** Exit 0; stdout does NOT contain `[`.
-- **Isolation:** Skipped if exit 2
+- **Then:** Exit 0; stdout contains `2.1.220` and does NOT contain `[`.
+- **Isolation:** pinned HOME, as IT-9
 - **Exit:** 0
 
 ---
 
 ### IT-11: `format::json` with matching marker → `labels` array present
 
-- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":"pinned"}`.
+- **Given:** isolated HOME with `.local/bin/claude` → `2.1.220` and `version-markers.json` containing `{"name":"team-pin","value":"2.1.220","description":""}`.
 - **When:**
   `clv .version.show format::json`
 - **Then:** Exit 0; output is valid JSON; `"labels"` key is present; first element has `"name":"team-pin"` and `"kind":"custom"`.
-- **Isolation:** Skipped if exit 2
+- **Isolation:** pinned HOME, as IT-9
 - **Exit:** 0
 
 ---
 
 ### IT-12: `v::0` ignores labels → bare semver, no brackets
 
-- **Given:** claude installed; isolated HOME with `version-markers.json` containing `{"name":"team-pin","value":"<installed-version>","description":""}`.
+- **Given:** isolated HOME with `.local/bin/claude` → `2.1.220` and `version-markers.json` containing `{"name":"team-pin","value":"2.1.220","description":""}`; control: `clv .version.show v::1` in that HOME shows `[team-pin]`.
 - **When:**
   `clv .version.show v::0`
-- **Then:** Exit 0; stdout is a semver string only; no `[` character present.
-- **Isolation:** Skipped if exit 2
+- **Then:** Exit 0; stdout is exactly `2.1.220` followed by a newline; no `[` character present.
+- **Isolation:** pinned HOME, as IT-9
 - **Exit:** 0
 
 ---

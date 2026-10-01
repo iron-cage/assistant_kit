@@ -53,7 +53,7 @@
 ```bash
 clv .params
 # bash_timeout   env: CLAUDE_CODE_BASH_TIMEOUT   default: 120000          (env)
-# model          cli: --model  env: CLAUDE_MODEL  config: model  default: claude-sonnet-5
+# model          cli: --model  env: ANTHROPIC_MODEL  config: model  default: claude-sonnet-5
 # theme          config: theme                    current: dark            (user)
 # ...  (35+ entries)
 ```
@@ -72,7 +72,7 @@ clv .params kind::config
 ```bash
 clv .params key::model
 # CLI:     --model
-# Env:     CLAUDE_MODEL   (unset)
+# Env:     ANTHROPIC_MODEL   (unset)
 # Config:  model          claude-sonnet-5  (catalog default)
 # Default: claude-sonnet-5
 ```
@@ -81,5 +81,5 @@ clv .params key::model
 
 ```bash
 clv .params format::json
-# [{"name":"model","cli":"--model","env":"CLAUDE_MODEL","config":"model",...}, ...]
+# [{"name":"model","cli":"--model","env":"ANTHROPIC_MODEL","config":"model",...}, ...]
 ```

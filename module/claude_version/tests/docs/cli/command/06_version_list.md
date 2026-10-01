@@ -719,30 +719,15 @@ Pinned value for `stable` must appear in `v::1` output (IT-14); custom markers a
 
 ### Network-Conditional Helper
 
-```rust
-fn skip_if_no_network( out : &std::process::Output ) -> bool
-{
-  if out.status.code() == Some( 2 )
-  {
-    let err = String::from_utf8_lossy( &out.stderr );
-    if err.contains( "failed to fetch" ) { return true; }
-  }
-  false
-}
-```
-
-Tests requiring successful network fetch:
-1. Run the command
-2. If `skip_if_no_network()` returns true → return (test passes vacuously)
-3. Otherwise assert exit 0 and verify output format
+A failed or empty release fetch falls back to the compiled-in `VERSION_HISTORY` snapshot with a stderr warning and still exits 0 (IT-35), so the `mode::history` tests pass offline against that snapshot. `require_network_or_fail( &out )` in `read_version_test.rs` panics only on exit 2 with a fetch error in stderr, which the fetch path no longer produces; a missing `HOME` (IT-36) is the remaining exit-2 path.
 
 ### Test Isolation Patterns
 
 | Pattern | Tests | Method |
 |---------|-------|--------|
-| No isolation needed | IT-1 through IT-6 (`mode::aliases`), IT-31 through IT-34, IT-37 through IT-40, IT-43 through IT-45 | Fails at adapter/validation, or reads compile-time data only |
-| Network-conditional | IT-16 through IT-30, IT-41 | `skip_if_no_network()` helper |
-| HOME isolation | IT-36, IT-41 | `run_cm_with_env(&[...], &[("HOME", "<tmp>")])` |
+| No isolation needed | IT-1 through IT-15 and IT-42, IT-46 (`mode::aliases`), IT-43 through IT-45 | Fails at adapter/validation, or only reads: `mode::aliases` lists the built-in aliases plus any markers in the inherited `HOME` |
+| History `HOME` | IT-16 through IT-34, IT-37 through IT-40 | `run_clv_history(&[...])`: one `HOME` under `CARGO_TARGET_TMPDIR` shared by every history test, so the release cache never lands in the inherited `HOME` (BUG-581); `run_clv()` refuses `mode::history` |
+| HOME isolation | IT-36, IT-41 | `run_clv_with_env(&[...], &[("HOME", "<empty or tmp>")])`; IT-41 seeds its own fresh cache |
 | Manual verification | IT-35 | Cannot reliably trigger in CI |
 
 ### Categories Summary

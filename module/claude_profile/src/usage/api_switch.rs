@@ -274,9 +274,9 @@ pub fn model_override_direction( quota : &OauthUsageData ) -> Option< &'static s
 ///
 /// Called AFTER `switch_account()` for every fetch-succeeded case — both idle and
 /// already-active accounts. When `seven_day_sonnet` remaining is below `OPUS_OVERRIDE_THRESHOLD` (10%) and the
-/// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`'s
-/// `model` to the `"opus"` shorthand (`override_session_model_to_opus`), which Claude
-/// Code resolves to its current Opus model.
+/// current session model is Sonnet, empty, or a bare full Opus ID such as `OPUS_MODEL_ID`
+/// (BUG-578), overrides `~/.claude/settings.json`'s `model` to the `"opus"` shorthand
+/// (`override_session_model_to_opus`), which Claude Code resolves to its current Opus model.
 ///
 /// # Limitation (BUG-226)
 ///

@@ -12,7 +12,7 @@
 //! | TC-488 | `count::9223372036854775807` (i64 max) → accepted | P |
 //! | TC-491 | `interval::18446744073709551615` (u64 max) → clear error, exit 1 | N |
 
-use crate::subprocess_helpers::{ run, out_stderr, code };
+use crate::subprocess_helpers::{ run, run_in_home, out_stdout, out_stderr, code };
 
 // TC-016: version:: empty value → exit 1
 #[ test ]
@@ -76,7 +76,8 @@ fn tc029_leading_zero_semver_rejected()
 #[ test ]
 fn tc487_count_u64_max_rejected_with_clear_error()
 {
-  let out = run( &[ ".version.list", "mode::history", "count::18446744073709551615" ] );
+  let home = tempfile::TempDir::new().expect( "failed to create tmpdir" );
+  let out = run_in_home( &[ ".version.list", "mode::history", "count::18446744073709551615" ], home.path() );
   assert_eq!( code( &out ), 1, "count::u64_max must be rejected (exit 1)" );
   let err = out_stderr( &out );
   assert!(
@@ -94,12 +95,19 @@ fn tc487_count_u64_max_rejected_with_clear_error()
 #[ test ]
 fn tc488_count_i64_max_accepted()
 {
-  // count::i64::MAX passes through the adapter without error.
-  // Use .version.list mode::history; the fallback snapshot means network state
-  // cannot cause exit 2 here, but this must NOT exit 1 due to count:: validation error.
-  let out = run( &[ ".version.list", "mode::history", "count::9223372036854775807" ] );
-  // Must not exit 1 (which would indicate a count:: validation failure)
-  assert_ne!( code( &out ), 1, "count::i64_max must not be rejected by adapter (exit must not be 1)" );
+  // count::i64::MAX passes through the adapter without error. A fresh one-release
+  // cache in the temp HOME answers the history fetch, so the network plays no part.
+  let home = tempfile::TempDir::new().expect( "failed to create tmpdir" );
+  let cache_dir = home.path().join( ".claude" ).join( ".transient" );
+  std::fs::create_dir_all( &cache_dir ).expect( "failed to create the cache dir" );
+  std::fs::write(
+    cache_dir.join( "version_history_cache.json" ),
+    r#"[{"tag_name": "v1.0.0", "published_at": "2026-01-01T00:00:00Z", "body": "- First release"}]"#,
+  ).expect( "failed to seed the release cache" );
+  let out = run_in_home( &[ ".version.list", "mode::history", "count::9223372036854775807" ], home.path() );
+  assert_eq!( code( &out ), 0, "count::i64_max must be accepted: {}", out_stderr( &out ) );
+  let text = out_stdout( &out );
+  assert!( text.contains( "1.0.0" ), "must list the cached release: {text}" );
 }
 
 // TC-491: interval::u64max (exceeds i64::MAX) → clear error, exit 1

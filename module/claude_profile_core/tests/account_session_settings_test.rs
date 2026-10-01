@@ -5,6 +5,7 @@
 //!
 //! | Test | Scenario |
 //! |------|----------|
+//! | `mre_bug578_bare_full_opus_ids_normalized_to_shorthand` | BUG-578: override_session_model_to_opus() normalizes any bare full Opus ID; leaves shorthand, `[1m]`-suffixed and non-Opus models untouched |
 //! | `ft10_set_session_model_preserves_existing_keys` | set_session_model() merges model into existing settings.json without losing other keys |
 //! | `ft11_set_session_model_creates_file_when_absent` | set_session_model() creates settings.json when file is absent (dir exists) |
 //! | `mre_bug258_set_session_model_creates_parent_dir_when_absent` | BUG-258: set_session_model() creates ~/.claude/ dir + file when dir is absent |
@@ -168,6 +169,61 @@ fn mre_bug257_override_shorthand_alias()
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
     "BUG-286: override must write shorthand \"opus\", not full ID; got: {content}",
   );
+}
+
+/// BUG-578 MRE: every bare full Opus ID normalizes to `"opus"`, not only the IDs the gate lists.
+///
+/// # Root Cause (BUG-578)
+/// The gate matched full Opus IDs by exact string (`"claude-opus-4-8"`, `"claude-opus-4-6"`),
+/// each the value clp's `opus` shorthand wrote at some point. `cc988323` remapped that shorthand
+/// to `"claude-opus-5-5"` without adding an arm, so the value clp itself writes matched nothing:
+/// no normalization, `false` returned, no `sonnet→opus` trace in `apply_model_override`.
+///
+/// # Why Not Caught
+/// The BUG-286 scenarios pre-write the hardcoded `"claude-opus-4-6"`/`"claude-opus-4-8"`, which
+/// keep passing after any remap. No test covered a full Opus ID outside the gate's list.
+///
+/// # Fix Applied
+/// The two exact arms became one shape match: `starts_with( "claude-opus-" )` with no `[`
+/// suffix, i.e. any bare full Opus ID, whatever the version.
+///
+/// # Prevention
+/// The normalize rows use IDs the old list never had. The untouched rows pin the shorthand,
+/// suffixed and non-Opus forms the shape match must not reach.
+///
+/// # Pitfall
+/// `claude-opus-5-5[1m]` is a full Opus ID too, but rewriting it to `"opus"` drops the 1M
+/// context. The `[` exclusion keeps it out, as the exact list did.
+#[ doc = "bug_reproducer(BUG-578)" ]
+#[ test ]
+fn mre_bug578_bare_full_opus_ids_normalized_to_shorthand()
+{
+  let tmp   = TempDir::new().unwrap();
+  let paths = ClaudePaths::with_home( tmp.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  let settings = paths.settings_file();
+
+  for id in [ "claude-opus-5-5", "claude-opus-5" ]
+  {
+    std::fs::write( &settings, format!( r#"{{"model":"{id}"}}"# ) ).unwrap();
+    let overrode = account::override_session_model_to_opus( &paths );
+    let content  = std::fs::read_to_string( &settings ).unwrap();
+    assert!( overrode, "BUG-578: bare full Opus ID {id:?} must trigger the override; got: {content}" );
+    assert_eq!(
+      account::parse_string_field( &content, "model" ).as_deref(), Some( "opus" ),
+      "BUG-578: {id:?} must be normalized to shorthand \"opus\"; got: {content}",
+    );
+  }
+
+  for id in [ "opus", "opus[1m]", "claude-opus-5-5[1m]", "opusplan", "claude-haiku-4-5" ]
+  {
+    let before = format!( r#"{{"model":"{id}"}}"# );
+    std::fs::write( &settings, &before ).unwrap();
+    let overrode = account::override_session_model_to_opus( &paths );
+    let content  = std::fs::read_to_string( &settings ).unwrap();
+    assert!( !overrode, "BUG-578: {id:?} must not trigger the override; got: {content}" );
+    assert_eq!( content, before, "BUG-578: {id:?} must be left untouched" );
+  }
 }
 
 /// `set_session_model()` writes the correct model ID or removes the key.

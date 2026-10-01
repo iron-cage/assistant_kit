@@ -15,7 +15,7 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 
 #### Entry Points
 
-- `src/usage/api_switch.rs:261` — `apply_model_override(quota, paths, trace, label, name, backend)` (mutation; `quota: &OauthUsageData`, `backend: AccountBackend` — the Redirect Backend Bypass check below); called from `src/usage/api.rs`, which does not define it
+- `src/usage/api_switch.rs:289` — `apply_model_override(quota, paths, trace, label, name, backend)` (mutation; `quota: &OauthUsageData`, `backend: AccountBackend` — the Redirect Backend Bypass check below); called from `src/usage/api.rs`, which does not define it
 - `src/usage/format.rs` — `recommended_model(aq)` (read-only, for footer recommendation; `aq: &AccountQuota`)
 
 #### Redirect Backend Bypass (Feature 071)
@@ -38,9 +38,16 @@ Effort is written **unconditionally** on every call to `apply_model_override()` 
 "Opus form" = model string matches `claude-opus-*` or `"opus"`.
 "Sonnet form" = model string matches `claude-sonnet-*` or `"sonnet"`.
 
+**Full-ID normalization:** "No-op" means the model already has the target form; it isn't always a no-write. When the target direction's gate (`claude_profile_core/src/account/session_settings.rs`) recognizes a full ID, the model is rewritten to the shorthand:
+
+- **→ Opus** (`override_session_model_to_opus()`): any bare `claude-opus-*` ID becomes `"opus"` (Fix BUG-286, BUG-578). IDs with a `[` suffix (`claude-opus-5-5[1m]`), `opus[1m]` and `opusplan` are left untouched, so a 1M-context choice survives.
+- **→ Sonnet** (`override_session_model_to_sonnet()`): only `claude-sonnet-5` and `claude-sonnet-4-6` become `"sonnet"`; other full Sonnet IDs stay as they are.
+
+An absent `model` key counts as the wrong form in every row: both functions write when it's missing.
+
 #### Threshold
 
-10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `types.rs:456` (canonical; `format.rs` and `api_switch.rs` both import it from there) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
+10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `types.rs:567` (canonical; `format.rs` and `api_switch.rs` both import it from there) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
 
 #### Bug History
 
@@ -52,6 +59,7 @@ Effort is written **unconditionally** on every call to `apply_model_override()` 
   - **Effort values updated:** Opus effort `"high"` → `"max"`; Sonnet effort `"low"` → `"high"`. BUG-322 fix had the right structure but wrong values.
   - **H3 — render.rs Next line used carry-forward session_effort instead of model-derived effort:** `rec_display` was `session_effort` (the current account's effort read from settings.json), not derived from the recommended account's model. Fix: compute `rec_effort = if rec_model == "opus" { "max" } else { "high" }` inside `render.rs` — always show model-derived effort in the Next line.
   - **Carry-forward removal:** `api.rs` rotation dispatcher removed `if let Some(se) = session_effort { set_session_effort(paths, se) }` — carry-forward was overwriting model-derived effort from `apply_model_override()` with stale pre-rotation effort.
+- **BUG-578 (Fix 2026-09-29):** the → Opus gate recognized full Opus IDs by exact string (`"claude-opus-4-8"` added by BUG-286, plus `"claude-opus-4-6"`). When `OPUS_MODEL_ID` moved to `"claude-opus-5-5"`, clp's own `opus` value matched no arm: no normalization and no `sonnet→opus` trace. Fix: match any bare `claude-opus-*` ID. See [pitfall/006](../pitfall/006_model_override_pitfalls.md) Pitfall 6.
 
 #### Relationship to `recommended_model()`
 
@@ -92,4 +100,4 @@ This is a **temporary blind spot** until Feature 066 (dual-source parsing) popul
 
 | File | Relationship |
 |------|-------------|
-| [pitfall/006](../pitfall/006_model_override_pitfalls.md) | Known pitfalls — absent-tier confusion, one-way ratchet, effort gate, carry-forward overwrite |
+| [pitfall/006](../pitfall/006_model_override_pitfalls.md) | Known pitfalls — absent-tier confusion, one-way ratchet, effort gate, carry-forward overwrite, stale full-ID gate arms |

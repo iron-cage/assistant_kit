@@ -24,6 +24,7 @@
 //! | AT-05 | Absent everywhere → Absent source | `at05_002_all_layers_absent` |
 //! | AT-06 | Project config overrides user config | `at06_002_project_overrides_user` |
 //! | T06 | nested `env.*` catalog keys resolve via User layer, not Absent | `at07_002_lock_version_nested_env_resolves` |
+//! | BUG-579 | `ANTHROPIC_MODEL` is the model env layer; `CLAUDE_MODEL` is not | `mre_bug579_model_env_layer_follows_anthropic_model` |
 
 use std::path::Path;
 use tempfile::TempDir;
@@ -41,7 +42,7 @@ fn write_settings( dir : &Path, key : &str, value : &str )
 
 // ─── AT-01: env var overrides user config ─────────────────────────────────────
 
-// AT-01: CLAUDE_MODEL set → resolve("model") returns Env source overriding user config
+// AT-01: ANTHROPIC_MODEL set → resolve("model") returns Env source overriding user config
 #[ test ]
 fn at01_002_env_overrides_user()
 {
@@ -53,9 +54,9 @@ fn at01_002_env_overrides_user()
   // Using a non-existent cwd to avoid project config interference.
   let no_project = TempDir::new().unwrap();
 
-  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-8" );
+  std::env::set_var( "ANTHROPIC_MODEL", "claude-opus-4-8" );
   let rv = resolve( "model", home, no_project.path(), catalog() );
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
 
   assert_eq!( rv.source, Layer::Env, "source must be Env when env var is set" );
   assert_eq!( rv.value.as_deref(), Some( "claude-opus-4-8" ), "value must come from env var" );
@@ -63,7 +64,7 @@ fn at01_002_env_overrides_user()
 
 // ─── AT-02: user config wins when env absent ──────────────────────────────────
 
-// AT-02: CLAUDE_MODEL unset, model in user config → resolve returns User source
+// AT-02: ANTHROPIC_MODEL unset, model in user config → resolve returns User source
 #[ test ]
 fn at02_002_user_config_wins_without_env()
 {
@@ -73,7 +74,7 @@ fn at02_002_user_config_wins_without_env()
 
   let no_project = TempDir::new().unwrap();
 
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let rv = resolve( "model", home, no_project.path(), catalog() );
 
   assert_eq!( rv.source, Layer::User, "source must be User when env absent and user config has key" );
@@ -97,7 +98,7 @@ fn at03_002_project_config_key()
 
   // User settings is empty (no model key).
 
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let rv = resolve( "model", home_dir.path(), project_dir.path(), catalog() );
 
   assert_eq!( rv.source, Layer::Project, "source must be Project when key in project config" );
@@ -114,7 +115,7 @@ fn at04_002_catalog_default_returned()
   let home_dir    = TempDir::new().unwrap();
   let no_project  = TempDir::new().unwrap();
 
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let rv = resolve( "model", home_dir.path(), no_project.path(), catalog() );
 
   assert_eq!( rv.source, Layer::Default, "source must be Default when all other layers absent" );
@@ -184,4 +185,49 @@ fn at07_002_lock_version_nested_env_resolves()
   let rv2 = resolve( "env.DISABLE_UPDATES", home_dir.path(), no_project.path(), catalog() );
   assert_eq!( rv2.source, Layer::User, "env.DISABLE_UPDATES must resolve via User layer, not Absent" );
   assert_eq!( rv2.value.as_deref(), Some( "1" ) );
+}
+
+// ─── BUG-579: the model env layer is ANTHROPIC_MODEL ──────────────────────────
+
+// BUG-579 — the `model` env layer must follow the variable Claude Code reads.
+//
+// Root Cause: both catalogs mapped `model` to `CLAUDE_MODEL`, a name the Claude
+// Code binary never reads (0 occurrences in v2.1.283; `ANTHROPIC_MODEL` occurs
+// 24 times, and a captured request carries its value). `resolve()` and `.params`
+// read the name from the catalog, so `ANTHROPIC_MODEL` fell through to the
+// settings value and `CLAUDE_MODEL` was reported as a winning `Layer::Env`.
+// Why Not Caught: every env-layer test set `CLAUDE_MODEL`, the catalog's own
+// name, and asserted `Layer::Env` — the plumbing was tested, the name never was.
+// Fix Applied: `env_var : Some( "ANTHROPIC_MODEL" )` for `model` in
+// `config_catalog.rs` and `params_catalog.rs`.
+// Prevention: this test spells `ANTHROPIC_MODEL` independently of the catalog
+// and asserts that `CLAUDE_MODEL` does NOT reach `Layer::Env`.
+// Pitfall: a test that sets the catalog's own env name proves the plumbing,
+// not the name — a mapping onto another program's env surface is only right
+// once it's checked against what that program actually reads.
+// test_kind: bug_reproducer(BUG-579)
+#[ test ]
+fn mre_bug579_model_env_layer_follows_anthropic_model()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path();
+  write_settings( home, "model", "claude-sonnet-5" );
+  let no_project = TempDir::new().unwrap();
+
+  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::set_var( "ANTHROPIC_MODEL", "claude-opus-5-5" );
+  let read_by_claude = resolve( "model", home, no_project.path(), catalog() );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
+
+  std::env::set_var( "CLAUDE_MODEL", "claude-opus-5-5" );
+  let ignored_by_claude = resolve( "model", home, no_project.path(), catalog() );
+  std::env::remove_var( "CLAUDE_MODEL" );
+
+  assert_eq!( read_by_claude.source, Layer::Env, "ANTHROPIC_MODEL must be the model env layer" );
+  assert_eq!( read_by_claude.value.as_deref(), Some( "claude-opus-5-5" ) );
+  assert_eq!( ignored_by_claude.source, Layer::User, "CLAUDE_MODEL is never read by Claude Code — it must not win" );
+  assert_eq!( ignored_by_claude.value.as_deref(), Some( "claude-sonnet-5" ) );
+
+  let param = claude_version_core::params_catalog::lookup( "model" ).expect( "model param in catalog" );
+  assert_eq!( param.env_var, Some( "ANTHROPIC_MODEL" ), ".params must advertise the env var Claude Code reads" );
 }

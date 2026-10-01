@@ -50,7 +50,7 @@
 ```
 model
   Forms:   CLI --model <model>  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
+  Env:     ANTHROPIC_MODEL → "claude-opus-4-8" (set)
   Config:  model = "claude-sonnet-5" (user)
   Default: claude-sonnet-5
   ───────────────────────────────────────

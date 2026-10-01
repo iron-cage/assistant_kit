@@ -150,7 +150,7 @@ fn resolve_effective( param : &ParamDef, user_settings : Option< &Path > ) -> ( 
 
 // ── Forms string builder ──────────────────────────────────────────────────────
 
-/// Build the human-readable forms string (e.g. `"CLI --model  |  env CLAUDE_MODEL  |  config model"`).
+/// Build the human-readable forms string (e.g. `"CLI --model  |  env ANTHROPIC_MODEL  |  config model"`).
 fn build_forms( param : &ParamDef ) -> String
 {
   let mut parts : Vec< String > = Vec::new();

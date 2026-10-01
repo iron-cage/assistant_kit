@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_history, run_clv_with_env, stdout, write_settings };
 
 /// EC-12: `.status v::0` → 3 bare lines with no label prefixes
 #[ test ]
@@ -117,7 +117,7 @@ fn verbosity_ec19_settings_get_v0_bare_value()
 #[ test ]
 fn verbosity_ec20_history_v0_bare_lines()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::0", "count::3" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::0", "count::3" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( !text.contains( "##" ), "v::0 must not contain ## markdown headers: {text}" );
@@ -129,7 +129,7 @@ fn verbosity_ec20_history_v0_bare_lines()
 #[ test ]
 fn verbosity_ec21_history_v2_full_changelog()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::2", "count::2" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::2", "count::2" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "##" ), "v::2 must include ## markdown headers: {text}" );

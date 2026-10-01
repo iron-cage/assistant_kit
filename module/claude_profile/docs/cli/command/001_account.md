@@ -431,7 +431,7 @@ clp .account.use name::alice@home.com trace::1
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
-# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-8  effort: low
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-sonnet-5  effort: low
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```

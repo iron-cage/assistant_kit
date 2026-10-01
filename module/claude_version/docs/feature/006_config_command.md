@@ -28,7 +28,7 @@
 
 **Resolution chain:** When showing or getting a setting, the effective value is the first non-absent value found in this priority order:
 
-1. Environment variable (e.g., `CLAUDE_MODEL` overrides `model`)
+1. Environment variable (e.g., `ANTHROPIC_MODEL` overrides `model`)
 2. Project config: `{cwd}/.claude/settings.json` or ancestor `.claude/settings.json`
 3. User config: `~/.claude/settings.json`
 4. Catalog default (from the known settings catalog)

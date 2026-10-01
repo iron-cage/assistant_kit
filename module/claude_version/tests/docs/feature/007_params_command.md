@@ -24,7 +24,7 @@ Two valid `.params` invocations that produce structurally different output:
 | FT-2 | AC-2 | `.params key::model` shows all three forms, current values, and default | ✅ `ft2_007_params_single_model_full_detail` |
 | FT-3 | AC-3 | `.params kind::config` shows only config-key params; env-only params absent | ✅ `ft3_007_params_kind_config_filters` |
 | FT-4 | AC-4 | `.params kind::env` shows only env-var params; config-only params absent | ✅ `ft4_007_params_kind_env_filters` |
-| FT-5 | AC-5 | `.params key::model` with CLAUDE_MODEL set shows env value with (env) annotation | ✅ `ft5_007_params_env_override_visible` |
+| FT-5 | AC-5 | `.params key::model` with ANTHROPIC_MODEL set shows env value with (env) annotation | ✅ `ft5_007_params_env_override_visible` |
 | FT-6 | AC-6 | `.params key::bash_timeout` shows CLAUDE_CODE_BASH_TIMEOUT unset + default 120000 | ✅ `ft6_007_params_env_only_param` |
 | FT-7 | AC-7 | `.params format::json` exits 0; output is valid JSON array with required fields | ✅ `ft7_007_params_json_output_structure` |
 | FT-8 | AC-8 | `.params key::print` shows CLI-only annotation | ✅ `ft8_007_params_cli_only_annotation` |
@@ -66,7 +66,7 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-1: show-all exits 0 with ≥35 entries
 
-- **Given:** clean environment; HOME set; no CLAUDE_MODEL env var
+- **Given:** clean environment; HOME set; no ANTHROPIC_MODEL env var
 - **When:** `clv .params`
 - **Then:** exit 0; stdout contains at least 35 parameter entries; each entry includes a source annotation (default/env/user/project) or CLI-only marker
 - **Exit:** 0
@@ -76,9 +76,9 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-2: single param shows all three forms, current values, and default
 
-- **Given:** clean environment; HOME set; `settings.json` has `model: "claude-sonnet-5"`; `CLAUDE_MODEL` unset
+- **Given:** clean environment; HOME set; `settings.json` has `model: "claude-sonnet-5"`; `ANTHROPIC_MODEL` unset
 - **When:** `clv .params key::model`
-- **Then:** exit 0; output shows CLI form (`--model`), env form (`CLAUDE_MODEL`), config form (`model`); shows current config value, default `claude-sonnet-5`, and effective value with source
+- **Then:** exit 0; output shows CLI form (`--model`), env form (`ANTHROPIC_MODEL`), config form (`model`); shows current config value, default `claude-sonnet-5`, and effective value with source
 - **Exit:** 0
 - **Source:** [feature/007_params_command.md — AC-2](../../../docs/feature/007_params_command.md)
 
@@ -106,7 +106,7 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-5: env override visible with (env) annotation
 
-- **Given:** clean environment; `CLAUDE_MODEL=claude-opus-4-8` set in env; HOME set
+- **Given:** clean environment; `ANTHROPIC_MODEL=claude-opus-4-8` set in env; HOME set
 - **When:** `clv .params key::model`
 - **Then:** exit 0; output shows env value `claude-opus-4-8` annotated with `(env)` source; env layer wins over config and default
 - **Exit:** 0
@@ -166,7 +166,7 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-11: default source annotation when no env or config
 
-- **Given:** clean environment; empty `settings.json`; `CLAUDE_MODEL` unset; HOME set
+- **Given:** clean environment; empty `settings.json`; `ANTHROPIC_MODEL` unset; HOME set
 - **When:** `clv .params key::model`
 - **Then:** exit 0; output shows catalog default `claude-sonnet-5` annotated with `(default)` source
 - **Exit:** 0

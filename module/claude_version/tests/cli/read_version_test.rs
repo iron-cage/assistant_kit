@@ -65,10 +65,16 @@
 //! | IT-39 | `mode::history count::abc` → exit 1 (type mismatch) | N | 1 |
 //! | IT-40 | `mode::history --verbose` unknown flag → exit 1 | N | 1 |
 //! | IT-41 | UTF-8 non-ASCII in body preserved (em-dash, smart-quote) (`mode::history`) | P | 0 |
+//!
+//! E15 tests run through `run_clv_history()`, whose `HOME` lives under
+//! `CARGO_TARGET_TMPDIR`: the release fetch rewrites
+//! `{HOME}/.claude/.transient/version_history_cache.json`, and under runbox the
+//! inherited `HOME` is the developer's real `~/.claude` (BUG-581). The two
+//! exceptions set `HOME` themselves: IT-36 (empty) and IT-41 (seeded cache).
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_markers };
+use crate::subprocess_helpers::{ assert_exit, pin_installed_version, run_clv, run_clv_history, run_clv_with_env, stderr, stdout, write_markers };
 
 // ─── E3: version show ────────────────────────────────────────────────────────
 
@@ -355,7 +361,7 @@ fn require_network_or_fail( out : &std::process::Output )
 #[ test ]
 fn it16_version_list_mode_history_defaults_exit_0()
 {
-  let out = run_clv( &[ ".version.list", "mode::history" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -366,7 +372,7 @@ fn it16_version_list_mode_history_defaults_exit_0()
 #[ test ]
 fn it17_version_list_mode_history_count_3()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::3", "v::0" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::3", "v::0" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -378,7 +384,7 @@ fn it17_version_list_mode_history_count_3()
 #[ test ]
 fn it18_version_list_mode_history_count_0_empty()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::0" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::0" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -389,7 +395,7 @@ fn it18_version_list_mode_history_count_0_empty()
 #[ test ]
 fn it19_version_list_mode_history_v0_bare()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::0", "count::3" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::0", "count::3" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -409,7 +415,7 @@ fn it19_version_list_mode_history_v0_bare()
 #[ test ]
 fn it20_version_list_mode_history_v1_with_summary()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::1", "count::3" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::1", "count::3" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -428,7 +434,7 @@ fn it20_version_list_mode_history_v1_with_summary()
 #[ test ]
 fn it21_version_list_mode_history_v2_full_changelog()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::2", "count::2" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::2", "count::2" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -440,7 +446,7 @@ fn it21_version_list_mode_history_v2_full_changelog()
 #[ test ]
 fn it22_version_list_mode_history_format_json()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::json", "count::3" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::json", "count::3" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -454,7 +460,7 @@ fn it22_version_list_mode_history_format_json()
 #[ test ]
 fn it23_version_list_mode_history_count_1_json()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::1", "format::json" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::1", "format::json" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -466,7 +472,7 @@ fn it23_version_list_mode_history_count_1_json()
 #[ test ]
 fn it24_version_list_mode_history_count_1_v0()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -478,7 +484,7 @@ fn it24_version_list_mode_history_count_1_v0()
 #[ test ]
 fn it25_version_list_mode_history_count_1_v2()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::1", "v::2" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::1", "v::2" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -493,7 +499,7 @@ fn it25_version_list_mode_history_count_1_v2()
 #[ test ]
 fn it26_version_list_mode_history_default_count_le_10()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::0" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::0" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -505,7 +511,7 @@ fn it26_version_list_mode_history_default_count_le_10()
 #[ test ]
 fn it27_version_list_mode_history_count_100_all()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::100", "v::0" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::100", "v::0" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -518,9 +524,9 @@ fn it27_version_list_mode_history_count_100_all()
 #[ test ]
 fn it28_version_list_mode_history_idempotent()
 {
-  let out1 = run_clv( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
+  let out1 = run_clv_history( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
   require_network_or_fail( &out1 );
-  let out2 = run_clv( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
+  let out2 = run_clv_history( &[ ".version.list", "mode::history", "count::1", "v::0" ] );
   require_network_or_fail( &out2 );
   assert_exit( &out1, 0 );
   assert_exit( &out2, 0 );
@@ -531,9 +537,9 @@ fn it28_version_list_mode_history_idempotent()
 #[ test ]
 fn it29_version_list_mode_history_param_order()
 {
-  let out_a = run_clv( &[ ".version.list", "mode::history", "count::3", "v::0" ] );
+  let out_a = run_clv_history( &[ ".version.list", "mode::history", "count::3", "v::0" ] );
   require_network_or_fail( &out_a );
-  let out_b = run_clv( &[ ".version.list", "v::0", "mode::history", "count::3" ] );
+  let out_b = run_clv_history( &[ ".version.list", "v::0", "mode::history", "count::3" ] );
   require_network_or_fail( &out_b );
   assert_exit( &out_a, 0 );
   assert_exit( &out_b, 0 );
@@ -544,7 +550,7 @@ fn it29_version_list_mode_history_param_order()
 #[ test ]
 fn it30_version_list_mode_history_count_0_json_empty_array()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::0", "format::json" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::0", "format::json" ] );
   require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -555,7 +561,7 @@ fn it30_version_list_mode_history_count_0_json_empty_array()
 #[ test ]
 fn it31_version_list_mode_history_format_xml_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::xml" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -563,7 +569,7 @@ fn it31_version_list_mode_history_format_xml_exits_1()
 #[ test ]
 fn it32_version_list_mode_history_format_uppercase_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::JSON" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -571,7 +577,7 @@ fn it32_version_list_mode_history_format_uppercase_exits_1()
 #[ test ]
 fn it33_version_list_mode_history_format_empty_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -579,7 +585,7 @@ fn it33_version_list_mode_history_format_empty_exits_1()
 #[ test ]
 fn it34_version_list_mode_history_unknown_param_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "bogus::x" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -599,7 +605,7 @@ fn it36_version_list_mode_history_no_home_exits_2()
 #[ test ]
 fn it37_version_list_mode_history_negative_count_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::-1" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::-1" ] );
   assert_exit( &out, 1 );
 }
 
@@ -607,7 +613,7 @@ fn it37_version_list_mode_history_negative_count_exits_1()
 #[ test ]
 fn it38_version_list_mode_history_v_abc_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "v::abc" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "v::abc" ] );
   assert_exit( &out, 1 );
 }
 
@@ -615,7 +621,7 @@ fn it38_version_list_mode_history_v_abc_exits_1()
 #[ test ]
 fn it39_version_list_mode_history_count_abc_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "count::abc" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "count::abc" ] );
   assert_exit( &out, 1 );
 }
 
@@ -623,7 +629,7 @@ fn it39_version_list_mode_history_count_abc_exits_1()
 #[ test ]
 fn it40_version_list_mode_history_flag_style_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "--verbose" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "--verbose" ] );
   assert_exit( &out, 1 );
 }
 
@@ -677,17 +683,41 @@ fn it41_version_list_mode_history_utf8_body_preserved()
 
 // ─── E3 label annotation tests (IT-9/IT-10/IT-11/IT-12/FT-6) ─────────────────
 
+/// Installed version each label test pins in its own temp `HOME` (BUG-580).
+const PINNED : &str = "2.1.220";
+
 // IT-9: v::1 → shows `[team-pin]` when custom marker matches installed version
+//
+// Root Cause
+// IT-9 read the installed version under the inherited HOME, then checked the
+// label under a temp HOME with no version symlink, where clv falls back to the
+// `claude` on PATH. Once those two installs differed (the container after
+// TC-036's install, BUG-581), the marker never matched and IT-9 failed.
+//
+// Why Not Caught
+// On a developer host both reads usually land on the same binary. IT-11 and
+// IT-12 shared the pattern but asserted nothing a matching label changes, and
+// all four returned early without asserting when the first read failed.
+//
+// Fix Applied
+// The test pins `PINNED` in its own temp HOME and values the marker at it, so
+// the version compared is the version shown: no inherited-HOME read, no early return.
+//
+// Prevention
+// `pin_installed_version()` sets the installed version for IT-9..IT-12 and FT-6,
+// and each of them carries a positive control on the label.
+//
+// Pitfall
+// Reading "the installed version" off the machine couples the fixture to that
+// machine. Pin it in the HOME the test owns and the comparison can't drift.
+// test_kind: bug_reproducer(BUG-580)
 #[ test ]
 fn it09_version_show_v1_custom_marker_label()
 {
-  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
-  if ver_out.status.code() != Some( 0 ) { return; }
-  let installed = stdout( &ver_out ).trim().to_string();
-
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_markers( dir.path(), &[ ( "team-pin", &installed ) ] );
+  pin_installed_version( dir.path(), PINNED );
+  write_markers( dir.path(), &[ ( "team-pin", PINNED ) ] );
 
   let out = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -699,15 +729,14 @@ fn it09_version_show_v1_custom_marker_label()
 #[ test ]
 fn it10_version_show_v1_no_markers_no_brackets()
 {
-  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
-  if ver_out.status.code() != Some( 0 ) { return; }
-
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  pin_installed_version( dir.path(), PINNED );
 
   let out = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  assert!( text.contains( PINNED ), "v::1 must show the pinned version, got: {text}" );
   assert!( !text.contains( '[' ), "v::1 with no markers must not show brackets, got: {text}" );
 }
 
@@ -715,49 +744,48 @@ fn it10_version_show_v1_no_markers_no_brackets()
 #[ test ]
 fn it11_version_show_json_labels_array()
 {
-  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
-  if ver_out.status.code() != Some( 0 ) { return; }
-  let installed = stdout( &ver_out ).trim().to_string();
-
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_markers( dir.path(), &[ ( "my-marker", &installed ) ] );
+  pin_installed_version( dir.path(), PINNED );
+  write_markers( dir.path(), &[ ( "team-pin", PINNED ) ] );
 
   let out = run_clv_with_env( &[ ".version.show", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"labels\"" ), "JSON must contain 'labels' key, got: {text}" );
+  assert!( text.contains( "\"name\":\"team-pin\"" ), "labels must name the matching marker, got: {text}" );
+  assert!( text.contains( "\"kind\":\"custom\"" ), "a marker label must be kind custom, got: {text}" );
 }
 
 // IT-12: v::0 → bare version string, no labels even when markers exist
 #[ test ]
 fn it12_version_show_v0_no_labels()
 {
-  let ver_out = run_clv( &[ ".version.show", "v::0" ] );
-  if ver_out.status.code() != Some( 0 ) { return; }
-  let installed = stdout( &ver_out ).trim().to_string();
-
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_markers( dir.path(), &[ ( "some-marker", &installed ) ] );
+  pin_installed_version( dir.path(), PINNED );
+  write_markers( dir.path(), &[ ( "team-pin", PINNED ) ] );
+
+  // Control: the marker does resolve to a label, so v::0 below has one to drop.
+  let control = run_clv_with_env( &[ ".version.show", "v::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &control, 0 );
+  let control_text = stdout( &control );
+  assert!( control_text.contains( "[team-pin]" ), "control: v::1 must show [team-pin], got: {control_text}" );
 
   let out = run_clv_with_env( &[ ".version.show", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( !text.contains( '[' ), "v::0 must not show labels, got: {text}" );
+  assert_eq!( text, format!( "{PINNED}\n" ), "v::0 must print only the bare version, got: {text}" );
 }
 
 // FT-6: Custom marker label annotation shown by `.version.show` (multi-label)
 #[ test ]
 fn ft006_marker_label_shown_by_version_show()
 {
-  const PINNED : &str = "2.1.220";
   let dir = TempDir::new().unwrap();
-  // Provide a stable symlink so get_version_from_symlink returns PINNED,
+  // Pin the installed version so get_version_from_symlink returns PINNED,
   // decoupling this test from system claude binary availability under parallel load.
-  let local_bin = dir.path().join( ".local" ).join( "bin" );
-  std::fs::create_dir_all( &local_bin ).unwrap();
-  std::os::unix::fs::symlink( PINNED, local_bin.join( "claude" ) ).unwrap();
+  pin_installed_version( dir.path(), PINNED );
   write_markers( dir.path(), &[
     ( "release-pin", PINNED ),
     ( "team-dev",    PINNED ),

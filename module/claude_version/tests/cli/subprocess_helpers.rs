@@ -29,9 +29,15 @@ fn assert_container()
 
 /// Run `clv` with the given arguments and return the full output.
 ///
+/// The subprocess inherits this process's `HOME`.  Under runbox that's the
+/// developer's real `~/.claude`, mounted read-write, so use this only for
+/// commands that write nothing under `HOME`.  Writing commands go through
+/// [`run_clv_with_env`] with a temp `HOME`; `mode::history` goes through
+/// [`run_clv_history`] (BUG-581).
+///
 /// # Panics
 ///
-/// Panics if the binary cannot be executed.
+/// Panics if the binary cannot be executed, or if `args` contains `mode::history`.
 #[ inline ]
 #[ must_use ]
 pub fn run_clv( args : &[ &str ] ) -> std::process::Output
@@ -46,12 +52,9 @@ pub fn run_clv( args : &[ &str ] ) -> std::process::Output
 ///
 /// # HOME Isolation — Symlink Requirement
 ///
-/// When overriding `HOME`, also create `<tempdir>/.local/bin/claude` as a
-/// symlink whose **target filename** is the expected version string, e.g.:
-///
-/// ```ignore
-/// std::os::unix::fs::symlink( "2.1.220", local_bin.join( "claude" ) )
-/// ```
+/// When overriding `HOME`, also pin the installed version with
+/// [`pin_installed_version`], which creates `<tempdir>/.local/bin/claude` as a
+/// symlink whose **target filename** is the expected version string.
 ///
 /// `get_version_from_symlink()` reads the symlink target filename — not the
 /// file at that path — so the target need not exist on disk.  Without the
@@ -61,7 +64,8 @@ pub fn run_clv( args : &[ &str ] ) -> std::process::Output
 ///
 /// # Panics
 ///
-/// Panics if the binary cannot be executed.
+/// Panics if the binary cannot be executed, or if `args` contains
+/// `mode::history` and `env_overrides` sets no `HOME`.
 #[ inline ]
 #[ must_use ]
 pub fn run_clv_with_env(
@@ -70,6 +74,14 @@ pub fn run_clv_with_env(
 ) -> std::process::Output
 {
   assert_container();
+  // Fix(BUG-581): refuse `mode::history` under the inherited `HOME`.
+  // Root cause: the release fetch writes `{HOME}/.claude/.transient/version_history_cache.json`,
+  //   and runbox mounts the developer's real `~/.claude` read-write at that `HOME`.
+  // Pitfall: a read command that refreshes a cache writes like any other; it needs a `HOME` the test owns.
+  assert!(
+    !args.contains( &"mode::history" ) || env_overrides.iter().any( | ( key, _ ) | *key == "HOME" ),
+    "`mode::history` writes a release cache under HOME — run it through run_clv_history() (BUG-581)"
+  );
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   let mut cmd = std::process::Command::new( bin );
   cmd.args( args );
@@ -78,6 +90,42 @@ pub fn run_clv_with_env(
     cmd.env( key, val );
   }
   cmd.output().expect( "failed to execute claude_version binary" )
+}
+
+/// Run `clv` with `HOME` set to a directory the test suite owns, for `mode::history`.
+///
+/// History mode refreshes `{HOME}/.claude/.transient/version_history_cache.json`
+/// from GitHub.  Every history test shares one `HOME` under
+/// `CARGO_TARGET_TMPDIR`, so the cache's one-hour TTL still holds the suite to
+/// about one fetch per hour, and the developer's real cache is never touched.
+///
+/// # Panics
+///
+/// Panics if the directory cannot be created or the binary cannot be executed.
+#[ inline ]
+#[ must_use ]
+pub fn run_clv_history( args : &[ &str ] ) -> std::process::Output
+{
+  let home = concat!( env!( "CARGO_TARGET_TMPDIR" ), "/clv_history_home" );
+  std::fs::create_dir_all( home ).expect( "failed to create the history HOME" );
+  run_clv_with_env( args, &[ ( "HOME", home ) ] )
+}
+
+/// Pin the installed version seen under `home_dir` to `version`.
+///
+/// Creates `{home_dir}/.local/bin/claude` as a symlink whose target filename
+/// is `version`.  `get_version_from_symlink()` reads only that filename, so
+/// the target need not exist on disk.
+///
+/// # Panics
+///
+/// Panics if the directory or the symlink cannot be created.
+#[ inline ]
+pub fn pin_installed_version( home_dir : &std::path::Path, version : &str )
+{
+  let local_bin = home_dir.join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).expect( "failed to create .local/bin" );
+  std::os::unix::fs::symlink( version, local_bin.join( "claude" ) ).expect( "failed to pin the installed version" );
 }
 
 /// Create a minimal `~/.claude/settings.json` inside `home_dir`.

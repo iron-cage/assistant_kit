@@ -11,7 +11,7 @@
 //! | IT-2  | `key::model` → CLI, env, config forms + default | single | 0 |
 //! | IT-3  | `kind::config` → only config-key params; env-only absent | show-all | 0 |
 //! | IT-4  | `kind::env` → only env-var params; config-only absent | show-all | 0 |
-//! | IT-5  | `key::model` with CLAUDE_MODEL set → env value + (env) | single | 0 |
+//! | IT-5  | `key::model` with ANTHROPIC_MODEL set → env value + (env) | single | 0 |
 //! | IT-6  | `key::bash_timeout` → env-only, unset, default 120000 | single | 0 |
 //! | IT-7  | `format::json` → valid JSON array with name field per entry | show-all | 0 |
 //! | IT-8  | `key::print` → CLI-only annotation | single | 0 |
@@ -38,7 +38,7 @@ fn it01_params_show_all_min_entries()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -53,7 +53,7 @@ fn it01_params_show_all_min_entries()
 
 // ─── IT-2: key::model → all three forms + default ────────────────────────────
 
-// IT-2: key::model no env no config → shows --model, CLAUDE_MODEL, default; exit 0
+// IT-2: key::model no env no config → shows --model, ANTHROPIC_MODEL, default; exit 0
 #[ test ]
 fn it02_params_single_model_full_detail()
 {
@@ -62,13 +62,13 @@ fn it02_params_single_model_full_detail()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "--model" ),           "must show CLI form --model: {text}" );
-  assert!( text.contains( "CLAUDE_MODEL" ),      "must show env form CLAUDE_MODEL: {text}" );
-  assert!( text.contains( "claude-sonnet-5" ), "must show default value: {text}" );
+  assert!( text.contains( "ANTHROPIC_MODEL" ),   "must show env form ANTHROPIC_MODEL: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ),   "must show default value: {text}" );
 }
 
 // ─── IT-3: kind::config → only config-key params ─────────────────────────────
@@ -109,9 +109,9 @@ fn it04_params_kind_env_filters()
   assert!( !text.contains( "theme" ),        "kind::env must exclude config-only theme: {text}" );
 }
 
-// ─── IT-5: key::model with CLAUDE_MODEL set ──────────────────────────────────
+// ─── IT-5: key::model with ANTHROPIC_MODEL set ──────────────────────────────────
 
-// IT-5: CLAUDE_MODEL=claude-opus-4-8 → env value shown with (env) annotation; exit 0
+// IT-5: ANTHROPIC_MODEL=claude-opus-4-8 → env value shown with (env) annotation; exit 0
 #[ test ]
 fn it05_params_env_override_visible()
 {
@@ -120,7 +120,7 @@ fn it05_params_env_override_visible()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -158,7 +158,7 @@ fn it07_params_json_output_structure()
 
   let out = run_clv_with_env(
     &[ ".params", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text  = stdout( &out );
@@ -201,7 +201,7 @@ fn it09_params_compact_v0_output()
 
   let out = run_clv_with_env(
     &[ ".params", "v::0" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -223,7 +223,7 @@ fn it10_params_default_annotation()
   let out = std::process::Command::new( bin )
     .args( [ ".params", "key::model" ] )
     .env( "HOME", dir.path().to_str().unwrap() )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -245,7 +245,7 @@ fn it11_params_show_all_alphabetical()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -358,7 +358,7 @@ fn t01_params_show_all_table_headers()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -377,7 +377,7 @@ fn t07_params_show_all_no_trailing_whitespace()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );

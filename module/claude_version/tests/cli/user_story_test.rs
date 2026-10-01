@@ -12,7 +12,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_history, run_clv_with_env, stderr, stdout, write_settings };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // US-001: Environment Check
@@ -123,7 +123,7 @@ fn us04_002_version_show_exits_0()
 #[ test ]
 fn us05_002_version_history_exits_0()
 {
-  let out = run_clv_with_env( &[ ".version.list", "mode::history" ], &[] );
+  let out = run_clv_history( &[ ".version.list", "mode::history" ] );
   if out.status.code() == Some( 0 )
   {
     assert!( !stdout( &out ).is_empty(), ".version.list mode::history must produce output" );
@@ -414,7 +414,7 @@ fn us1_006_config_show_all_source_annotations()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -651,7 +651,7 @@ fn us01_007_params_show_all_entries()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -673,13 +673,13 @@ fn us02_007_params_single_model_forms()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "--model" ),           "must show CLI form --model: {text}" );
-  assert!( text.contains( "CLAUDE_MODEL" ),      "must show env form CLAUDE_MODEL: {text}" );
-  assert!( text.contains( "claude-sonnet-5" ), "must show default: {text}" );
+  assert!( text.contains( "ANTHROPIC_MODEL" ),   "must show env form ANTHROPIC_MODEL: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ),   "must show default: {text}" );
   assert!( text.contains( "(default)" ),         "must show (default) annotation: {text}" );
 }
 
@@ -717,7 +717,7 @@ fn us04_007_params_kind_env_only()
   assert!( !text.contains( "theme" ),        "kind::env must exclude config-only theme: {text}" );
 }
 
-// US-5: .params key::model with CLAUDE_MODEL set → shows (env) annotation; exit 0
+// US-5: .params key::model with ANTHROPIC_MODEL set → shows (env) annotation; exit 0
 #[ test ]
 fn us05_007_params_env_override_annotated()
 {
@@ -726,7 +726,7 @@ fn us05_007_params_env_override_annotated()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -764,7 +764,7 @@ fn us07_007_params_json_array_output()
 
   let out = run_clv_with_env(
     &[ ".params", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text    = stdout( &out );
@@ -804,7 +804,7 @@ fn us10_007_params_show_all_alphabetical()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text  = stdout( &out );

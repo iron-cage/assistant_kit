@@ -331,6 +331,57 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
   );
 }
 
+/// `mre_bug578` — the full IDs clp itself writes for `opus`/`sonnet` (`OPUS_MODEL_ID`,
+/// `SONNET_MODEL_ID`) normalize to the shorthand in both override directions.
+///
+/// # Root Cause
+/// `override_session_model_to_opus` (`claude_profile_core`) recognized full Opus IDs from an
+/// exact-string list. `cc988323` remapped `OPUS_MODEL_ID` to `"claude-opus-5-5"` without
+/// extending it, so `.model model::opus`'s own value was never normalized and the
+/// `sonnet→opus` trace never fired.
+///
+/// # Why Not Caught
+/// `mre_bug286_full_opus_id_normalized_to_shorthand` pre-writes the literal `"claude-opus-4-8"`,
+/// which keeps passing after any remap. No test fed the live constants to the gates.
+///
+/// # Fix Applied
+/// The opus gate matches any bare `claude-opus-*` ID (BUG-578, `claude_profile_core`).
+///
+/// # Prevention
+/// Both directions pre-write the live constants. The sonnet gate still lists its full IDs, so
+/// the next `SONNET_MODEL_ID` remap fails here until that gate recognizes it.
+///
+/// # Pitfall
+/// Test the constant, not its current value: a literal keeps passing while the constant moves on.
+#[ doc = "bug_reproducer(BUG-578)" ]
+#[ test ]
+fn mre_bug578_own_full_model_ids_normalized_both_directions()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  use claude_profile::usage::test_bridge::types::{ OPUS_MODEL_ID, SONNET_MODEL_ID };
+  // ( pre-written model, 7d(Son) utilization, expected shorthand ): 95% used is below the 10%-left
+  // threshold (→ opus), 50% used is above it (→ sonnet).
+  for ( model, utilization, expected ) in [ ( OPUS_MODEL_ID, 95.0, "opus" ), ( SONNET_MODEL_ID, 50.0, "sonnet" ) ]
+  {
+    let dir   = TempDir::new().unwrap();
+    let paths = claude_profile::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    std::fs::write( paths.settings_file(), format!( r#"{{"model":"{model}"}}"# ) ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "account.use", "test-account", claude_profile::account::AccountBackend::Anthropic );
+    let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+    assert!(
+      content.contains( &format!( "\"{expected}\"" ) ) && !content.contains( model ),
+      "BUG-578: {model:?} at 7d(Son) {utilization}% used must be normalized to {expected:?}; got: {content}",
+    );
+  }
+}
+
 /// `mre_bug300` — `apply_model_override()` fires unconditionally when `seven_day_sonnet = None`.
 ///
 /// # Root Cause

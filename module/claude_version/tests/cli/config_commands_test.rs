@@ -16,7 +16,7 @@
 //! | IT-4  | `key::model value::claude-opus-4-8 scope::project` → project write | set | 0 |
 //! | IT-5  | `key::theme unset::1` → key removed from user settings | unset | 0 |
 //! | IT-6  | `format::json` → JSON with source fields | show-all | 0 |
-//! | IT-7  | `key::model` with `CLAUDE_MODEL` set → shows env value | get | 0 |
+//! | IT-7  | `key::model` with `ANTHROPIC_MODEL` set → shows env value | get | 0 |
 //! | IT-8  | `key::unknownArbitraryKey value::v` → accepted, written | set | 0 |
 //! | IT-9  | `key::model` no env/config → shows catalog default | get | 0 |
 //! | IT-10 | `key::theme value::dark dry::1` → preview, no write | set | 0 |
@@ -38,7 +38,7 @@
 //! | FT-04 | AC-04 | set with scope::project writes to project settings.json | 0 |
 //! | FT-05 | AC-05 | unset removes key from user settings | 0 |
 //! | FT-06 | AC-06 | format::json returns resolved settings with source fields | 0 |
-//! | FT-07 | AC-07 | env var (CLAUDE_MODEL) overrides user config for model key | 0 |
+//! | FT-07 | AC-07 | env var (ANTHROPIC_MODEL) overrides user config for model key | 0 |
 //! | FT-08 | AC-08 | absent key shows default (hasCompletedOnboarding→false) | 0 |
 //! | FT-09 | AC-09 | dry::1 previews set, no file change | 0 |
 //! | FT-10 | AC-10 | HOME unset → exit 2 | 2 |
@@ -61,7 +61,7 @@ fn it01_config_show_all_source_labels()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -178,7 +178,7 @@ fn it06_config_show_all_json_format()
 
   let out = run_clv_with_env(
     &[ ".config", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -189,7 +189,7 @@ fn it06_config_show_all_json_format()
 
 // ─── IT-7: env var overrides for model ───────────────────────────────────────
 
-// IT-7: key::model with CLAUDE_MODEL set → shows env value with (env) annotation; exit 0
+// IT-7: key::model with ANTHROPIC_MODEL set → shows env value with (env) annotation; exit 0
 #[ test ]
 fn it07_config_get_env_override()
 {
@@ -198,7 +198,7 @@ fn it07_config_get_env_override()
 
   let out = run_clv_with_env(
     &[ ".config", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -245,7 +245,7 @@ fn it09_config_catalog_default_model()
   let out = std::process::Command::new( bin )
     .args( [ ".config", "key::model" ] )
     .env( "HOME", home )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -396,7 +396,7 @@ fn ft1_006_config_show_all_text()
   let out = std::process::Command::new( bin )
     .args( [ ".config" ] )
     .env( "HOME", home )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( cwd_dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -522,7 +522,7 @@ fn ft6_006_config_show_all_json()
 
   let out = run_clv_with_env(
     &[ ".config", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -536,7 +536,7 @@ fn ft6_006_config_show_all_json()
 
 // ─── FT-07: AC-07 env var overrides user config ──────────────────────────────
 
-// FT-7: CLAUDE_MODEL=claude-opus-4-8 overrides user settings model → shows (env); exit 0
+// FT-7: ANTHROPIC_MODEL=claude-opus-4-8 overrides user settings model → shows (env); exit 0
 #[ test ]
 fn ft7_006_config_env_overrides_user()
 {
@@ -546,7 +546,7 @@ fn ft7_006_config_env_overrides_user()
 
   let out = run_clv_with_env(
     &[ ".config", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -646,7 +646,7 @@ fn ft12_006_config_catalog_default_model()
   let out = std::process::Command::new( bin )
     .args( [ ".config", "key::model" ] )
     .env( "HOME", home )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -786,7 +786,7 @@ fn tc01_007_config_key_catalog_default()
   let out = std::process::Command::new( bin )
     .args( [ ".config", "key::model" ] )
     .env( "HOME", dir.path().to_str().unwrap() )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -864,7 +864,7 @@ fn tc05_007_config_key_absent_show_all()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -896,7 +896,7 @@ fn t04_config_show_all_table_headers()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -905,7 +905,7 @@ fn t04_config_show_all_table_headers()
   assert!( text.lines().count() >= 2, "expected header + ≥1 row, got:\n{text}" );
 }
 
-// T06: show-all with CLAUDE_MODEL set → model row's Source column shows "env"
+// T06: show-all with ANTHROPIC_MODEL set → model row's Source column shows "env"
 #[ test ]
 fn t06_config_show_all_env_override_source()
 {
@@ -914,7 +914,7 @@ fn t06_config_show_all_env_override_source()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -935,7 +935,7 @@ fn t08_config_show_all_no_trailing_whitespace()
 
   let out = run_clv_with_env(
     &[ ".config" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );

@@ -76,7 +76,7 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 | IT-4 | `key::model value::claude-opus-4-8 scope::project` → project write | set | 0 | F1=scope-project, F4=project |
 | IT-5 | `key::theme unset::1` → key removed from user settings | unset | 0 | F1=unset |
 | IT-6 | `format::json` → JSON with source fields | show-all | 0 | F2=json |
-| IT-7 | `key::model` with `CLAUDE_MODEL` set → shows env value | get | 0 | F1=key-only |
+| IT-7 | `key::model` with `ANTHROPIC_MODEL` set → shows env value | get | 0 | F1=key-only |
 | IT-8 | `key::unknownArbitraryKey value::v` → accepted, written | set | 0 | F1=key+value |
 | IT-9 | `key::model` no env/config → shows catalog default | get | 0 | F1=key-only |
 | IT-10 | `key::theme value::dark dry::1` → preview, no write | set | 0 | F3=1 |
@@ -187,9 +187,9 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 ---
 
-### IT-7: `key::model` with `CLAUDE_MODEL` set → shows env value
+### IT-7: `key::model` with `ANTHROPIC_MODEL` set → shows env value
 
-- **Given:** `HOME=<tmp>`; `CLAUDE_MODEL=claude-opus-4-8` in environment; user config omits `model`
+- **Given:** `HOME=<tmp>`; `ANTHROPIC_MODEL=claude-opus-4-8` in environment; user config omits `model`
 - **When:** `clv .config key::model`
 - **Then:** exit 0; output shows `claude-opus-4-8` with source annotation `(env)` or `(environment)`
 - **Exit:** 0
@@ -209,7 +209,7 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 ### IT-9: `key::model` no env/config → shows catalog default
 
-- **Given:** `HOME=<tmp>` with empty `~/.claude/settings.json`; `CLAUDE_MODEL` unset
+- **Given:** `HOME=<tmp>` with empty `~/.claude/settings.json`; `ANTHROPIC_MODEL` unset
 - **When:** `clv .config key::model`
 - **Then:** exit 0; output shows `claude-sonnet-5` (catalog default) with source annotation `(default)`
 - **Exit:** 0

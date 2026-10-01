@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document failure modes in session model and effort management via `settings.json`.
-- **Responsibility**: Covers absent-tier/exhaustion confusion, one-way ratchet, missing initialization, effort decoupling, and unconditional effort write requirement.
-- **In Scope**: `apply_model_override()` and `set_session_effort()` pitfalls; BUG-300, BUG-311, BUG-312, BUG-322, TSK-335 H2.
+- **Responsibility**: Covers absent-tier/exhaustion confusion, one-way ratchet, missing initialization, effort decoupling, unconditional effort write requirement, and full-ID gate arms that go stale.
+- **In Scope**: `apply_model_override()` and `set_session_effort()` pitfalls; BUG-286, BUG-300, BUG-311, BUG-312, BUG-322, BUG-578, TSK-335 H2.
 - **Out of Scope**: Quota gate pitfalls (→ pitfall/001); session model override algorithm (→ algorithm/002).
 
 ### Pattern
@@ -50,6 +50,14 @@ Gating `set_session_effort()` inside `if overrode { }` means effort is only upda
 **Fix:** Move all effort writes outside the `if overrode` gate — they run unconditionally on every `apply_model_override()` call.
 
 **Rule:** Effort sync must be unconditional. "Model didn't change" does not mean "effort is correct" — the effort field is independent and can be absent or stale even when the model is already right.
+
+### Pitfall 6 — Exact full-ID gate arms go stale when a model constant moves (BUG-286, BUG-578)
+
+`override_session_model_to_opus()` normalizes a full Opus ID in `settings.json` to the `"opus"` shorthand. It used to recognize full IDs by exact string: `"claude-opus-4-6"`, then `"claude-opus-4-8"` added by BUG-286. Each arm was the value clp's own `opus` shorthand wrote at the time (`OPUS_MODEL_ID`). When `OPUS_MODEL_ID` moved to `"claude-opus-5-5"`, no arm was added. `.model model::opus` then wrote a value the gate didn't recognize, so normalization and the `sonnet→opus` trace line silently stopped for it. The unit tests pre-wrote the old literals and kept passing.
+
+**Fix:** Match by shape: any bare `claude-opus-*` ID, excluding `[`-suffixed IDs (`claude-opus-5-5[1m]`) so a user-chosen 1M context isn't dropped. `mre_bug578_own_full_model_ids_normalized_both_directions` feeds the live `OPUS_MODEL_ID` and `SONNET_MODEL_ID` constants to both gates.
+
+**Rule:** A gate that must recognize "the value we write" is tested with the constant that produces it, never a copy of its current value. The Sonnet gate still lists `"claude-sonnet-5"`/`"claude-sonnet-4-6"` exactly; the constant-fed test is what catches the next `SONNET_MODEL_ID` remap.
 
 ### Algorithms
 

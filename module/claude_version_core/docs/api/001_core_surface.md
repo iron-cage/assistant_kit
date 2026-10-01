@@ -49,7 +49,7 @@ front.
 | `pub struct SettingDef { key, env_var, default }` | All fields `&'static str` / `Option< &'static str >`. `Debug`. |
 | `catalog() -> &'static [ SettingDef ]` | The authoritative registry of known settings keys. `#[must_use]`. |
 
-Ten entries, of which exactly two carry an env-var mapping — `model` → `CLAUDE_MODEL` and
+Ten entries, of which exactly two carry an env-var mapping — `model` → `ANTHROPIC_MODEL` and
 `env.DISABLE_UPDATES` → `DISABLE_UPDATES`. A key absent from this catalog can still be read
 from a settings file, but it has no env-var layer and no default; see `Layer::Absent` below.
 
@@ -68,7 +68,7 @@ from a settings file, but it has no env-var layer and no default; see `Layer::Ab
 and stops at the git-repository boundary or the filesystem root, whichever comes first.
 
 **An empty env var does not win the resolution.** `resolve` requires the variable to be both
-set and non-empty before returning `Layer::Env`; `CLAUDE_MODEL=""` falls through to the
+set and non-empty before returning `Layer::Env`; `ANTHROPIC_MODEL=""` falls through to the
 project layer rather than resolving to `Some( "" )`. This is deliberate — an exported-but-blank
 variable is far more often an unset-shell artifact than an intentional override — but it means
 `Env` can never be the source of an empty string. The lower layers apply no such filter, so a

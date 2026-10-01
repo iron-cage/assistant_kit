@@ -14,7 +14,7 @@
 //! | cli/param/14_mode.md | EC-6 | `mode_ec6_uppercase_exits_1` |
 //! | cli/param/14_mode.md | EC-7 | `mode_ec7_count_inert_under_aliases` |
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_history, stderr, stdout };
 
 /// Alias names that only ever appear in `mode::aliases` output.
 const ALIAS_MARKERS : [ &str; 2 ] = [ "latest", "stable" ];
@@ -37,7 +37,7 @@ fn mode_ec1_aliases_shows_alias_table()
 #[ test ]
 fn mode_ec2_history_shows_release_history()
 {
-  let out = run_clv( &[ ".version.list", "mode::history" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( !text.is_empty(), "history output must be non-empty" );

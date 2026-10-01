@@ -28,7 +28,7 @@ Both are valid; the scope of resolution differs.
 | FT-4 | AC-4 | `.config key::K value::V scope::project` writes to project settings.json | ✅ `ft4_006_config_set_project_scope` |
 | FT-5 | AC-5 | `.config key::K unset::1` removes key from user settings | ✅ `ft5_006_config_unset_removes_key` |
 | FT-6 | AC-6 | `.config format::json` returns resolved settings as JSON with source fields | ✅ `ft6_006_config_show_all_json` |
-| FT-7 | AC-7 | Env var (CLAUDE_MODEL) overrides project and user config for `model` key | ✅ `ft7_006_config_env_overrides_user` |
+| FT-7 | AC-7 | Env var (ANTHROPIC_MODEL) overrides project and user config for `model` key | ✅ `ft7_006_config_env_overrides_user` |
 | FT-8 | AC-8 | `.config key::K` absent everywhere → exit 0 with absent indicator | ✅ `ft8_006_config_get_absent_key` |
 | FT-9 | AC-9 | `.config key::K value::V dry::1` → preview, no file change | ✅ `ft9_006_config_set_dry_run` |
 | FT-10 | AC-10 | HOME unset → exit 2 for any filesystem operation | ✅ `ft10_006_config_home_unset_exits_2` |
@@ -51,7 +51,7 @@ Both are valid; the scope of resolution differs.
 
 ### FT-1: show-all prints resolved settings in text format
 
-- **Given:** isolated HOME with `settings.json` containing `{"theme": "dark"}`; no project config; `CLAUDE_MODEL` unset
+- **Given:** isolated HOME with `settings.json` containing `{"theme": "dark"}`; no project config; `ANTHROPIC_MODEL` unset
 - **When:** `clv .config`
 - **Then:** stdout contains `model` with default value `claude-sonnet-5` (source: default) and `theme` with value `dark` (source: user); exit 0
 - **Exit:** 0
@@ -101,7 +101,7 @@ Both are valid; the scope of resolution differs.
 
 ### FT-6: format::json returns resolved settings with source fields
 
-- **Given:** isolated HOME; `settings.json` contains `{"theme": "dark"}`; `CLAUDE_MODEL` unset
+- **Given:** isolated HOME; `settings.json` contains `{"theme": "dark"}`; `ANTHROPIC_MODEL` unset
 - **When:** `clv .config format::json`
 - **Then:** stdout is valid JSON object containing `"model"` with `"source": "default"` and `"theme"` with `"source": "user"`; exit 0
 - **Exit:** 0
@@ -111,7 +111,7 @@ Both are valid; the scope of resolution differs.
 
 ### FT-7: env var overrides user config for model key
 
-- **Given:** isolated HOME; `settings.json` contains `{"model": "claude-sonnet-5"}`; `CLAUDE_MODEL=claude-opus-4-8` set in env
+- **Given:** isolated HOME; `settings.json` contains `{"model": "claude-sonnet-5"}`; `ANTHROPIC_MODEL=claude-opus-4-8` set in env
 - **When:** `clv .config key::model`
 - **Then:** stdout shows `claude-opus-4-8` with `(env)` source annotation; exit 0
 - **Exit:** 0
@@ -121,7 +121,7 @@ Both are valid; the scope of resolution differs.
 
 ### FT-8: absent key shows absent indicator, exit 0
 
-- **Given:** isolated HOME; empty `settings.json`; `CLAUDE_MODEL` unset
+- **Given:** isolated HOME; empty `settings.json`; `ANTHROPIC_MODEL` unset
 - **When:** `clv .config key::hasCompletedOnboarding`
 - **Then:** stdout shows `false` with `(default)` source annotation (catalog default); exit 0
 - **Exit:** 0
@@ -161,7 +161,7 @@ Both are valid; the scope of resolution differs.
 
 ### FT-12: catalog default for model is claude-sonnet-5
 
-- **Given:** isolated HOME; empty `settings.json`; `CLAUDE_MODEL` unset; no project config
+- **Given:** isolated HOME; empty `settings.json`; `ANTHROPIC_MODEL` unset; no project config
 - **When:** `clv .config key::model`
 - **Then:** stdout shows `claude-sonnet-5` with `(default)` annotation; exit 0
 - **Exit:** 0

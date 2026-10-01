@@ -85,7 +85,7 @@ fn ac01_002_env_overrides_user()
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
   crate::subprocess_helpers::write_settings( home_dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
-  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-8" );
+  std::env::set_var( "ANTHROPIC_MODEL", "claude-opus-4-8" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Env,                             "env must beat user config: got {:?}", r.source );
   assert_eq!( r.value,  Some( "claude-opus-4-8".to_string() ),  "wrong value: {:?}", r.value );
@@ -98,7 +98,7 @@ fn ac02_002_user_config_wins_without_env()
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
   crate::subprocess_helpers::write_settings( home_dir.path(), &[ ( "model", "claude-haiku-4-5-20251001" ) ] );
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::User,                                    "user config must win when env absent: got {:?}", r.source );
   assert_eq!( r.value,  Some( "claude-haiku-4-5-20251001".to_string() ), "wrong value: {:?}", r.value );
@@ -112,7 +112,7 @@ fn ac03_002_project_config_key()
   let cwd      = TempDir::new().unwrap();
   // Write project settings at cwd/.claude/settings.json (found by ancestor walk).
   crate::subprocess_helpers::write_settings( cwd.path(), &[ ( "model", "claude-opus-4-8" ) ] );
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Project,                        "project config must supply value: got {:?}", r.source );
   assert_eq!( r.value,  Some( "claude-opus-4-8".to_string() ), "wrong value: {:?}", r.value );
@@ -125,7 +125,7 @@ fn ac04_002_catalog_default_returned()
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
   // No settings files written; "model" has catalog default "claude-sonnet-5".
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Default,                           "catalog default must be returned: got {:?}", r.source );
   assert_eq!( r.value,  Some( "claude-sonnet-5".to_string() ),  "wrong default value: {:?}", r.value );
@@ -167,7 +167,7 @@ fn ac07_002_home_unset_skips_user_config()
   let cwd      = TempDir::new().unwrap();
   // No .claude/settings.json written to home_dir — simulates absent HOME at CLI layer.
   // No project config in cwd.
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let r = resolve( "theme", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Default,                "absent user config must fall through to Default: got {:?}", r.source );
   assert_eq!( r.value,  Some( "dark".to_string() ),    "catalog default for 'theme' must be \"dark\": {:?}", r.value );
@@ -185,7 +185,7 @@ fn ac08_002_ancestor_project_config_found()
   // child is a subdirectory of parent — it has no .claude/settings.json of its own.
   let child = parent.path().join( "subdir" );
   std::fs::create_dir_all( &child ).unwrap();
-  std::env::remove_var( "CLAUDE_MODEL" );
+  std::env::remove_var( "ANTHROPIC_MODEL" );
   let r = resolve( "preferredVersionSpec", home_dir.path(), &child, config_catalog::catalog() );
   assert_eq!( r.source, Layer::Project,              "ancestor project config must supply value: got {:?}", r.source );
   assert_eq!( r.value,  Some( "beta".to_string() ),  "ancestor config value must be returned: {:?}", r.value );

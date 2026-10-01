@@ -13,7 +13,7 @@
 //! | cli/type/10_list_mode.md | TC-5 | `list_mode_tc5_unknown_exits_1` |
 //! | cli/type/10_list_mode.md | TC-6 | `list_mode_tc6_empty_exits_1` |
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_history, stderr, stdout };
 
 /// Alias names that only ever appear in `mode::aliases` output.
 const ALIAS_MARKERS : [ &str; 2 ] = [ "latest", "stable" ];
@@ -36,7 +36,7 @@ fn list_mode_tc1_aliases_shows_table()
 #[ test ]
 fn list_mode_tc2_history_shows_entries()
 {
-  let out = run_clv( &[ ".version.list", "mode::history" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( !text.is_empty(), "history output must be non-empty" );

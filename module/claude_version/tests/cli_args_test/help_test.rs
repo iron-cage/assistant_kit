@@ -22,7 +22,7 @@
 //! | `ec7_help_accepted_by_all_commands` | `10_help` | `.help` universally accepted | P |
 //! | `ec8_help_wins_over_params` | `10_help` | `.help` wins over all params | P |
 
-use crate::subprocess_helpers::{ assert_container, run, out_stdout, code };
+use crate::subprocess_helpers::{ run, run_in_home, out_stdout, code };
 
 // TC-001: empty argv → help output, exit 0
 #[ test ]
@@ -149,7 +149,8 @@ fn tc489_bare_help_after_command_routes_to_help()
 #[ test ]
 fn tc490_bare_help_after_params_routes_to_help()
 {
-  let out = run( &[ ".version.list", "mode::history", "count::3", "help" ] );
+  let home = tempfile::TempDir::new().expect( "failed to create tmpdir" );
+  let out = run_in_home( &[ ".version.list", "mode::history", "count::3", "help" ], home.path() );
   assert_eq!( code( &out ), 0, "`.version.list mode::history count::3 help` must exit 0" );
   let stdout = out_stdout( &out );
   assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
@@ -161,15 +162,8 @@ fn tc490_bare_help_after_params_routes_to_help()
 #[ test ]
 fn ec3_help_mutation_no_side_effects()
 {
-  assert_container();
   let dir = tempfile::TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let bin = env!( "CARGO_BIN_EXE_claude_version" );
-  let out = std::process::Command::new( bin )
-    .args( [ ".settings.set", "key::theme", "value::dark", ".help" ] )
-    .env( "HOME", home )
-    .output()
-    .expect( "failed to run" );
+  let out = run_in_home( &[ ".settings.set", "key::theme", "value::dark", ".help" ], dir.path() );
   assert_eq!( code( &out ), 0, ".help must exit 0 even with mutation command: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = out_stdout( &out );
   assert!( stdout.contains( "Version Management" ), "must show help: {stdout}" );

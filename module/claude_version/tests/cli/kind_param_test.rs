@@ -151,13 +151,13 @@ fn kind_ec7_ignored_when_key_present()
   let home = dir.path().to_str().unwrap();
   let out  = run_clv_with_env(
     &[ ".params", "key::model", "kind::env" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // key:: triggers single-param mode; kind:: is ignored; model forms must appear
-  assert!( text.contains( "--model" ),     "kind:: ignored — must show --model CLI form: {text}" );
-  assert!( text.contains( "CLAUDE_MODEL" ), "kind:: ignored — must show CLAUDE_MODEL env form: {text}" );
+  assert!( text.contains( "--model" ),         "kind:: ignored — must show --model CLI form: {text}" );
+  assert!( text.contains( "ANTHROPIC_MODEL" ), "kind:: ignored — must show ANTHROPIC_MODEL env form: {text}" );
 }
 
 // ─── TC-1 (cli/type/08_param_kind.md): config variant shows config params ─────

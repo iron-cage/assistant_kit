@@ -37,7 +37,7 @@ Type compliance and validation tests for `ConfigKey`. See [type/07_config_key.md
 
 ### TC-1: `key::model` -> catalog key, resolves env + default
 
-- **Given:** clean HOME; no `CLAUDE_MODEL` env var; no user config
+- **Given:** clean HOME; no `ANTHROPIC_MODEL` env var; no user config
 - **When:** `clv .config key::model`
 - **Then:** exit 0; output contains `claude-sonnet-5` and source annotation `(default)`
 - **Exit:** 0

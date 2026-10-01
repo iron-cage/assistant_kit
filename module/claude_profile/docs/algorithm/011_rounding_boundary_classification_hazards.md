@@ -48,26 +48,26 @@ Rounding happens once, at step 1, and both the comparison and the display consum
 
 #### Entry Point 2 — `apply_model_override`
 
-`claude_profile/src/usage/api_switch.rs:261-347` — `pub fn apply_model_override(quota: &OauthUsageData, paths: &crate::ClaudePaths, trace: bool, label: &str, name: &str, backend: AccountBackend)`. Called from `usage_routine()` (`api.rs:188,341`) and from `apply_post_switch_touch()` (`api_switch.rs:378`, itself invoked by `account_use_routine()` in `commands/account_ops.rs` during `.account.use`) for the current/winning account after a successful quota fetch. Shown below in its current, post-BUG-331-fix form.
+`claude_profile/src/usage/api_switch.rs:289-375` — `pub fn apply_model_override(quota: &OauthUsageData, paths: &crate::ClaudePaths, trace: bool, label: &str, name: &str, backend: AccountBackend)`. Called from `usage_routine()` (`api.rs:176,372`) and from `apply_post_switch_touch()` (`api_switch.rs:406`, itself invoked by `account_use_routine()` in `commands/account_ops.rs` during `.account.use`) for the current/winning account after a successful quota fetch. Shown below in its current, post-BUG-331-fix form.
 
 ```rust
 if let Some( ref sonnet ) = quota.seven_day_sonnet
 {
-  let sonnet_left = ( 100.0 - sonnet.utilization ).round();      // api_switch.rs:293, rounded once (Fix BUG-331)
-  if sonnet_left < OPUS_OVERRIDE_THRESHOLD                       // api_switch.rs:294, compares the ROUNDED value
+  let sonnet_left = sonnet_left_pct( sonnet );                   // api_switch.rs:321 — ( 100.0 - u ).round() at :121-124, rounded once (Fix BUG-331)
+  if sonnet_left < OPUS_OVERRIDE_THRESHOLD                       // api_switch.rs:322, compares the ROUNDED value
   {
-    // sonnet→opus branch (api_switch.rs:295-312)
-    // ... trace log: format!( "...sonnet→opus (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:305, formats SAME rounded value
+    // sonnet→opus branch (api_switch.rs:323-340)
+    // ... trace log: format!( "...sonnet→opus (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:333, formats SAME rounded value
   }
   else
   {
-    // opus→sonnet branch (api_switch.rs:313-325)
-    // ... trace log: format!( "...opus→sonnet (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:319, formats SAME rounded value
+    // opus→sonnet branch (api_switch.rs:342-353)
+    // ... trace log: format!( "...opus→sonnet (7d(Son) left={sonnet_left:.0}%)..." )   // api_switch.rs:347, formats SAME rounded value
   }
 }
 else
 {
-  // sonnet tier absent — conservative "sonnet" branch (api_switch.rs:327-337), no threshold comparison
+  // sonnet tier absent — conservative "sonnet" branch (api_switch.rs:356-365), no threshold comparison
 }
 ```
 
@@ -75,11 +75,13 @@ else
 
 | Condition | Branch | Model write | Effort write | Trace log (when `trace::1`) |
 |-----------|--------|--------------|----------------|-------------------------------|
-| `seven_day_sonnet` present AND `sonnet_left < OPUS_OVERRIDE_THRESHOLD` (rounded compare, `api_switch.rs:294`) | sonnet→opus | `claude-opus-4-8` | `max` | `model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:305`, formats same rounded value) |
-| `seven_day_sonnet` present AND `sonnet_left >= OPUS_OVERRIDE_THRESHOLD` | opus→sonnet | `claude-sonnet-5` (via `override_session_model_to_sonnet`) | `high` | `model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:319`, formats same rounded value) |
-| `seven_day_sonnet` absent (`None`) | conservative sonnet | `claude-sonnet-5` | `high` | none (no threshold comparison, not affected) |
+| `seven_day_sonnet` present AND `sonnet_left < OPUS_OVERRIDE_THRESHOLD` (rounded compare, `api_switch.rs:322`) | sonnet→opus | `"opus"` shorthand (via `override_session_model_to_opus`) | `max` | `model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:333`, formats same rounded value) |
+| `seven_day_sonnet` present AND `sonnet_left >= OPUS_OVERRIDE_THRESHOLD` | opus→sonnet | `"sonnet"` shorthand (via `override_session_model_to_sonnet`) | `high` | `model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)` (`api_switch.rs:347`, formats same rounded value) |
+| `seven_day_sonnet` absent (`None`) | conservative sonnet | `"sonnet"` shorthand (via `override_session_model_to_sonnet`) | `high` | none (no threshold comparison, not affected) |
 
-`OPUS_OVERRIDE_THRESHOLD : f64 = 10.0` (`types.rs:456`). Both entry points now round once and reuse the rounded value for both comparison and display/trace — the BUG-331 fix (see § Rounding-Boundary Hazard : Fix pattern below).
+Each model write happens only when the session model passes that function's gate (`claude_profile_core/src/account/session_settings.rs`) — e.g. the opus write skips a model that is already `"opus"`; the effort write is unconditional in every row (TSK-335).
+
+`OPUS_OVERRIDE_THRESHOLD : f64 = 10.0` (`types.rs:567`). Both entry points now round once and reuse the rounded value for both comparison and display/trace — the BUG-331 fix (see § Rounding-Boundary Hazard : Fix pattern below).
 
 ### Rounding-Boundary Hazard (BUG-331)
 
@@ -118,9 +120,9 @@ format!( "{emoji} {left:.0}%" )
 ```
 
 ```rust
-// apply_model_override, api_switch.rs:293-294 — same pattern, applied before BOTH the
-// branch comparison (line 294) and both trace writeln! calls (lines 305, 319):
-let sonnet_left = ( 100.0 - sonnet.utilization ).round();
+// apply_model_override, api_switch.rs:321-322 — same pattern, applied before BOTH the
+// branch comparison (line 322) and both trace writeln! calls (lines 333, 347):
+let sonnet_left = sonnet_left_pct( sonnet ); // ( 100.0 - sonnet.utilization ).round()
 if sonnet_left < OPUS_OVERRIDE_THRESHOLD { /* ... */ } else { /* ... */ }
 ```
 
@@ -151,8 +153,8 @@ Per BUG-331 § History (Step 6 — Search More Instances), the following thresho
 | File | Relationship |
 |------|--------------|
 | `src/usage/format.rs:470-478` | `pct_emoji` closure — both call sites (`format.rs:487,489`) |
-| `src/usage/api_switch.rs:261-347` | `apply_model_override` — branch selection (`293-294`) and trace logging (`305,319`) |
-| `src/usage/types.rs:456,465,471` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
+| `src/usage/api_switch.rs:289-375` | `apply_model_override` — branch selection (`321-322`, rounding in `sonnet_left_pct` at `121-124`) and trace logging (`333,347`) |
+| `src/usage/types.rs:567,576,582` | `OPUS_OVERRIDE_THRESHOLD`, `H_EXHAUSTED_THRESHOLD`, `WEEKLY_EXHAUSTION_THRESHOLD` constant definitions |
 | `src/usage/approx.rs:100-176` | `quadratic_fit()` — upstream source of the floating-point noise that triggers this hazard (see algorithm/006) |
 
 ### Invariants

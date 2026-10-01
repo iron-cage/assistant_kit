@@ -63,7 +63,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 | IT-2 | `key::model` → block with CLI, env, config forms + default | single | 0 | F1=key-known |
 | IT-3 | `kind::config` → only config-key params; env-only absent | show-all | 0 | F2=config |
 | IT-4 | `kind::env` → only env-var params; config-only absent | show-all | 0 | F2=env |
-| IT-5 | `key::model` with CLAUDE_MODEL set → env value shown with (env) | single | 0 | F5=set |
+| IT-5 | `key::model` with ANTHROPIC_MODEL set → env value shown with (env) | single | 0 | F5=set |
 | IT-6 | `key::bash_timeout` → env CLAUDE_CODE_BASH_TIMEOUT → unset, default 120000 | single | 0 | F5=unset |
 | IT-7 | `format::json` → valid JSON array with required fields per entry | show-all | 0 | F3=json |
 | IT-8 | `key::print` → shows --print CLI form + CLI-only annotation | single | 0 | F1=key-known |
@@ -123,9 +123,9 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ### IT-2: key::model deep-dive
 
-- **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
+- **Given:** `HOME=<tmp>` (no settings.json), `ANTHROPIC_MODEL` not set
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains strings `--model`, `CLAUDE_MODEL`, `config model`, and `claude-sonnet-5` (default)
+- **Then:** exit 0; stdout contains strings `--model`, `ANTHROPIC_MODEL`, `config model`, and `claude-sonnet-5` (default)
 - **Exit:** 0
 
 ---
@@ -148,9 +148,9 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ---
 
-### IT-5: key::model with CLAUDE_MODEL set
+### IT-5: key::model with ANTHROPIC_MODEL set
 
-- **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-8` in env
+- **Given:** `HOME=<tmp>`, `ANTHROPIC_MODEL=claude-opus-4-8` in env
 - **When:** `clv.params key::model`
 - **Then:** exit 0; stdout contains `claude-opus-4-8` and `(env)` annotation
 - **Exit:** 0
@@ -195,7 +195,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ### IT-10: key::model no env no config → default annotation
 
-- **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
+- **Given:** `HOME=<tmp>` (no settings.json), `ANTHROPIC_MODEL` not set
 - **When:** `clv.params key::model`
 - **Then:** exit 0; stdout contains `claude-sonnet-5` with `(default)` annotation; no env or config value shown
 - **Exit:** 0

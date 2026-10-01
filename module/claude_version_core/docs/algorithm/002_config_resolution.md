@@ -42,7 +42,7 @@ pub fn catalog() -> &'static [ SettingDef ];  // 10 entries
 
 **Step 1 — Environment variable check:**
 
-Look up K's env var mapping from the catalog. Of the 10 catalog entries, only `model` maps to an env var (`CLAUDE_MODEL`); the other 9 have `env_var: None`.
+Look up K's env var mapping from the catalog. Two of the 10 catalog entries map to an env var: `model` → `ANTHROPIC_MODEL`, the variable Claude Code itself reads for the model (the former `CLAUDE_MODEL` mapping named a variable Claude Code never reads — BUG-579), and `env.DISABLE_UPDATES` → `DISABLE_UPDATES`. The other 8 have `env_var: None`.
 
 If the catalog maps K to an env var E, read it:
 - Set and non-empty → return `ResolvedValue { value: Some(v), source: Env }`. Stop.
@@ -84,7 +84,7 @@ Look up K in `catalog()`:
 
 | Key | Env var | Default |
 |-----|---------|---------|
-| `model` | `CLAUDE_MODEL` | `claude-sonnet-5` |
+| `model` | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
 | `preferredVersionSpec` | — | — (absent) |
 | `preferredVersionResolved` | — | — (absent) |
 | `autoUpdates` | — | `true` |
@@ -93,7 +93,7 @@ Look up K in `catalog()`:
 | `env.DISABLE_AUTOUPDATER` | — | — (absent) |
 | `autoUpdatesChannel` | — | `latest` |
 | `minimumVersion` | — | — (absent) |
-| `env.DISABLE_UPDATES` | — | — (absent) |
+| `env.DISABLE_UPDATES` | `DISABLE_UPDATES` | — (absent) |
 
 Non-catalog keys are accepted by `resolve()` with no env mapping and no default — they resolve via Steps 2-3 only, or `Absent` if unset everywhere.
 

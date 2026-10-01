@@ -145,7 +145,7 @@ fn ft1_007_params_show_all_min_entries()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -170,13 +170,13 @@ fn ft2_007_params_single_model_full_detail()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "--model" ),           "must show CLI form --model: {text}" );
-  assert!( text.contains( "CLAUDE_MODEL" ),      "must show env form CLAUDE_MODEL: {text}" );
-  assert!( text.contains( "claude-sonnet-5" ), "must show value or default: {text}" );
+  assert!( text.contains( "ANTHROPIC_MODEL" ),   "must show env form ANTHROPIC_MODEL: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ),   "must show value or default: {text}" );
 }
 
 // ─── FT-3 (feature/007_params_command.md): kind::config filters ───────────────
@@ -219,7 +219,7 @@ fn ft4_007_params_kind_env_filters()
 
 // ─── FT-5 (feature/007_params_command.md): env override visible with (env) ────
 
-// FT-5: CLAUDE_MODEL=claude-opus-4-8 set → env value annotated (env); exit 0
+// FT-5: ANTHROPIC_MODEL=claude-opus-4-8 set → env value annotated (env); exit 0
 #[ test ]
 fn ft5_007_params_env_override_visible()
 {
@@ -228,7 +228,7 @@ fn ft5_007_params_env_override_visible()
 
   let out = run_clv_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -266,7 +266,7 @@ fn ft7_007_params_json_output_structure()
 
   let out = run_clv_with_env(
     &[ ".params", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text    = stdout( &out );
@@ -339,7 +339,7 @@ fn ft11_007_params_default_source_annotation()
   let out = std::process::Command::new( bin )
     .args( [ ".params", "key::model" ] )
     .env( "HOME", dir.path().to_str().unwrap() )
-    .env( "CLAUDE_MODEL", "" )
+    .env( "ANTHROPIC_MODEL", "" )
     .current_dir( dir.path() )
     .output()
     .expect( "failed to execute claude_version binary" );
@@ -361,7 +361,7 @@ fn ft12_007_params_show_all_alphabetical()
 
   let out = run_clv_with_env(
     &[ ".params" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text  = stdout( &out );

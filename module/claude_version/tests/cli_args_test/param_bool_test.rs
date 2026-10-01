@@ -11,7 +11,7 @@
 //! | TC-033 | `dry::true` (non-0/1 boolean) → exit 1 | N |
 //! | TC-034 | `dry::yes` (non-0/1 boolean) → exit 1 | N |
 //! | TC-035 | `force::true` (non-0/1 boolean) → exit 1 | N |
-//! | TC-036 | `dry::0` explicitly accepted | P |
+//! | TC-036 | `dry::0` runs the real install: idempotent at a pinned 2.1.220, preference written to a temp `HOME` | P |
 //! | TC-037 | `force::0` explicitly accepted | P |
 //! | TC-493 | `dry::0 dry::1` last-wins → `dry::1` wins, shows `[dry-run]` | P |
 //! | TC-494 | `dry::1 dry::0` last-wins → `dry::0` wins, file actually written | P |
@@ -26,7 +26,7 @@
 //! | `force_ec4_negative_exits_1` | `03_force` | `force::-1` → exit 1 (negative) | N |
 //! | `force_ec6_empty_exits_1` | `03_force` | `force::` → exit 1 (empty) | N |
 
-use crate::subprocess_helpers::{ assert_container, run, out_stdout, out_stderr, code };
+use crate::subprocess_helpers::{ run, run_in_home, out_stdout, out_stderr, code };
 
 // TC-020: dry::1 accepted
 #[ test ]
@@ -97,13 +97,49 @@ fn tc035_force_true_rejected()
   assert!( err.contains( "force::" ), "error must mention force::: {err}" );
 }
 
-// TC-036: dry::0 explicitly accepted
+// TC-036: dry::0 explicitly accepted — runs the real install, in a temp HOME
+//
+// Root Cause
+// TC-036 ran `.version.install dry::0` through `run()`, which inherits HOME.
+// Under runbox that HOME's `.claude/` is the developer's real `~/.claude`,
+// mounted read-write, so the non-dry install rewrote its preference keys to
+// `stable` (2.1.220) and could download and swap the installed binary.
+//
+// Why Not Caught
+// The test asserted only "not exit 1", which holds for a no-op, a network
+// failure, and a real downgrade alike, so nothing ever looked at what it wrote.
+//
+// Fix Applied
+// The test pins 2.1.220 in a temp HOME and installs `version::2.1.220`, so
+// the real (non-dry) path takes its idempotent branch: no network, installer,
+// or binary swap. It then asserts the preference landed in the temp HOME.
+//
+// Prevention
+// `run()` refuses `mode::history`, and commands that write under HOME go
+// through `run_in_home()`.
+//
+// Pitfall
+// "Must not exit 1" proves nothing about what a mutating command did. Give it
+// a HOME the test owns and assert the write itself.
+// test_kind: bug_reproducer(BUG-581)
 #[ test ]
 fn tc036_dry_0_accepted()
 {
-  let out = run( &[ ".version.install", "dry::0" ] );
-  // dry::0 means no dry-run — but command still runs (may exit 0 or 2)
-  assert_ne!( code( &out ), 1, "dry::0 is valid, must not exit 1" );
+  let home = tempfile::TempDir::new().expect( "failed to create tmpdir" );
+  let local_bin = home.path().join( ".local/bin" );
+  std::fs::create_dir_all( &local_bin ).expect( "failed to create .local/bin" );
+  std::os::unix::fs::symlink( "2.1.220", local_bin.join( "claude" ) ).expect( "failed to pin 2.1.220" );
+  let out = run_in_home( &[ ".version.install", "version::2.1.220", "dry::0" ], home.path() );
+  assert_eq!( code( &out ), 0, "dry::0 is valid and the pinned install is a no-op: {}", out_stderr( &out ) );
+  let text = out_stdout( &out );
+  assert!( text.contains( "already at v2.1.220" ), "dry::0 must take the real idempotent path: {text}" );
+  assert!( !text.contains( "[dry-run]" ), "dry::0 must not preview: {text}" );
+  let settings = std::fs::read_to_string( home.path().join( ".claude/settings.json" ) )
+    .expect( "dry::0 must write settings.json in the temp HOME" );
+  assert!(
+    settings.contains( "preferredVersionSpec" ) && settings.contains( "2.1.220" ),
+    "dry::0 must store the preference: {settings}"
+  );
 }
 
 // TC-037: force::0 explicitly accepted
@@ -178,13 +214,8 @@ fn tc493_dry_0_then_1_last_wins_dry_active()
 #[ test ]
 fn tc494_dry_1_then_0_last_wins_dry_inactive()
 {
-  assert_container();
   let dir = tempfile::TempDir::new().expect( "failed to create tmpdir" );
-  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
-  .args( [ ".settings.set", "key::probe", "value::check", "dry::1", "dry::0" ] )
-  .env( "HOME", dir.path() )
-  .output()
-  .expect( "failed to run clv" );
+  let out = run_in_home( &[ ".settings.set", "key::probe", "value::check", "dry::1", "dry::0" ], dir.path() );
 
   // dry::0 wins → real write, so settings file must exist
   let settings_file = dir.path().join( ".claude/settings.json" );
@@ -193,7 +224,7 @@ fn tc494_dry_1_then_0_last_wins_dry_inactive()
     "dry::0 (last) must win: settings file must be written"
   );
   // Must NOT show [dry-run] prefix
-  let text = String::from_utf8_lossy( &out.stdout ).into_owned();
+  let text = out_stdout( &out );
   assert!(
     !text.contains( "[dry-run]" ),
     "dry::0 (last) must win: output must NOT contain [dry-run]: {text}"

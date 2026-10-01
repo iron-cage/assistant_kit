@@ -12,7 +12,7 @@
 | # | Variable | Type | Default | Purpose |
 |---|----------|------|---------|---------|
 | 1 | `HOME` | Path | *(OS-provided)* | Locates settings file and credential store |
-| 2 | `CLAUDE_MODEL` | String | — | Overrides `model` setting; highest priority in `.config` resolution chain |
+| 2 | `ANTHROPIC_MODEL` | String | — | Overrides `model` setting; highest priority in `.config` resolution chain |
 | 3 | `CLAUDE_CODE_BASH_TIMEOUT` | u64 | 120000 | Timeout in ms for bash tool execution; read by `.params` for `bash_timeout` param effective value |
 
 ---
@@ -29,9 +29,11 @@ If `HOME` is unset, commands that access settings or credentials exit with code 
 
 ---
 
-### Variable :: 2. `CLAUDE_MODEL`
+### Variable :: 2. `ANTHROPIC_MODEL`
 
 When set, provides the effective value for the `model` settings key in the `.config` resolution chain (env layer = highest priority). Overrides project config, user config, and catalog default.
+
+It's the variable Claude Code itself reads for the model (`--model` beats it, and it beats the settings `model` key). `CLAUDE_MODEL` isn't read by Claude Code, so clv ignores it too.
 
 If set to an empty string, it is treated as absent (env layer skipped for `model`).
 

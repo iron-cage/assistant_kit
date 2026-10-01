@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_history, run_clv_with_env, stdout, write_settings };
 
 /// EC-11: `.status format::json` → valid JSON object starting with `{`
 #[ test ]
@@ -89,7 +89,7 @@ fn format_ec16_settings_get_format_json_has_key_value()
 #[ test ]
 fn format_ec17_history_format_json_fields()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::json", "count::3" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::json", "count::3" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -102,7 +102,7 @@ fn format_ec17_history_format_json_fields()
 #[ test ]
 fn format_ec18_history_format_xml_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::xml" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -110,7 +110,7 @@ fn format_ec18_history_format_xml_exits_1()
 #[ test ]
 fn format_ec19_history_format_json_uppercase_exits_1()
 {
-  let out = run_clv( &[ ".version.list", "mode::history", "format::JSON" ] );
+  let out = run_clv_history( &[ ".version.list", "mode::history", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -122,7 +122,7 @@ fn format_ec20_params_format_json_array()
   let home = dir.path().to_str().unwrap();
   let out  = run_clv_with_env(
     &[ ".params", "format::json" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+    &[ ( "HOME", home ), ( "ANTHROPIC_MODEL", "" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );

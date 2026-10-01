@@ -6,8 +6,10 @@ use super::json_field::parse_string_field;
 
 /// Override the session model to Opus in `~/.claude/settings.json` when the current model is Sonnet.
 ///
-/// Returns `true` when the override was written (current model was Sonnet or absent);
-/// `false` when the model was already non-Sonnet (Opus, Haiku, etc.) — no write occurs.
+/// Returns `true` when `"opus"` was written: the current model was Sonnet (any form), absent,
+/// or a bare full Opus ID (`claude-opus-*` without a `[1m]`-style suffix), which is normalized
+/// to the shorthand. Returns `false`, with no write, for the `"opus"` shorthand itself, other
+/// Opus forms (`opus[1m]`, `opusplan`, `claude-opus-5-5[1m]`) and non-Opus models (Haiku, etc.).
 ///
 /// Best-effort: any I/O failure is silently ignored (same policy as the `switch_account`
 /// model-restore block — `settings.json` mutations must never fail the caller).
@@ -47,7 +49,14 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   //   normalisation was a missing arm.
   // Pitfall: both "opus" shorthand and "claude-opus-4-6" full-ID mean opus; the gate must
   //   treat them as equivalent to avoid skipping re-normalisation when full-ID is present.
-  if current.contains( "sonnet" ) || current == "claude-opus-4-8" || current == "claude-opus-4-6" || current.is_empty()
+  // Fix(BUG-578): full-ID Opus is matched by shape — any bare `claude-opus-*` — instead of
+  //   the exact "claude-opus-4-8"/"claude-opus-4-6" arms.
+  // Root cause: each arm was the value clp's `opus` shorthand wrote at the time, and the
+  //   `cc988323` remap to "claude-opus-5-5" added no arm, so clp's own value matched nothing.
+  // Pitfall: a `[`-suffixed ID ("claude-opus-5-5[1m]") stays out — normalizing it to "opus"
+  //   would drop the 1M context the user picked.
+  let full_id_opus = current.starts_with( "claude-opus-" ) && !current.contains( '[' );
+  if current.contains( "sonnet" ) || full_id_opus || current.is_empty()
   {
     obj.insert( "model".to_string(), serde_json::Value::String( "opus".to_string() ) );
     let _ = atomic_write( &path, &serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );

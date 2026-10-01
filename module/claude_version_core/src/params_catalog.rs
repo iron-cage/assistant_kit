@@ -21,7 +21,7 @@ pub struct ParamDef
   pub name       : &'static str,
   /// CLI flag form (e.g., `"--model"` or `"-p / --print"`). `None` = no CLI flag.
   pub cli_flag   : Option< &'static str >,
-  /// Environment variable name (e.g., `"CLAUDE_MODEL"`). `None` = not env-settable.
+  /// Environment variable name (e.g., `"ANTHROPIC_MODEL"`). `None` = not env-settable.
   pub env_var    : Option< &'static str >,
   /// settings.json key (e.g., `"model"`). `None` = not config-settable.
   pub config_key : Option< &'static str >,
@@ -796,7 +796,12 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     {
       name       : "model",
       cli_flag   : Some( "--model" ),
-      env_var    : Some( "CLAUDE_MODEL" ),
+      // Fix(BUG-579): `ANTHROPIC_MODEL` is the env form Claude Code reads for `--model`.
+      // Root cause: the entry named `CLAUDE_MODEL`, which the Claude Code binary never
+      // reads, so `.params` advertised a variable that changes nothing.
+      // Pitfall: an env name on another program's surface must be checked against that
+      // program (binary strings, a captured request), not against tests that set it.
+      env_var    : Some( "ANTHROPIC_MODEL" ),
       config_key : Some( "model" ),
       default    : Some( "claude-sonnet-5" ),
     },

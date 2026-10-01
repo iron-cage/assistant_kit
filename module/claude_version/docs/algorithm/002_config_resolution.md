@@ -25,9 +25,10 @@ Look up the env var mapping for K from the catalog:
 
 | Key | Env var |
 |-----|---------|
-| `model` | `CLAUDE_MODEL` |
+| `model` | `ANTHROPIC_MODEL` |
+| `env.DISABLE_UPDATES` | `DISABLE_UPDATES` |
 
-`model` is the only catalog entry with an env var mapping; the other 9 entries (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates`, `theme`, `hasCompletedOnboarding`, `env.DISABLE_AUTOUPDATER`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_UPDATES`) all have `env_var: None` in `config_catalog.rs`.
+`ANTHROPIC_MODEL` is the variable Claude Code itself reads for the model; `CLAUDE_MODEL` isn't read by Claude Code, so it has no layer here (BUG-579). The other 8 entries (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates`, `theme`, `hasCompletedOnboarding`, `env.DISABLE_AUTOUPDATER`, `autoUpdatesChannel`, `minimumVersion`) all have `env_var: None` in `config_catalog.rs`.
 
 If the catalog maps K to an env var E, read `std::env::var(E)`:
 - If set and non-empty → return `ResolvedValue { value: Some(v), source: Env }`. Stop.
@@ -72,7 +73,7 @@ The known settings catalog is implemented in `claude_version_core::config_catalo
 
 | Key | Type | Env var | Default | Notes |
 |-----|------|---------|---------|-------|
-| `model` | String | `CLAUDE_MODEL` | `claude-sonnet-5` | Active model name |
+| `model` | String | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Active model name |
 | `preferredVersionSpec` | String | — | `stable` | Version channel: stable/beta/exact |
 | `preferredVersionResolved` | String | — | — (absent) | Last resolved concrete version |
 | `autoUpdates` | Bool | — | `true` | Auto-update on launch |
@@ -81,7 +82,7 @@ The known settings catalog is implemented in `claude_version_core::config_catalo
 | `env.DISABLE_AUTOUPDATER` | String | — | — (absent) | Disable autoupdate via settings env block |
 | `autoUpdatesChannel` | String | — | — (absent) | Version lock Layer 6: pins the update channel while pinned |
 | `minimumVersion` | String | — | — (absent) | Version lock Layer 7: soft update floor set to the resolved pinned semver |
-| `env.DISABLE_UPDATES` | String | — | — (absent) | Version lock Layer 8: suppresses manual `claude update`, independent of `DISABLE_AUTOUPDATER` |
+| `env.DISABLE_UPDATES` | String | `DISABLE_UPDATES` | — (absent) | Version lock Layer 8: suppresses manual `claude update`, independent of `DISABLE_AUTOUPDATER` |
 
 **Known gap:** The catalog covers 10 of ~21 settings.json config keys. The following keys are MISSING from the catalog and therefore absent from `.config show-all` unless a user has written them to a config file:
 

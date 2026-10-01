@@ -28,7 +28,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-1: env var overrides user config
 
-- **Given:** `CLAUDE_MODEL=claude-opus-4-8`; user settings has `{"model": "claude-sonnet-5"}`
+- **Given:** `ANTHROPIC_MODEL=claude-opus-4-8`; user settings has `{"model": "claude-sonnet-5"}`
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-opus-4-8"), source: Env }`
 - **Source:** [algorithm/002_config_resolution.md — Step 1](../../../docs/algorithm/002_config_resolution.md)
@@ -37,7 +37,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-2: user config wins when env absent
 
-- **Given:** `CLAUDE_MODEL` unset; user settings has `{"model": "claude-haiku-4-5-20251001"}`
+- **Given:** `ANTHROPIC_MODEL` unset; user settings has `{"model": "claude-haiku-4-5-20251001"}`
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-haiku-4-5-20251001"), source: User }`
 - **Source:** [algorithm/002_config_resolution.md — Step 3](../../../docs/algorithm/002_config_resolution.md)
@@ -46,7 +46,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-3: project config key returned
 
-- **Given:** `CLAUDE_MODEL` unset; project settings has `{"model": "claude-opus-4-8"}`; user settings empty
+- **Given:** `ANTHROPIC_MODEL` unset; project settings has `{"model": "claude-opus-4-8"}`; user settings empty
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-opus-4-8"), source: Project }`
 - **Source:** [algorithm/002_config_resolution.md — Step 2](../../../docs/algorithm/002_config_resolution.md)
@@ -55,7 +55,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-4: catalog default returned when all layers absent
 
-- **Given:** `CLAUDE_MODEL` unset; no project config; user settings empty
+- **Given:** `ANTHROPIC_MODEL` unset; no project config; user settings empty
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-sonnet-5"), source: Default }`
 - **Source:** [algorithm/002_config_resolution.md — Step 4](../../../docs/algorithm/002_config_resolution.md)
@@ -73,7 +73,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-6: project config overrides user config
 
-- **Given:** `CLAUDE_MODEL` unset; project settings has `{"theme": "dark"}`; user settings has `{"theme": "light"}`
+- **Given:** `ANTHROPIC_MODEL` unset; project settings has `{"theme": "dark"}`; user settings has `{"theme": "light"}`
 - **When:** resolve(`theme`)
 - **Then:** `ResolvedValue { value: Some("dark"), source: Project }`
 - **Source:** [algorithm/002_config_resolution.md — Step 2](../../../docs/algorithm/002_config_resolution.md)
@@ -82,7 +82,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-7: home_dir has no user config → catalog default returned
 
-- **Given:** `CLAUDE_MODEL` env var absent; `home_dir` parameter has no `.claude/settings.json`; no `.claude/settings.json` in cwd or any ancestor directory
+- **Given:** `ANTHROPIC_MODEL` env var absent; `home_dir` parameter has no `.claude/settings.json`; no `.claude/settings.json` in cwd or any ancestor directory
 - **When:** `resolve("theme", home_dir, cwd, catalog)`
 - **Then:** `ResolvedValue { value: Some("dark"), source: Default }`
 - **Note:** `resolve()` reads user config from `home_dir/.claude/settings.json` (parameter, not `HOME` env var). When that file is absent, Step 3 produces no value and Step 4 returns the catalog default (`"dark"` for `theme`). CLI layer is responsible for deriving `home_dir` from `HOME` before calling `resolve()`.
@@ -91,7 +91,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ### AC-8: project config found in ancestor directory
 
-- **Given:** `CLAUDE_MODEL` unset; cwd has no `.claude/settings.json`; parent directory of cwd has `.claude/settings.json` with `{"preferredVersionSpec": "beta"}`; user settings empty
+- **Given:** `ANTHROPIC_MODEL` unset; cwd has no `.claude/settings.json`; parent directory of cwd has `.claude/settings.json` with `{"preferredVersionSpec": "beta"}`; user settings empty
 - **When:** `resolve("preferredVersionSpec")` from cwd
 - **Then:** `ResolvedValue { value: Some("beta"), source: Project }`
 - **Note:** Step 2 walks up from cwd searching for `.claude/settings.json`; finds it one level up in the parent directory

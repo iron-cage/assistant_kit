@@ -95,8 +95,8 @@ clv.params v::0
 
 ```
 model
-  Forms:   CLI --model <model>  |  env CLAUDE_MODEL  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
+  Forms:   CLI --model <model>  |  env ANTHROPIC_MODEL  |  config model
+  Env:     ANTHROPIC_MODEL → "claude-opus-4-8" (set)
   Config:  model = (absent in user config)
   Default: claude-sonnet-5
   ────────────────────────────────────────────────────
