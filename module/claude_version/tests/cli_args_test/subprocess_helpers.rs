@@ -1,27 +1,9 @@
 //! Local subprocess helpers for `cli_args_test` integration tests.
 //!
-//! Provides container guard, binary runner, and output extractors used across
-//! all `cli_args_test` sub-modules.
+//! Provides binary runners and output extractors used across all
+//! `cli_args_test` sub-modules.  Both runners check `crate::spawn_guard` first.
 
-/// Assert that the current process is inside a container or has bypassed the guard.
-///
-/// # Panics
-///
-/// Panics if neither a container environment nor the `VERB_LAYER=l0` bypass is detected.
-#[ inline ]
-pub fn assert_container()
-{
-  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
-    || std::path::Path::new( "/run/.containerenv" ).exists()
-    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
-  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
-  assert!(
-    in_container || escaped,
-    "\n\nTests must run inside a container.\n\
-     Standard invocation: cd module/claude_version && ./verb/test\n\
-     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
-  );
-}
+use crate::spawn_guard::{ assert_container, assert_no_history_mode };
 
 /// Run `claude_version` with the given arguments and return the full output.
 ///
@@ -38,14 +20,7 @@ pub fn assert_container()
 pub fn run( args : &[ &str ] ) -> std::process::Output
 {
   assert_container();
-  // Fix(BUG-581): refuse `mode::history` under the inherited `HOME`.
-  // Root cause: the release fetch writes `{HOME}/.claude/.transient/version_history_cache.json`,
-  //   and runbox mounts the developer's real `~/.claude` read-write at that `HOME`.
-  // Pitfall: a read command that refreshes a cache writes like any other; it needs a `HOME` the test owns.
-  assert!(
-    !args.contains( &"mode::history" ),
-    "`mode::history` writes a release cache under HOME — run it through run_in_home() (BUG-581)"
-  );
+  assert_no_history_mode( args, "run_in_home" );
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   std::process::Command::new( bin )
     .args( args )

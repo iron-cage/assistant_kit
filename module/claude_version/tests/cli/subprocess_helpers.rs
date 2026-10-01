@@ -13,19 +13,7 @@
 //! 1. `Cargo.toml` — `[[bin]] name`
 //! 2. `env!("CARGO_BIN_EXE_<name>")` in `run_clv_with_env`
 
-fn assert_container()
-{
-  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
-    || std::path::Path::new( "/run/.containerenv" ).exists()
-    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
-  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
-  assert!(
-    in_container || escaped,
-    "\n\nTests must run inside a container.\n\
-     Standard invocation: cd module/claude_version && ./verb/test\n\
-     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
-  );
-}
+use crate::spawn_guard::{ assert_container, assert_no_history_mode };
 
 /// Run `clv` with the given arguments and return the full output.
 ///
@@ -74,14 +62,10 @@ pub fn run_clv_with_env(
 ) -> std::process::Output
 {
   assert_container();
-  // Fix(BUG-581): refuse `mode::history` under the inherited `HOME`.
-  // Root cause: the release fetch writes `{HOME}/.claude/.transient/version_history_cache.json`,
-  //   and runbox mounts the developer's real `~/.claude` read-write at that `HOME`.
-  // Pitfall: a read command that refreshes a cache writes like any other; it needs a `HOME` the test owns.
-  assert!(
-    !args.contains( &"mode::history" ) || env_overrides.iter().any( | ( key, _ ) | *key == "HOME" ),
-    "`mode::history` writes a release cache under HOME — run it through run_clv_history() (BUG-581)"
-  );
+  if !env_overrides.iter().any( | ( key, _ ) | *key == "HOME" )
+  {
+    assert_no_history_mode( args, "run_clv_history" );
+  }
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   let mut cmd = std::process::Command::new( bin );
   cmd.args( args );

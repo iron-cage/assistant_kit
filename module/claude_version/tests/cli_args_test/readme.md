@@ -8,7 +8,7 @@ Module files for argument parsing tests, included by `tests/cli_args_test.rs`
 
 | File | Responsibility |
 |------|----------------|
-| `subprocess_helpers.rs` | Container guard, binary runner, and output extractors |
+| `subprocess_helpers.rs` | Binary runners and output extractors |
 | `help_test.rs` | `.help` command and anywhere-in-argv routing tests (TC-001/002/026/038-040/489-490, EC-3..EC-8) |
 | `parsing_test.rs` | Command recognition, param syntax enforcement, unknown param/command rejection |
 | `param_verbosity_test.rs` | `v::` / `verbosity::` parameter: range, type, last-wins, canonical-key parity |

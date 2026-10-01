@@ -12,6 +12,7 @@ Unit and integration tests for `claude_version`.
 | `settings_io_test.rs` | Settings JSON read/write and type-inference unit tests |
 | `cli.rs` | Entry point test crate that includes all CLI test modules |
 | `cli/` | Module files for CLI tests, organised by domain (included by `cli.rs`) |
+| `isolation/` | Spawn guard included by both `cli.rs` and `cli_args_test.rs` |
 | `lib_test.rs` | Library API: `register_commands()` callable and registers all commands |
 | `manual/` | Manual testing plan for scenarios requiring human verification |
 | `docs/` | Test planning documentation mirroring `docs/` structure |
@@ -65,7 +66,7 @@ Unit and integration tests for `claude_version`.
 
 | File | Responsibility |
 |------|----------------|
-| `cli_args_test/subprocess_helpers.rs` | Container guard, binary runner, and output extractors |
+| `cli_args_test/subprocess_helpers.rs` | Binary runners and output extractors |
 | `cli_args_test/help_test.rs` | `.help` anywhere-in-argv routing and EC-3..EC-8 spec edge cases |
 | `cli_args_test/parsing_test.rs` | Command recognition, param syntax enforcement, unknown rejection |
 | `cli_args_test/param_verbosity_test.rs` | `v::` / `verbosity::` range, type, last-wins, canonical-key parity |

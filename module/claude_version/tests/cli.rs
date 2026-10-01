@@ -5,6 +5,9 @@
 //!
 //! Add new CLI test modules here as new domains or commands are covered.
 
+#[ path = "isolation/spawn_guard.rs" ]
+pub mod spawn_guard;
+
 #[ path = "cli/subprocess_helpers.rs" ]
 pub mod subprocess_helpers;
 

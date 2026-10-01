@@ -6,7 +6,10 @@
 //!
 //! All tests invoke the compiled binary via subprocess using
 //! `CARGO_BIN_EXE_claude_version`. Container guard is enforced via
-//! `subprocess_helpers::assert_container`.
+//! `spawn_guard::assert_container`.
+
+#[ path = "isolation/spawn_guard.rs" ]
+pub mod spawn_guard;
 
 #[ path = "cli_args_test/subprocess_helpers.rs" ]
 pub mod subprocess_helpers;
