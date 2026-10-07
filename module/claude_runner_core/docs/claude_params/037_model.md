@@ -69,5 +69,5 @@ claude --print --model sonnet --fallback-model haiku "Analyze this code"
 
 - Model aliases resolve to specific model IDs at runtime, per provider (see the alias table above) — on Bedrock, `sonnet` is `claude-sonnet-4-5`, not the latest Sonnet
 - For reproducible automation, prefer full model IDs over aliases
-- `ClaudeCommand::new()` sets no model. `claude_runner_core` exports `DEFAULT_MODEL` (`claude-opus-5-5`): `IsolatedModel::Default` injects it for `run_isolated()`, and `claude_runner` uses it as the `run`/`ask`/`topic` built-in default
+- `ClaudeCommand::new()` sets no model. `claude_runner_core` exports `DEFAULT_MODEL` (`claude-sonnet-5`): `IsolatedModel::Default` injects it for `run_isolated()`, and `claude_runner` uses it as the `run`/`ask`/`topic` built-in default
 - `--fallback-model` only works with `--print` mode

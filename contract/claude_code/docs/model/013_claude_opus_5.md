@@ -28,7 +28,7 @@ v2.1.219 (2026-07-24) — [`../version/115_v2_1_219.md`](../version/115_v2_1_219
 
 ### Workspace Usage
 
-No workspace constant targets this model. The former `ISOLATED_DEFAULT_MODEL` held the CLI alias `"opus"`, so it resolved here from v2.1.219 with no source change, and would have moved on to Opus 5.5 at v2.1.280 the same way. It has since been replaced by `DEFAULT_MODEL`, the explicit ID `"claude-opus-5-5"` — see [`014_claude_opus_5_5.md`](014_claude_opus_5_5.md) and [`012_workspace_defaults.md`](012_workspace_defaults.md) for the role table and update policy.
+No workspace constant targets this model. The former `ISOLATED_DEFAULT_MODEL` held the CLI alias `"opus"`, so it resolved here from v2.1.219 with no source change, and would have moved on to Opus 5.5 at v2.1.280 the same way. It has since been replaced by `DEFAULT_MODEL`, the explicit ID `"claude-sonnet-5"` — see [`004_claude_sonnet_5.md`](004_claude_sonnet_5.md) and [`012_workspace_defaults.md`](012_workspace_defaults.md) for the role table and update policy.
 
 ### Related v2.1.219 changes
 
@@ -59,7 +59,8 @@ claude --model opus -p 'reply with only your model id' </dev/null
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master model entity index |
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment and update policy |
-| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Next default Opus (v2.1.280+); current `DEFAULT_MODEL` |
+| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Next default Opus (v2.1.280+) |
+| doc | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | Current `DEFAULT_MODEL` |
 | doc | [003_claude_opus_4_8.md](003_claude_opus_4_8.md) | Previous default Opus; still fast-mode eligible |
 | doc | [../param/157_disable_1m_context.md](../param/157_disable_1m_context.md) | Opting out of the 1M window this model ships with |
 | doc | [../param/042_model.md](../param/042_model.md) | `--model` flag and the `[1m]` suffix mechanism |

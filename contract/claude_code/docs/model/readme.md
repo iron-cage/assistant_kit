@@ -58,7 +58,7 @@ a model to a tier default names a model that must have a profile here.
 | [001](001_claude_fable_5.md) | claude-fable-5 | `claude-fable-5` | Fable | 1M | 128k / 300k† | No | Yes | GA |
 | [002](002_claude_mythos_5.md) | claude-mythos-5 | `claude-mythos-5` | Mythos | 1M | 128k | No | Yes | invite-only |
 | [003](003_claude_opus_4_8.md) | claude-opus-4-8 | `claude-opus-4-8` | Opus | 1M | 128k / 300k† | No | Yes | superseded as default (v2.1.219); fast-mode eligible |
-| [004](004_claude_sonnet_5.md) | claude-sonnet-5 | `claude-sonnet-5` | Sonnet | 1M | 128k / 300k† | No | Yes | **current** |
+| [004](004_claude_sonnet_5.md) | claude-sonnet-5 | `claude-sonnet-5` | Sonnet | 1M | 128k / 300k† | No | Yes | **current**; workspace `DEFAULT_MODEL`, `REFRESH_DEFAULT_MODEL` |
 | [005](005_claude_haiku_4_5.md) | claude-haiku-4-5 | `claude-haiku-4-5-20251001` | Haiku | 200k | 64k | Yes | No | **current** |
 | [006](006_claude_opus_4_7.md) | claude-opus-4-7 | `claude-opus-4-7` | Opus‡ | 1M | 128k | No | Yes | legacy |
 | [007](007_claude_opus_4_6.md) | claude-opus-4-6 | `claude-opus-4-6` | Opus | 1M | 128k | Yes | Yes | legacy |
@@ -68,7 +68,7 @@ a model to a tier default names a model that must have a profile here.
 | [011](011_claude_opus_4_1.md) | claude-opus-4-1 | `claude-opus-4-1-20250805` | Opus | 200k | 32k | Yes | No | deprecated (retire: 2026-08-05) |
 | [012](012_workspace_defaults.md) | Workspace Defaults | — | — | — | — | — | — | active |
 | [013](013_claude_opus_5.md) | claude-opus-5 | `claude-opus-5` | Opus | 1M | unverified | unverified | unverified | superseded as default (v2.1.280); default Opus v2.1.219–v2.1.279 |
-| [014](014_claude_opus_5_5.md) | claude-opus-5-5 | `claude-opus-5-5` | Opus | 1M | 128k | No | Yes | **current default Opus** (v2.1.280+); workspace `DEFAULT_MODEL` |
+| [014](014_claude_opus_5_5.md) | claude-opus-5-5 | `claude-opus-5-5` | Opus | 1M | 128k | No | Yes | **current default Opus** (v2.1.280+) |
 
 † 300k via Batch API with `output-300k-2026-03-24` beta
 ‡ Opus 4.7 introduced a new tokenizer: same text → ~30% more tokens vs pre-4.7 models; claude-fable-5 and claude-mythos-5 share this tokenizer.

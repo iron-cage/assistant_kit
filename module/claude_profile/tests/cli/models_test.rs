@@ -35,7 +35,7 @@ use crate::cli_runner::{ run_cs, stdout, assert_exit };
 // ── IT: Integration Tests ─────────────────────────────────────────────────────
 
 /// IT-01 (AC-01): `clp .models offline::1` — stdout contains `claude-opus-5-5` (the current
-/// default Opus, `claude_runner_core::DEFAULT_MODEL`) and `claude-opus-4-8`. Exit 0.
+/// Opus) and `claude-opus-4-8`. Exit 0.
 #[ test ]
 fn it01_offline_contains_opus()
 {

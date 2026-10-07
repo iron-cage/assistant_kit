@@ -247,21 +247,21 @@ fn t09_timeout_with_changed_credentials_result_type()
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
 /// T10: `IsolatedModel::model_id()` returns the correct `Option<&str>` for all
-/// three variants, and `DEFAULT_MODEL` equals `"claude-opus-5-5"`.
+/// three variants, and `DEFAULT_MODEL` equals `"claude-sonnet-5"`.
 ///
 /// Covers FT-1 through FT-4 from `tests/docs/feature/004_run_isolated.md`:
 /// - FT-1: `Default.model_id()` → `Some(DEFAULT_MODEL)`
 /// - FT-2: `KeepCurrent.model_id()` → `None` (no `--model` flag injected)
 /// - FT-3: `Specific("custom-model").model_id()` → `Some("custom-model")`
-/// - FT-4: `DEFAULT_MODEL == "claude-opus-5-5"` (explicit Opus 5.5 ID, not a release-dependent alias)
+/// - FT-4: `DEFAULT_MODEL == "claude-sonnet-5"` (explicit Sonnet 5 ID, not a release-dependent alias)
 #[ test ]
 fn t10_isolated_model_model_id_all_variants()
 {
-  // FT-4: constant is the explicit Opus 5.5 ID — the `opus` alias resolves differently per
-  // Claude release and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/settings, so it would not pin a model.
+  // FT-4: constant is the explicit Sonnet 5 ID — the `sonnet` alias resolves differently per
+  // Claude release and per `ANTHROPIC_DEFAULT_SONNET_MODEL`/settings, so it would not pin a model.
   assert_eq!(
-    DEFAULT_MODEL, "claude-opus-5-5",
-    "DEFAULT_MODEL must equal the explicit Opus 5.5 model ID",
+    DEFAULT_MODEL, "claude-sonnet-5",
+    "DEFAULT_MODEL must equal the explicit Sonnet 5 model ID",
   );
 
   // FT-1: Default → Some(DEFAULT_MODEL).

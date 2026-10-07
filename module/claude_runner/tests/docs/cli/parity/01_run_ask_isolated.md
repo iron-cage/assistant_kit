@@ -10,7 +10,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 |----|-----------|----------|
 | PC-1 | `clr ask --dry-run "X"` produces byte-identical output to `clr run --dry-run "X"` | Alias Equivalence |
 | PC-2 | ask carries through all common run flags unchanged (--effort, --model, --topic) | Param Surface Parity |
-| PC-3 | isolated injects hardcoded model (opus); run/ask inject no model by default | Model Injection Divergence |
+| PC-3 | isolated and run/ask inject the same default model (config-pref-aware) | Model Injection Parity |
 | PC-4 | isolated creates a fresh temp HOME; run/ask execute in real `$HOME` | HOME Divergence |
 | PC-5 | isolated print-mode timeout is 30 s; run/ask default is 0 = unlimited (TSK-503) | Timeout Divergence |
 
@@ -18,7 +18,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 
 - Alias Equivalence: 1 test (PC-1)
 - Param Surface Parity: 1 test (PC-2)
-- Model Injection Divergence: 1 test (PC-3)
+- Model Injection Parity: 1 test (PC-3)
 - HOME Divergence: 1 test (PC-4)
 - Timeout Divergence: 1 test (PC-5)
 
@@ -52,10 +52,10 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 
 - **Given:** clr binary; valid credentials file; `--trace` flag
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` vs `clr run --trace "Fix bug"`
-- **Then:** isolated stderr contains `--model claude-opus-5-5` (`DEFAULT_MODEL`) in the assembled command — unless a `model` preference is set in project `.clr.toml` or the user `config.toml` (`$CLR_CONFIG_DIR/config.toml` when that override is set, else `~/.clr/config.toml` — the same file `run` reads, BUG-007), in which case that preference appears instead (resolved once at `run_isolated_command()` entry, so preview, no-file, and `--file` paths all agree — BUG-485); run stderr contains the same `--model claude-opus-5-5` (withheld on a non-anthropic seat — Provider Gate — which never applies to isolated)
+- **Then:** isolated stderr contains `--model claude-sonnet-5` (`DEFAULT_MODEL`) in the assembled command — unless a `model` preference is set in project `.clr.toml` or the user `config.toml` (`$CLR_CONFIG_DIR/config.toml` when that override is set, else `~/.clr/config.toml` — the same file `run` reads, BUG-007), in which case that preference appears instead (resolved once at `run_isolated_command()` entry, so preview, no-file, and `--file` paths all agree — BUG-485); run stderr contains the same `--model claude-sonnet-5` (withheld on a non-anthropic seat — Provider Gate — which never applies to isolated)
 - **Exit:** 1 (claude absent in test env)
 - **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
-- **Implemented by:** `isolated_defaults_test.rs::isd_01_default_model_is_opus_5_5`, `isolated_defaults_test.rs::isd_14_isolated_dry_run_shows_default_model`, `param_edge_cases_test.rs::s08_model_defaults_to_builtin_when_absent`, `isolated_defaults_test.rs::bug485_dry_run_preview_shows_config_model_pref_not_hardcoded_default` (config-pref parity ✅), `isolated_defaults_test.rs::bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir` (`CLR_CONFIG_DIR` parity ✅)
+- **Implemented by:** `isolated_defaults_test.rs::isd_01_default_model_is_sonnet_5`, `isolated_defaults_test.rs::isd_14_isolated_dry_run_shows_default_model`, `param_edge_cases_test.rs::s08_model_defaults_to_builtin_when_absent`, `isolated_defaults_test.rs::bug485_dry_run_preview_shows_config_model_pref_not_hardcoded_default` (config-pref parity ✅), `isolated_defaults_test.rs::bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir` (`CLR_CONFIG_DIR` parity ✅)
 
 ---
 

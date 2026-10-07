@@ -11,13 +11,13 @@
 
 | Role | Crate | Constant / Call Site | Value | Resolves To |
 |------|-------|----------------------|-------|-------------|
-| Default model (`clr isolated`; `clr run`/`ask`/`topic` level-5 default) | `claude_runner_core` | `DEFAULT_MODEL` | `"claude-opus-5-5"` (pinned full ID, not an alias) | `claude-opus-5-5` (fixed — no runtime resolution) |
+| Default model (`clr isolated`; `clr run`/`ask`/`topic` level-5 default) | `claude_runner_core` | `DEFAULT_MODEL` | `"claude-sonnet-5"` (pinned full ID, not an alias) | `claude-sonnet-5` (fixed — no runtime resolution) |
 | OAuth token refresh ping | `claude_runner_core` | `REFRESH_DEFAULT_MODEL` | `"claude-sonnet-5"` (pinned full ID, not an alias) | `claude-sonnet-5` (fixed — no runtime resolution) |
 | Rate-limit header probe | `claude_quota` | body of `fetch_rate_limits()` | `"claude-haiku-4-5-20251001"` (full API ID) | — (sent directly to API) |
 
 ### Rationale
 
-**Default model** (`DEFAULT_MODEL`): Isolated runs handle high-complexity user tasks — reasoning, code generation, analysis — where capability is primary, and `clr run`/`ask`/`topic` fall back to the same constant when no CLI `--model`, `--args-file`, `CLR_MODEL` or config-file `model` sets one. It replaced `ISOLATED_DEFAULT_MODEL`, which held the `"opus"` CLI alias so the subprocess tracked the latest Opus without a code change. The alias names a different model per release, per provider (the v2.1.283 catalog maps it to `claude-opus-4-6` on Foundry and `claude-opus-4-7` on a gateway) and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/settings override, so one `clr` build could run different models on different machines. The explicit ID runs the same model everywhere, and changes only by source edit.
+**Default model** (`DEFAULT_MODEL`): Isolated runs handle real user tasks — reasoning, code generation, analysis — and `clr run`/`ask`/`topic` fall back to the same constant when no CLI `--model`, `--args-file`, `CLR_MODEL` or config-file `model` sets one. The current Sonnet trades Opus's peak capability for speed and lower per-token cost, and Opus stays one `--model claude-opus-5-5` away. Sonnet 5 also accepts every default `clr` layers on top of the model — `--effort max` (catalog `max_effort`), `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` (its catalog output upper bound) and the 400k auto-compact window (below its 1M context) — so the switch changed no other default. The constant replaced `ISOLATED_DEFAULT_MODEL`, which held the `"opus"` CLI alias so the subprocess tracked the latest Opus without a code change. An alias names a different model per release, per provider (the v2.1.283 catalog maps `opus` to `claude-opus-4-6` on Foundry and `claude-opus-4-7` on a gateway, and `sonnet` to `claude-sonnet-4-5` on Bedrock, Vertex, Foundry and Mantle) and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/`ANTHROPIC_DEFAULT_SONNET_MODEL`/settings override, so one `clr` build could run different models on different machines. The explicit ID runs the same model everywhere, and changes only by source edit. `DEFAULT_MODEL` holds the same value as `REFRESH_DEFAULT_MODEL` today but stays a separate constant: one serves real user tasks, the other the refresh ping, and each follows its own target.
 
 **OAuth token refresh ping** (`REFRESH_DEFAULT_MODEL`): Refresh invocations send a trivial `"."` prompt to force an OAuth token exchange. The constant is pinned to the full ID `"claude-sonnet-5"`, not an alias — it does not track future Sonnet releases automatically and must be updated by hand (see Update Policy below). Sonnet is fast and quota-efficient; Opus would waste allowance on a no-op request.
 
@@ -33,16 +33,16 @@ Update model defaults when:
 - A new model generation replaces the current default tier.
 - A significantly more capable model in the same tier is released and the old one becomes clearly legacy.
 
-**Update sequence**: create new model profile file in `model/` → update `readme.md` Overview Table → this file (role assignment) → source constants (see below).
+**Update sequence**: create new model profile file in `model/` → update `readme.md` Overview Table → this file (role assignment) → source constants (see below) → tests that pass a model through a CLI, env or config tier. Each must use an ID other than the new default, or assert the exact `--model X` pair: the dry-run preview already carries `--model <DEFAULT_MODEL>`, so a value equal to the default — or a substring of it, like `sonnet` in `claude-sonnet-5` — passes even when the tier is ignored.
 
 **Pinned IDs trade silent drift for silent staleness.** While `ISOLATED_DEFAULT_MODEL` held the alias `"opus"`, an Anthropic-side promotion changed what it resolved to with no source edit, no compile error and no test failure — at v2.1.219 it moved from `claude-opus-4-8` to `claude-opus-5` while this table still named 4.8. Every workspace default is now a pinned ID, so none can drift silently. The cost is the opposite risk: nothing forces a source edit when a newer model ships, so each constant keeps targeting its pinned model until someone updates it by hand.
 
 The only mechanism that notices a newer model worth adopting is a deliberate re-check. Two ways, both cheap:
 
 ```bash
-# 1. Ask the binary what the "opus" alias resolves to right now — a newer ID than
-#    DEFAULT_MODEL means a newer Opus has shipped (same check with --model sonnet):
-claude --model opus -p 'reply with only your model id' </dev/null
+# 1. Ask the binary what the "sonnet" alias resolves to right now — a newer ID than
+#    DEFAULT_MODEL and REFRESH_DEFAULT_MODEL means a newer Sonnet has shipped:
+claude --model sonnet -p 'reply with only your model id' </dev/null
 
 # 2. Scan the installed binary's embedded changelog for tier-default promotions
 #    (the version/ docs stop at v2.1.220, so they miss later ones):
@@ -65,10 +65,10 @@ Re-run both whenever a new Claude Code version is installed. Either one naming a
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master model entity index and full catalog overview |
-| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Current `DEFAULT_MODEL` profile |
+| doc | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | Current `DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` profile |
+| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | What the former `ISOLATED_DEFAULT_MODEL` alias resolves to (v2.1.280+) |
 | doc | [013_claude_opus_5.md](013_claude_opus_5.md) | What the former `ISOLATED_DEFAULT_MODEL` alias resolved to (v2.1.219–v2.1.279) |
 | doc | [003_claude_opus_4_8.md](003_claude_opus_4_8.md) | What that alias resolved to before v2.1.219 |
-| doc | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | Current REFRESH_DEFAULT_MODEL profile |
 | doc | [005_claude_haiku_4_5.md](005_claude_haiku_4_5.md) | Current rate-limit probe model profile |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live catalog for update verification |
 | source | `module/claude_runner_core/src/isolated.rs` | DEFAULT_MODEL, REFRESH_DEFAULT_MODEL |

@@ -28,7 +28,7 @@
 | `-h` / `--help` | Yes | Yes |
 | Passthrough (`-- <args>`) | Yes | No |
 | **--- Auto-Injections ---** | | |
-| Default model | `claude-opus-5-5` (`DEFAULT_MODEL`) | `claude-sonnet-5` (`REFRESH_DEFAULT_MODEL`) |
+| Default model | `claude-sonnet-5` (`DEFAULT_MODEL`) | `claude-sonnet-5` (`REFRESH_DEFAULT_MODEL`) |
 | Default effort | `max` | `low` |
 | `--dangerously-skip-permissions` | Yes — when MESSAGE present; No in no-message REPL | No — never (refresh invokes no tools) |
 | `--no-session-persistence` | Yes — always | Yes — always |
@@ -57,7 +57,7 @@
 | With-message -> print | Yes (+ `--dangerously-skip-permissions`) | Yes (always; fixed `"."`) |
 | Passthrough override | Yes via `-- <args>` | No |
 | **--- Rationale for Divergence ---** | | |
-| Model rationale | Maximum capability for real user tasks | Sonnet sufficient for trivial OAuth-trigger `"."` prompt |
+| Model rationale | Real user tasks: Sonnet for speed and per-token cost, overridable via `--model`/`CLR_MODEL`/config `model` | Sonnet sufficient for trivial OAuth-trigger `"."` prompt; pinned, never overridable |
 | Effort rationale | `max` — real task may require deep reasoning | `low` — minimal reasoning for a one-character ping |
 | `--chrome` rationale | Browser tools may be needed for real tasks | OAuth exchange is pure HTTP; browser context adds overhead |
 | `--dangerously-skip-permissions` rationale | Tool calls must not block interactively in print mode | No tool use; no permission prompts possible |
@@ -70,7 +70,7 @@
 ### Key Takeaways
 
 - Both commands share the same underlying `run_isolated()` implementation and the same temp HOME lifecycle (create, populate, spawn, delete).
-- The defining difference: `isolated` runs a real user task (maximized capability: Opus + max effort + chrome); `refresh` runs a trivial ping (minimized footprint: Sonnet + low effort + no-chrome).
+- The defining difference: `isolated` runs a real user task (max effort + chrome, overridable model); `refresh` runs a trivial ping (minimized footprint: low effort + no-chrome, pinned model). Both default to `claude-sonnet-5` today, through separate constants (`DEFAULT_MODEL`, `REFRESH_DEFAULT_MODEL`) that each follow their own target.
 - `refresh` exit `1` covers "no refresh occurred" — if the token was already fresh, there is nothing to write back, so exit `1` signals that nothing changed. This differs from `isolated` where exit `1` means only spawn/I/O errors.
 - `isolated` can fall back to exit `0` on timeout if the OAuth refresh completed before the deadline; `refresh` always exits `2` on timeout (the token exchange is all-or-nothing).
 - `isolated` supports passthrough args (`-- --effort medium`); `refresh` does not — its injections are fixed by design.

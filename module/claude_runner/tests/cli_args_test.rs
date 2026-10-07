@@ -204,7 +204,8 @@ fn t10_multiple_flags_combined()
     &[
       "--dry-run", "--dir", "/tmp",
       "--from", src,
-      "--model", "claude-sonnet-5", "fix it",
+      // Not `DEFAULT_MODEL`: the default lands in the preview even when `--model` is ignored.
+      "--model", "claude-opus-5-5", "fix it",
     ],
     &[ ( "CLAUDE_HOME", claude_home_str ) ],
   );
@@ -213,7 +214,7 @@ fn t10_multiple_flags_combined()
   assert!( stdout.contains( "cd /tmp" ), "Must have cd line. Got:\n{stdout}" );
   assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on). Got:\n{stdout}" );
   assert!( stdout.contains( " -c" ), "Must have -c when the --from source has a prior session. Got:\n{stdout}" );
-  assert!( stdout.contains( "claude-sonnet-5" ), "Must have model. Got:\n{stdout}" );
+  assert!( stdout.contains( "--model claude-opus-5-5" ), "Must have model. Got:\n{stdout}" );
   assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message. Got:\n{stdout}" );
 }
 

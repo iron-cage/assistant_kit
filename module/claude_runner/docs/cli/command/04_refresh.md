@@ -31,7 +31,7 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace] [--dry-run] [--no-comp
 1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved path.
 3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-4. Spawn `claude --print "."` with `HOME=<temp>`, `--model "sonnet"` alias, `--effort low`, `--no-session-persistence`, `--no-chrome`; wait up to `--timeout` seconds.
+4. Spawn `claude --print "."` with `HOME=<temp>`, `--model "claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`), `--effort low`, `--no-session-persistence`, `--no-chrome`; wait up to `--timeout` seconds.
 5. If credentials were refreshed at subprocess startup, write updated file back to `--creds` and exit 0; otherwise exit 1 (no refresh) or 2 (timeout); delete temp HOME unconditionally.
 
 ### Exit Codes

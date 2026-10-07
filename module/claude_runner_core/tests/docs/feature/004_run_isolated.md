@@ -13,10 +13,10 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| FT-1 | `IsolatedModel::Default.model_id()` → `Some("claude-opus-5-5")` | Unit |
+| FT-1 | `IsolatedModel::Default.model_id()` → `Some("claude-sonnet-5")` | Unit |
 | FT-2 | `IsolatedModel::KeepCurrent.model_id()` → `None` | Unit |
 | FT-3 | `IsolatedModel::Specific("custom-model").model_id()` → `Some("custom-model")` | Unit |
-| FT-4 | `DEFAULT_MODEL` constant → `"claude-opus-5-5"` | Unit |
+| FT-4 | `DEFAULT_MODEL` constant → `"claude-sonnet-5"` | Unit |
 | FT-5 | `run_isolated()` writes `CLAUDE.md` with immediate-response instruction to temp HOME | Unit |
 | FT-6 | `ClaudeCommand` built with `with_home_isolation()` does not include `--chrome` in args | Unit |
 | FT-7 | `resolve_isolated_default_model()` reads the user tier from `$CLR_CONFIG_DIR/config.toml` when set, `HOME` optional; project `.clr.toml` still wins | Unit |
@@ -30,11 +30,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-1: `IsolatedModel::Default.model_id()` → `Some("claude-opus-5-5")`
+### FT-1: `IsolatedModel::Default.model_id()` → `Some("claude-sonnet-5")`
 
 - **Given:** no external resources; `IsolatedModel::Default` constructed inline
 - **When:** `IsolatedModel::Default.model_id()` called
-- **Then:** returns `Some("claude-opus-5-5")` (`DEFAULT_MODEL`, an explicit ID rather than the `opus` alias)
+- **Then:** returns `Some("claude-sonnet-5")` (`DEFAULT_MODEL`, an explicit ID rather than the `sonnet` alias)
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 
@@ -60,11 +60,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-4: `DEFAULT_MODEL` constant equals `"claude-opus-5-5"`
+### FT-4: `DEFAULT_MODEL` constant equals `"claude-sonnet-5"`
 
 - **Given:** no external resources
 - **When:** `DEFAULT_MODEL` constant value is asserted
-- **Then:** equals `"claude-opus-5-5"`; `IsolatedModel::Default.model_id()` returns `Some(DEFAULT_MODEL)`; the explicit ID pins one model, where the `opus` alias would resolve per release and per settings
+- **Then:** equals `"claude-sonnet-5"`; `IsolatedModel::Default.model_id()` returns `Some(DEFAULT_MODEL)`; the explicit ID pins one model, where the `sonnet` alias would resolve per release and per settings
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 

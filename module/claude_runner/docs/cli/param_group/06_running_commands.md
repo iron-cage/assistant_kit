@@ -32,7 +32,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--trace` | ✅ | ✅ | ✅ | ✅ | ✅ | emit env+command to stderr then execute |
 | `--no-compact-window` | ✅ | ✅ | ✅ | ✅ | ✅ | suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection |
 | **Model and effort** | | | | | | |
-| `--model` | ✅ | ✅ | ✅ | ✅ | default: `"claude-sonnet-5"` | run/ask/topic/isolated fall back to config tiers then `claude-opus-5-5` (`DEFAULT_MODEL`) — withheld for run/ask/topic on a non-anthropic seat (Provider Gate); refresh uses the `REFRESH_DEFAULT_MODEL` constant |
+| `--model` | ✅ | ✅ | ✅ | ✅ | default: `"claude-sonnet-5"` | run/ask/topic/isolated fall back to config tiers then `claude-sonnet-5` (`DEFAULT_MODEL`) — withheld for run/ask/topic on a non-anthropic seat (Provider Gate); refresh uses the `REFRESH_DEFAULT_MODEL` constant |
 | `--effort` | ✅ user sets | ✅ user sets | ✅ user sets | ✅ user sets (default: `max`) | `low` * | refresh injects `low`; cannot override via flag |
 | `--no-effort-max` | ✅ | ✅ | ✅ | ✅ | ➖ | suppresses default `--effort max`; not available for refresh (fixed by design) |
 | `--no-chrome` | ✅ | ✅ | ✅ | ✅ | ➖ | suppresses `--chrome` injection; not available for refresh |

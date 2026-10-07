@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Profile for `claude-opus-5-5` — the default Opus model since v2.1.280, what the `"opus"` CLI alias resolves to on first-party auth, and the workspace's built-in `DEFAULT_MODEL`.
+- **Purpose**: Profile for `claude-opus-5-5` — the default Opus model since v2.1.280, and what the `"opus"` CLI alias resolves to on first-party auth.
 - **Responsibility**: Documents this model's API ID, alias resolution, context window, max output, thinking and effort support, fast-mode eligibility, availability, and workspace role.
 - **In Scope**: Model ID, alias, `[1m]` suffix form, max output, thinking/effort capabilities, fast-mode status, workspace constant assignment, availability status.
 - **Out of Scope**: Cloud platform IDs for Bedrock/Vertex (→ Anthropic docs); fast-mode and batch pricing (→ Anthropic docs); model training details.
@@ -35,7 +35,7 @@ The same release changed the default model on Pro and Team Standard plans from S
 
 ### Workspace Usage
 
-**`DEFAULT_MODEL`** (`module/claude_runner_core/src/isolated.rs`) is the explicit ID `"claude-opus-5-5"`, not the `opus` alias. It is the target of `IsolatedModel::Default` (`clr isolated`) and the level-5 built-in default of `clr run`/`ask`/`topic`. The alias would name a different model per release, per provider (Foundry and gateway above), and per `ANTHROPIC_DEFAULT_OPUS_MODEL` override, so the constant pins the ID and changes only by source edit. See [`012_workspace_defaults.md`](012_workspace_defaults.md) for the role table and update policy.
+No workspace constant targets this model: `DEFAULT_MODEL` (`module/claude_runner_core/src/isolated.rs`) pins `"claude-sonnet-5"` ([`004_claude_sonnet_5.md`](004_claude_sonnet_5.md)). Opus 5.5 runs when a caller asks for it through a higher precedence tier (`--model`, `--args-file`, `CLR_MODEL` or a config-file `model`). The explicit ID `claude-opus-5-5` is the stable value there too: the `opus` alias names a different model per release, per provider (Foundry and gateway above), and per `ANTHROPIC_DEFAULT_OPUS_MODEL` override. See [`012_workspace_defaults.md`](012_workspace_defaults.md) for the role table and update policy.
 
 ### Verification
 
@@ -64,6 +64,7 @@ claude --model opus -p 'reply with only your model id' </dev/null
 | doc | [readme.md](readme.md) | Master model entity index |
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment and update policy |
 | doc | [013_claude_opus_5.md](013_claude_opus_5.md) | Previous default Opus (v2.1.219–v2.1.279); this model's 3P fallback |
+| doc | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | Current `DEFAULT_MODEL` profile |
 | doc | [../param/157_disable_1m_context.md](../param/157_disable_1m_context.md) | Opting out of the 1M window this model ships with |
 | doc | [../param/042_model.md](../param/042_model.md) | `--model` flag and the `[1m]` suffix mechanism |
-| source | `module/claude_runner_core/src/isolated.rs` | `DEFAULT_MODEL` constant |
+| source | `module/claude_runner_core/src/isolated.rs` | `DEFAULT_MODEL` constant (now `claude-sonnet-5`) |

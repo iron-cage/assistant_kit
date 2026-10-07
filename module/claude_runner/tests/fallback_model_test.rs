@@ -18,8 +18,9 @@ fn ec1_fallback_model_forwarded()
     stdout.contains( "--fallback-model" ),
     "assembled command must contain --fallback-model. Got:\n{stdout}"
   );
+  // Exact pair — a bare `sonnet` check is also satisfied by the built-in `--model claude-sonnet-5`.
   assert!(
-    stdout.contains( "sonnet" ),
+    stdout.contains( "--fallback-model sonnet" ),
     "assembled command must contain the value sonnet. Got:\n{stdout}"
   );
 }

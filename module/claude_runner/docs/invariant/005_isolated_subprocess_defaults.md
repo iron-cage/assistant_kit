@@ -13,7 +13,7 @@
 
 | Behavior | isolated | refresh | Rationale |
 |----------|----------|---------|-----------|
-| Model | `"claude-opus-5-5"` (`DEFAULT_MODEL`, after the config-file tiers) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) | Isolated runs real user tasks requiring maximum capability; refresh executes a trivial `"."` ping to trigger OAuth token exchange only |
+| Model | `"claude-sonnet-5"` (`DEFAULT_MODEL`, after the config-file tiers) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) | Isolated runs real user tasks: Sonnet trades Opus's peak capability for speed and lower per-token cost, and Opus stays one `--model` (or config `model`) away; refresh executes a trivial `"."` ping to trigger OAuth token exchange only. Same value today, separate constants: each follows its own target |
 | `--effort` | `max` (injected) | `low` (injected) | Real tasks need maximum reasoning; credential ping needs minimal reasoning |
 | `--dangerously-skip-permissions` | ON when message present | not injected | Isolated tasks invoke tools; without this flag, every tool call blocks on an interactive permission prompt |
 | `--no-session-persistence` | always injected | always injected | Temp HOME is unconditionally discarded after run; writing session files to it is pure I/O waste |
@@ -56,7 +56,7 @@ clr isolated "what is 2+2?" -- --no-skip-permissions
 - Chrome (refresh only): prepended as `["--no-chrome"]` for refresh before `--print` and message
 
 **In `module/claude_runner_core/src/isolated.rs::run_isolated()`:**
-- Model: prepended via `IsolatedModel::Default` → `resolve_isolated_default_model()` (project `.clr.toml` → user `~/.clr/config.toml`), else `DEFAULT_MODEL = "claude-opus-5-5"` for isolated; `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` for refresh where `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"`
+- Model: prepended via `IsolatedModel::Default` → `resolve_isolated_default_model()` (project `.clr.toml` → user `~/.clr/config.toml`), else `DEFAULT_MODEL = "claude-sonnet-5"` for isolated; `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` for refresh where `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"`
 - `CLAUDE_CODE_AUTO_COMPACT_WINDOW`: set to `400000` in subprocess env via `ClaudeCommand::new()` → `compact_window: Some(DEFAULT_COMPACT_WINDOW)` (`= 400_000`); suppressed by `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` (same as all 5 running commands)
 - CLAUDE.md: written to `claude_dir/CLAUDE.md` before subprocess spawn
 - Timeout=0: deadline is skipped when `timeout_secs == 0` (no watchdog)
@@ -69,7 +69,7 @@ If any default is removed or reverted:
 - Refresh sets up browser context for a pure HTTP operation (chrome suppression removed)
 - Subprocess asks clarifying questions or prompts for confirmation, blocking permanently (CLAUDE.md removed)
 - `--timeout 0` kills subprocess immediately, making unlimited timeout impossible (timeout fix reverted)
-- Isolated user tasks run on `"sonnet"`/`"claude-sonnet-5"` instead of `"opus"` (model reverted)
+- Isolated user tasks run on whatever model the binary or an alias selects — varying per release, provider and settings — instead of the pinned `"claude-sonnet-5"` (model pin reverted)
 
 ### Related Docs
 

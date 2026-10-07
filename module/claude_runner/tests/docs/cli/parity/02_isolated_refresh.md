@@ -8,7 +8,7 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| PC-1 | isolated injects opus model; refresh injects sonnet model | Model Divergence |
+| PC-1 | isolated injects `DEFAULT_MODEL`; refresh injects `REFRESH_DEFAULT_MODEL` | Model Constants |
 | PC-2 | isolated injects `--effort max`; refresh injects `--effort low` | Effort Divergence |
 | PC-3 | isolated default timeout 30 s; refresh default timeout 45 s | Timeout Divergence |
 | PC-4 | isolated injects `--chrome` (default on); refresh injects `--no-chrome` | Chrome Divergence |
@@ -16,7 +16,7 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 
 ## Test Coverage Summary
 
-- Model Divergence: 1 test (PC-1)
+- Model Constants: 1 test (PC-1)
 - Effort Divergence: 1 test (PC-2)
 - Timeout Divergence: 1 test (PC-3)
 - Chrome Divergence: 1 test (PC-4)
@@ -26,13 +26,13 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 
 ---
 
-### PC-1: isolated injects opus model; refresh injects sonnet model
+### PC-1: isolated injects `DEFAULT_MODEL`; refresh injects `REFRESH_DEFAULT_MODEL`
 
 - **Given:** `DEFAULT_MODEL` and `REFRESH_DEFAULT_MODEL` constants in source
 - **When:** `DEFAULT_MODEL` value read; `REFRESH_DEFAULT_MODEL` value read
-- **Then:** `DEFAULT_MODEL == "claude-opus-5-5"` (heavyweight model for user tasks); `REFRESH_DEFAULT_MODEL == "claude-sonnet-5"` (lightweight model for trivial OAuth ping)
+- **Then:** `DEFAULT_MODEL == "claude-sonnet-5"` (user tasks); `REFRESH_DEFAULT_MODEL == "claude-sonnet-5"` (trivial OAuth ping) — equal values today, kept as separate constants because each follows its own target
 - **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
-- **Implemented by:** `isolated_defaults_test.rs::isd_01_default_model_is_opus_5_5`, `isolated_defaults_test.rs::isd_02_refresh_default_model_is_sonnet`
+- **Implemented by:** `isolated_defaults_test.rs::isd_01_default_model_is_sonnet_5`, `isolated_defaults_test.rs::isd_02_refresh_default_model_is_sonnet`
 
 ---
 

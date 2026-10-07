@@ -133,7 +133,7 @@ Positionals are likewise specified by the command that takes them — `kill <PID
 |---|-----------|------|---------|--------------|-------------|---------|
 | 1 | `[MESSAGE]` | [`MessageText`](../type/01_message_text.md) | — | Any text | Prompt text for Claude | 2 cmds |
 | 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (auto-default: message, non-TTY stdin, or file/stdin content) | 1 cmd |
-| 3 | `--model` | [`ModelName`](../type/04_model_name.md) | `claude-opus-5-5` | Any model name | Claude model to use | 1 cmd |
+| 3 | `--model` | [`ModelName`](../type/04_model_name.md) | `claude-sonnet-5` | Any model name | Claude model to use | 1 cmd |
 | 4 | `--verbose` | bool | false | present/absent | Enable Claude verbose output | 1 cmd |
 | 5 | `--no-skip-permissions` | bool | false | present/absent | Disable automatic permission bypass | 1 cmd |
 | 6 | `--interactive` | bool | false | present/absent | Forces TTY passthrough, overriding all auto-print triggers | 1 cmd |

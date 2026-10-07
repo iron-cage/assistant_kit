@@ -14,7 +14,7 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 | IN-6 | All opt-outs together remove all suppressible defaults | Combined Suppression |
 | IN-7 | Empty session source (`--from`) → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
 | IN-8 | Fresh CWD, no `--session-dir` → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
-| IN-9 | `--model claude-opus-5-5` present by default | Default Present |
+| IN-9 | `--model claude-sonnet-5` present by default | Default Present |
 | IN-10 | Non-anthropic seat → built-in `--model` withheld | Provider Gate |
 
 ## Test Coverage Summary
@@ -112,11 +112,11 @@ Test case planning for [invariant/001_default_flags.md](../../../docs/invariant/
 
 ---
 
-### IN-9: `--model claude-opus-5-5` present by default
+### IN-9: `--model claude-sonnet-5` present by default
 
 - **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command contains `--model claude-opus-5-5` (`DEFAULT_MODEL`), exactly once
+- **Then:** Assembled command contains `--model claude-sonnet-5` (`DEFAULT_MODEL`), exactly once
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md)
 - **Implementation:** `tests/param_edge_cases_test.rs` — `s08_model_defaults_to_builtin_when_absent`; `tests/bug_reproducers_008_test.rs` — `dispatch_run_builtin_default_model_injected_when_prefs_absent`

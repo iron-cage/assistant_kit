@@ -23,7 +23,7 @@
 //!
 //! --model:
 //! - S07: positional then `--model` at end of argv → exit 1 (`003_model.md` EC-3)
-//! - S08: without `--model` → built-in default `--model claude-opus-5-5` injected (`003_model.md` EC-7)
+//! - S08: without `--model` → built-in default `--model claude-sonnet-5` injected (`003_model.md` EC-7)
 //!
 //! --verbose:
 //! - S09: without `--verbose` → absent from command (`004_verbose.md` EC-2)

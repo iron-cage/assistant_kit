@@ -660,9 +660,10 @@ fn t16_config_only_sets_gate_poll_secs_and_max_attempts()
 fn t17_seat_env_block_suppresses_config_model()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  // Not `DEFAULT_MODEL`, so a leaked config value and a leaked default stay distinguishable.
   write_config_file(
     config_dir.path(),
-    "model = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+    "model = \"claude-opus-5-5\"\nfallback_model = \"claude-opus-4-8\"\n",
   );
   let home = tempfile::TempDir::new().expect( "home dir" );
   write_seat_settings( home.path(), KIMI_SEAT_ENV );
@@ -677,7 +678,7 @@ fn t17_seat_env_block_suppresses_config_model()
   assert_eq!( exit_code( &out ), 0, "T17: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
   assert!(
-    !stdout.contains( "--model" ) && !stdout.contains( "claude-sonnet-5" ),
+    !stdout.contains( "--model" ) && !stdout.contains( "claude-opus-5-5" ),
     "T17: config model must be suppressed while the seat env block is live. Got:\n{stdout}"
   );
   assert!(
@@ -702,7 +703,8 @@ fn t18_settings_without_model_pin_leaves_config_model_effective()
   ]
   {
     let config_dir = tempfile::TempDir::new().expect( "config dir" );
-    write_config_file( config_dir.path(), "model = \"claude-sonnet-5\"\n" );
+    // Not `DEFAULT_MODEL`: the default lands in the preview even when the config `model` is ignored.
+    write_config_file( config_dir.path(), "model = \"claude-opus-5-5\"\n" );
     let home = tempfile::TempDir::new().expect( "home dir" );
     write_seat_settings( home.path(), settings );
 
@@ -716,7 +718,7 @@ fn t18_settings_without_model_pin_leaves_config_model_effective()
     assert_eq!( exit_code( &out ), 0, "T18 ({label}): must exit 0; stderr: {}", stderr_str( &out ) );
     let stdout = stdout_str( &out );
     assert!(
-      stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
+      stdout.contains( "--model claude-opus-5-5" ),
       "T18 ({label}): settings.json without an ANTHROPIC_MODEL pin must not suppress config model. Got:\n{stdout}"
     );
   }
@@ -765,9 +767,10 @@ fn t19_cli_model_wins_over_provider_gate()
 fn t20_trace_names_suppressed_config_model()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  // Not `DEFAULT_MODEL`, so a note naming the default instead of the config value fails.
   write_config_file(
     config_dir.path(),
-    "model = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+    "model = \"claude-opus-5-5\"\nfallback_model = \"claude-opus-4-8\"\n",
   );
   let home = tempfile::TempDir::new().expect( "home dir" );
   write_seat_settings( home.path(), KIMI_SEAT_ENV );
@@ -782,7 +785,7 @@ fn t20_trace_names_suppressed_config_model()
   assert_eq!( exit_code( &out ), 0, "T20: must exit 0; stderr: {}", stderr_str( &out ) );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "config model 'claude-sonnet-5' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)" ),
+    stderr.contains( "config model 'claude-opus-5-5' ignored (seat env pins ANTHROPIC_MODEL=kimi-k3)" ),
     "T20: trace must name the suppressed model and the seat's pinned model. Got:\n{stderr}"
   );
   assert!(
@@ -794,7 +797,7 @@ fn t20_trace_names_suppressed_config_model()
 // ── T21: stale provider pin alone no longer suppresses (MRE BUG-548) ──────────────
 
 /// T21: MRE for BUG-548 — the user's incident direction. Config carries a stale
-/// `provider = "kimi"` pin AND `model = "claude-sonnet-5"`, but the seat has switched
+/// `provider = "kimi"` pin AND a config `model`, but the seat has switched
 /// back to anthropic (settings.json absent — `clp .account.use <anthropic>` removed
 /// the env block per Feature 071). The config model MUST apply: the seat routes to
 /// api.anthropic.com and nothing would be overridden.
@@ -838,9 +841,10 @@ fn t20_trace_names_suppressed_config_model()
 fn t21_mre_bug548_stale_provider_pin_does_not_suppress_on_anthropic_seat()
 {
   let config_dir = tempfile::TempDir::new().expect( "config dir" );
+  // Not `DEFAULT_MODEL`: the default lands in the preview even when the config `model` is ignored.
   write_config_file(
     config_dir.path(),
-    "provider = \"kimi\"\nmodel = \"claude-sonnet-5\"\nfallback_model = \"claude-opus-4-8\"\n",
+    "provider = \"kimi\"\nmodel = \"claude-opus-5-5\"\nfallback_model = \"claude-opus-4-8\"\n",
   );
   // Anthropic seat: HOME has no .claude/settings.json at all — exactly the state
   // `clp .account.use <anthropic>` leaves behind after removing the env block.
@@ -856,7 +860,7 @@ fn t21_mre_bug548_stale_provider_pin_does_not_suppress_on_anthropic_seat()
   assert_eq!( exit_code( &out ), 0, "T21: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
   assert!(
-    stdout.contains( "--model" ) && stdout.contains( "claude-sonnet-5" ),
+    stdout.contains( "--model claude-opus-5-5" ),
     "T21: config model must apply on an anthropic seat despite a stale provider pin. Got:\n{stdout}"
   );
   assert!(

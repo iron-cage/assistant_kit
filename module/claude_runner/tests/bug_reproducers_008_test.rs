@@ -30,7 +30,7 @@
 //! read. `dispatch_run()`'s resolution became exactly 4 tiers: `--model` flag → JSON config →
 //! `CLR_MODEL` env → `config.toml`. `dispatch_ask()` is a pure alias calling `dispatch_run()` —
 //! updated automatically. A later change added the level-5 built-in default: with all four
-//! tiers unset, `apply_config_defaults()` injects `DEFAULT_MODEL` (`claude-opus-5-5`) — except
+//! tiers unset, `apply_config_defaults()` injects `DEFAULT_MODEL` (`claude-sonnet-5`) — except
 //! on a non-anthropic seat (Provider Gate), where no `--model` is injected at all.
 //!
 //! ## Prevention
@@ -123,14 +123,15 @@ fn dispatch_run_explicit_model_flag_wins_over_pref()
   .expect( "failed to write prefs.json" );
 
   let home_str = home_dir.path().to_str().expect( "HOME path must be valid UTF-8" );
+  // Not `DEFAULT_MODEL`: the default lands in the preview even when `--model` is ignored.
   let out      = run_cli_with_env(
-    &[ "--dry-run", "--model", "claude-sonnet-5", "Fix bug" ],
+    &[ "--dry-run", "--model", "claude-opus-5-5", "Fix bug" ],
     &[ ( "HOME", home_str ) ],
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "claude-sonnet-5" ),
+    stdout.contains( "--model claude-opus-5-5" ),
     "explicit --model value must appear in assembled command. Got:\n{stdout}"
   );
   assert!(

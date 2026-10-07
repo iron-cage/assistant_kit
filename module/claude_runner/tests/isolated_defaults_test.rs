@@ -12,7 +12,7 @@
 //! disabling the watchdog.
 //!
 //! ## Fix Applied
-//! S1/S7: `DEFAULT_MODEL = "claude-opus-5-5"` + `REFRESH_DEFAULT_MODEL`;
+//! S1/S7: `DEFAULT_MODEL` (now `"claude-sonnet-5"`) + `REFRESH_DEFAULT_MODEL`;
 //!   `EffortLevel::Max` injected for isolated, `EffortLevel::Low` for refresh.
 //! S2: `timeout_secs == 0` → `deadline = None` (no watchdog).
 //! S3: `--no-session-persistence` prepended for both commands.
@@ -53,13 +53,13 @@ mod isolated_defaults_test
 
   // ── ISD-1 / ISD-2 : model constants ──────────────────────────────────────
 
-  /// ISD-1: `DEFAULT_MODEL` constant equals `"claude-opus-5-5"`.
+  /// ISD-1: `DEFAULT_MODEL` constant equals `"claude-sonnet-5"`.
   #[ test ]
-  fn isd_01_default_model_is_opus_5_5()
+  fn isd_01_default_model_is_sonnet_5()
   {
     assert_eq!(
-      DEFAULT_MODEL, "claude-opus-5-5",
-      "DEFAULT_MODEL must be the explicit Opus 5.5 ID (the `opus` alias resolves per Claude release)"
+      DEFAULT_MODEL, "claude-sonnet-5",
+      "DEFAULT_MODEL must be the explicit Sonnet 5 ID (the `sonnet` alias resolves per Claude release)"
     );
   }
 
@@ -352,7 +352,7 @@ mod isolated_defaults_test
   // ── ISD-14 : built-in default model reaches the assembled command ─────────
 
   /// ISD-14: with no `--model`, no `CLR_MODEL`, and no config preference in either
-  /// tier, `clr isolated --dry-run` previews `--model claude-opus-5-5` (`DEFAULT_MODEL`).
+  /// tier, `clr isolated --dry-run` previews `--model claude-sonnet-5` (`DEFAULT_MODEL`).
   ///
   /// ISD-1 pins the constant alone; this pins the end-to-end path —
   /// `IsolatedModel::Default` → `resolve_isolated_default_model()` returns `None` →

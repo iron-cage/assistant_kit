@@ -39,8 +39,7 @@ fn g1cc1_all_claude_native_flags_forwarded_together()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!( stdout.contains( "--print" ),                 "output must contain --print: {stdout}" );
-  assert!( stdout.contains( "--model" ),                 "output must contain --model: {stdout}" );
-  assert!( stdout.contains( "sonnet" ),                  "output must contain model value: {stdout}" );
+  assert!( stdout.contains( "--model sonnet" ),          "output must contain --model sonnet: {stdout}" );
   assert!( stdout.contains( "--verbose" ),               "output must contain --verbose: {stdout}" );
   assert!( stdout.contains( "--effort" ),                "output must contain --effort: {stdout}" );
   assert!( stdout.contains( "high" ),                    "output must contain effort value: {stdout}" );
@@ -60,8 +59,8 @@ fn g1cc2_model_and_verbose_coexist()
   let out = run_cli( &[ "--dry-run", "--model", "opus", "--verbose", "Fix bug" ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  // Exact `--model opus` pair — a bare `--model`/`opus` substring check would also be
-  // satisfied by the built-in default `--model claude-opus-5-5`.
+  // Exact `--model opus` pair — a bare `--model`/`opus` substring check is also satisfied by
+  // the built-in `--model <DEFAULT_MODEL>` whenever the default's ID contains the value.
   assert!( stdout.contains( "--model opus" ), "output must contain --model opus: {stdout}" );
   assert!( stdout.contains( "--verbose" ),    "output must contain --verbose: {stdout}" );
 }
@@ -82,7 +81,7 @@ fn g1cc3_verbose_and_effort_max_both_present()
 
 /// G1CC4: No group flags → only defaults injected; no user-supplied group flags appear.
 ///
-/// Default `--effort max`, `--print`, and the built-in `--model claude-opus-5-5` are
+/// Default `--effort max`, `--print`, and the built-in `--model claude-sonnet-5` are
 /// present; `--verbose` is absent.
 ///
 /// Spec: `01_claude_native_flags.md` CC-4
@@ -167,8 +166,10 @@ fn g1cc6_all_new_passthrough_params_forwarded_together()
   assert!( stdout.contains( "--max-budget-usd" ),  "must contain --max-budget-usd: {stdout}" );
   assert!( stdout.contains( "5.00" ),              "must contain 5.00: {stdout}" );
   assert!( stdout.contains( "--add-dir" ),         "must contain --add-dir: {stdout}" );
-  assert!( stdout.contains( "--fallback-model" ),  "must contain --fallback-model: {stdout}" );
-  assert!( stdout.contains( "sonnet" ),            "must contain sonnet: {stdout}" );
+  assert!(
+    stdout.contains( "--fallback-model sonnet" ),
+    "must contain --fallback-model sonnet: {stdout}"
+  );
 }
 
 // ─── Group 2: Runner Control ───────────────────────────────────────────────────

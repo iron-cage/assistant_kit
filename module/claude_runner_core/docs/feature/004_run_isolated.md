@@ -31,9 +31,9 @@ pub enum RunnerError {
     Io(String),
 }
 
-/// Explicit model ID passed as --model for real user tasks — not the "opus" alias, which the
+/// Explicit model ID passed as --model for real user tasks — not the "sonnet" alias, which the
 /// binary resolves per release and per settings. Shared with claude_runner's run/ask/topic default.
-pub const DEFAULT_MODEL : &str = "claude-opus-5-5";
+pub const DEFAULT_MODEL : &str = "claude-sonnet-5";
 
 pub enum IsolatedModel {
     Default,           // prepends --model DEFAULT_MODEL, unless a config-file model resolves first
@@ -83,7 +83,7 @@ pub fn run_isolated(
     content instructs subprocess to respond immediately without extended thinking
     on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
-      ClaudeCommand::new().with_home(<temp>).with_args([--model claude-opus-5-5, <args...>])
+      ClaudeCommand::new().with_home(<temp>).with_args([--model claude-sonnet-5, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped

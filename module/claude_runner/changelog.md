@@ -100,13 +100,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Built-in default model is now `claude-opus-5-5`** (`claude_runner_core::DEFAULT_MODEL`)
-  - `run`/`ask`/`topic` pass `--model claude-opus-5-5` when no higher precedence level sets a model (CLI `--model`, `--args-file`, `CLR_MODEL`, config-file `model`) — previously no `--model` was passed and the `claude` binary picked its own default
+- **Built-in default model is now `claude-sonnet-5`** (`claude_runner_core::DEFAULT_MODEL`)
+  - `run`/`ask`/`topic` pass `--model claude-sonnet-5` when no higher precedence level sets a model (CLI `--model`, `--args-file`, `CLR_MODEL`, config-file `model`) — previously no `--model` was passed and the `claude` binary picked its own default
+  - Sonnet 5 accepts every default `clr` layers on top: `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` (its output ceiling), and the 400k auto-compact window (below its 1M context)
   - Provider Gate: a non-empty `env.ANTHROPIC_MODEL` in `~/.claude/settings.json` withholds the built-in default together with the config tier, so non-anthropic seats keep their own model binding; `--trace` emits no note for the withheld default
-  - `clr isolated` default switched from the `opus` alias (resolved by the binary per release and per settings) to the explicit ID `claude-opus-5-5`; `clr refresh` stays on `claude-sonnet-5`
-  - **Breaking (`claude_runner_core` public API):** `ISOLATED_DEFAULT_MODEL` (`"opus"`) renamed to `DEFAULT_MODEL` (`"claude-opus-5-5"`) — one constant now backs both `IsolatedModel::Default` and `clr`'s level-5 default
-  - `--help` for `run`/`isolated`/`ask`/`topic` prints `(default: claude-opus-5-5)`; the journal records `claude-opus-5-5` for runs that previously recorded no model
-  - Docs: `docs/cli/param/003_model.md`, `docs/cli/config_param.md`, `docs/invariant/001_default_flags.md` (new `--model` default row), `docs/invariant/005_isolated_subprocess_defaults.md`, plus the parity, type, and param-group docs; tests: `config_file_test.rs` T22 (Provider Gate withholds the default), `isolated_defaults_test.rs` ISD-14, `param_edge_cases_test.rs` S08, and the exact-command assertions in `dry_run_test.rs`, `ultrathink_args_test.rs`, and `cli_args_ext_test.rs`
+  - `clr isolated` default switched from the `opus` alias (resolved by the binary per release and per settings) to the explicit ID `claude-sonnet-5` — isolated tasks now run on Sonnet, trading Opus's peak capability for speed and lower per-token cost; `--model claude-opus-5-5` (or config `model`) still runs Opus. `clr refresh` stays on `claude-sonnet-5` through its own `REFRESH_DEFAULT_MODEL`
+  - **Breaking (`claude_runner_core` public API):** `ISOLATED_DEFAULT_MODEL` (`"opus"`) renamed to `DEFAULT_MODEL` (`"claude-sonnet-5"`) — one constant now backs both `IsolatedModel::Default` and `clr`'s level-5 default
+  - `--help` for `run`/`isolated`/`ask`/`topic` prints `(default: claude-sonnet-5)`; the journal records `claude-sonnet-5` for runs that previously recorded no model
+  - Docs: `docs/cli/param/003_model.md`, `docs/cli/config_param.md`, `docs/invariant/001_default_flags.md` (new `--model` default row), `docs/invariant/005_isolated_subprocess_defaults.md`, plus the parity, type, and param-group docs; tests: `config_file_test.rs` T22 (Provider Gate withholds the default), `isolated_defaults_test.rs` ISD-14, `param_edge_cases_test.rs` S08, and the exact-command assertions in `dry_run_test.rs`, `ultrathink_args_test.rs`, and `cli_args_ext_test.rs`; tests that pass a model through a CLI/env/config tier now use a non-default ID (`claude-opus-5-5`) or assert the exact `--model`/`--fallback-model` pair, so the built-in default can't satisfy them (`cli_args_test.rs` T10, `bug_reproducers_008_test.rs`, `config_file_test.rs` T17/T18/T20/T21, `fallback_model_test.rs` EC-1, `param_group_test.rs`, `env_var_test.rs` E03)
 
 - **Default auto-compact window raised 300,000 → 400,000 tokens**
   - `DEFAULT_COMPACT_WINDOW` (`claude_runner_core/src/command/mod.rs`) is now `400_000`, so every `clr` subprocess gets `CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` unless opted out

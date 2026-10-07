@@ -11,7 +11,7 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 | TC-1 | Valid model name → forwarded to claude | Valid Input |
 | TC-2 | Model name with hyphens → accepted | Valid Input |
 | TC-3 | `--model` without value → exit 1 | Missing Value |
-| TC-4 | `--model` absent → built-in `claude-opus-5-5` in assembled command | Default |
+| TC-4 | `--model` absent → built-in `claude-sonnet-5` in assembled command | Default |
 
 ## Test Coverage Summary
 
@@ -38,7 +38,7 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 ### TC-2: Model name with hyphens → accepted
 
 - **Given:** clean environment
-- **When:** `clr --dry-run "Fix bug" --model claude-sonnet-5`
+- **When:** `clr --dry-run "Fix bug" --model claude-opus-5-5` (not `DEFAULT_MODEL`, which the preview carries anyway)
 - **Then:** Exit 0; hyphenated model name accepted and forwarded intact
 - **Exit:** 0
 - **Source:** [type/04_model_name.md](../../../../docs/cli/type/04_model_name.md)
@@ -55,10 +55,10 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 
 ---
 
-### TC-4: `--model` absent → built-in `claude-opus-5-5` in assembled command
+### TC-4: `--model` absent → built-in `claude-sonnet-5` in assembled command
 
 - **Given:** clean environment (no `CLR_MODEL`, no config-file `model`, no `env.ANTHROPIC_MODEL` in `~/.claude/settings.json`)
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command contains `--model claude-opus-5-5` (`DEFAULT_MODEL`); on a non-anthropic seat no `--model` is emitted at all (Provider Gate)
+- **Then:** Assembled command contains `--model claude-sonnet-5` (`DEFAULT_MODEL`); on a non-anthropic seat no `--model` is emitted at all (Provider Gate)
 - **Exit:** 0
 - **Source:** [type/04_model_name.md](../../../../docs/cli/type/04_model_name.md)

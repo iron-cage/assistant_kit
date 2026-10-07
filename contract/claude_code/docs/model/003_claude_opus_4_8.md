@@ -29,12 +29,12 @@
 **No longer a workspace default.** The former `ISOLATED_DEFAULT_MODEL` held the CLI alias `"opus"`, which resolved here until v2.1.219 moved it to `claude-opus-5` ([`013_claude_opus_5.md`](013_claude_opus_5.md)). That supersession was the alias design working — the constant didn't change; what it pointed at did. The constant has since been replaced by a pinned ID:
 
 ```
-DEFAULT_MODEL = "claude-opus-5-5"   // pinned full ID — not an alias
+DEFAULT_MODEL = "claude-sonnet-5"   // pinned full ID — not an alias
 ```
 
-See [`014_claude_opus_5_5.md`](014_claude_opus_5_5.md) for why the alias was dropped.
+See [`012_workspace_defaults.md`](012_workspace_defaults.md) for why the alias was dropped, and [`004_claude_sonnet_5.md`](004_claude_sonnet_5.md) for the model it pins.
 
-The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` must be updated whenever Anthropic promotes a new model to the `opus` alias. That column had gone stale against v2.1.219 until this revision, which is the concrete cost of the alias indirection: nothing in the source breaks, so nothing prompts the doc update.
+While the constant held the alias, the `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assignment` had to be updated whenever Anthropic promoted a new model to `opus`. That column went stale against v2.1.219, which is the concrete cost of the alias indirection: nothing in the source breaks, so nothing prompts the doc update.
 
 ### Still current for
 
@@ -49,7 +49,9 @@ The `"Resolves To"` column in `012_workspace_defaults.md § Role-to-Model Assign
 | doc | [012_workspace_defaults.md](012_workspace_defaults.md) | Role-to-model assignment and update policy |
 | source | `module/claude_runner_core/src/isolated.rs` | Historical `ISOLATED_DEFAULT_MODEL` site (now `DEFAULT_MODEL`) |
 | endpoint | [../endpoint/011_v1_models.md](../endpoint/011_v1_models.md) | GET /v1/models — live model capabilities |
-| doc | [013_claude_opus_5.md](013_claude_opus_5.md) | Current default Opus; what the `opus` alias resolves to now |
+| doc | [013_claude_opus_5.md](013_claude_opus_5.md) | Next default Opus (v2.1.219–v2.1.279) |
+| doc | [014_claude_opus_5_5.md](014_claude_opus_5_5.md) | Current default Opus; what the `opus` alias resolves to now |
+| doc | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | Current `DEFAULT_MODEL` |
 | doc | [001_claude_fable_5.md](001_claude_fable_5.md) | Next-tier model above Opus 4.8 |
 | doc | [006_claude_opus_4_7.md](006_claude_opus_4_7.md) | Previous Opus generation; removed from fast mode in v2.1.219 |
 | doc | [../version/115_v2_1_219.md](../version/115_v2_1_219.md) | Release that superseded this model as the Opus default |

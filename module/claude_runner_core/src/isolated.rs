@@ -25,10 +25,14 @@ use std::io;
 /// `claude_runner::cli::config` (level-5 built-in default) to keep every running
 /// command's default in lockstep.
 ///
-/// An explicit ID, not the `"opus"` alias — the Claude binary resolves the alias per
-/// release and per `ANTHROPIC_DEFAULT_OPUS_MODEL`/settings overrides, so the alias
-/// never pins one model.  Update this constant when the target model changes.
-pub const DEFAULT_MODEL : &str = "claude-opus-5-5";
+/// An explicit ID, not the `"sonnet"` alias — the Claude binary resolves the alias per
+/// release, per provider and per `ANTHROPIC_DEFAULT_SONNET_MODEL`/settings overrides, so
+/// the alias never pins one model.  Update this constant when the target model changes.
+///
+/// Currently the same value as [`REFRESH_DEFAULT_MODEL`], but kept as a separate
+/// constant: this one serves real user tasks, that one the credential-refresh ping,
+/// and each follows its own target model.
+pub const DEFAULT_MODEL : &str = "claude-sonnet-5";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -55,9 +59,9 @@ pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-5";
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
-/// The `Default` variant targets [`DEFAULT_MODEL`] — the current production Opus
-/// (highest capability) — for real user tasks; callers that want the Claude binary
-/// to use whatever model it would normally select should pass `KeepCurrent`.
+/// The `Default` variant targets [`DEFAULT_MODEL`] — the current Sonnet, faster and
+/// cheaper per token than Opus — for real user tasks; callers that want the Claude
+/// binary to use whatever model it would normally select should pass `KeepCurrent`.
 #[ derive( Debug, Clone ) ]
 pub enum IsolatedModel
 {

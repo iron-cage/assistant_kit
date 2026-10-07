@@ -84,7 +84,7 @@ fn it9_isolated_help_exits_zero()
 
 // ── IT-46 through IT-67: Plan 007 native flag parity ─────────────────────────
 
-/// IT-46: `--model sonnet` overrides isolated's injected `claude-opus-5-5` default.
+/// IT-46: `--model sonnet` overrides isolated's injected `claude-sonnet-5` default.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-46
 #[ test ]

@@ -15,7 +15,7 @@
 //! |------|---------|-------------------------------------|
 //! | E01  | `CLR_MESSAGE`              | stdout contains the message text                             |
 //! | E02  | `CLR_PRINT`                | stdout contains `--print` (with `--interactive` on CLI)     |
-//! | E03  | `CLR_MODEL`                | stdout contains `--model` and `sonnet`                      |
+//! | E03  | `CLR_MODEL`                | stdout contains `--model sonnet`                            |
 //! | E04  | `CLR_VERBOSE`              | stdout contains `--verbose`                                 |
 //! | E05  | `CLR_NO_SKIP_PERMISSIONS`  | stdout NOT contains `--dangerously-skip-permissions`        |
 //! | E06  | `CLR_INTERACTIVE`          | stdout NOT contains `--print` (with positional message)     |
@@ -101,8 +101,8 @@ fn e03_clr_model_sets_model()
   let out = run_cli_with_env( &[ "--dry-run", "task" ], &[ ( "CLR_MODEL", "sonnet" ) ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "--model" ), "CLR_MODEL must add --model flag: {stdout}" );
-  assert!( stdout.contains( "sonnet" ),  "CLR_MODEL must include model name: {stdout}" );
+  // Exact pair — bare `--model`/`sonnet` checks are also satisfied by the built-in `--model claude-sonnet-5`.
+  assert!( stdout.contains( "--model sonnet" ), "CLR_MODEL must add --model sonnet: {stdout}" );
 
   // CLI-wins
   let out2 = run_cli_with_env(
@@ -110,8 +110,8 @@ fn e03_clr_model_sets_model()
     &[ ( "CLR_MODEL", "sonnet" ) ],
   );
   let stdout2 = String::from_utf8_lossy( &out2.stdout );
-  assert!( stdout2.contains( "opus" ),   "CLI --model must win over CLR_MODEL: {stdout2}" );
-  assert!( !stdout2.contains( "sonnet" ), "CLR_MODEL must not override CLI --model: {stdout2}" );
+  assert!( stdout2.contains( "--model opus" ), "CLI --model must win over CLR_MODEL: {stdout2}" );
+  assert!( !stdout2.contains( "sonnet" ),       "CLR_MODEL must not override CLI --model: {stdout2}" );
 }
 
 // ─── E04: CLR_VERBOSE ─────────────────────────────────────────────────────────
