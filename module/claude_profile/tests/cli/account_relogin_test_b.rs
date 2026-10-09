@@ -496,6 +496,7 @@ fn mre_bug_209_account_save_uses_active_marker_not_stale_email()
 /// Any inference that relies on a single marker written only by one class of credential-change
 /// ops fails silently when other classes bypass that marker. Always prefer a source that ALL
 /// credential-change paths maintain — `oauthAccount.emailAddress` is the universal source.
+// BUG-582 — that premise fails when a running Claude process rewrites ~/.claude.json, and this test never checks slot contents
 #[ doc = "bug_reproducer(BUG-212)" ]
 #[ test ]
 fn mre_bug_212_account_save_stale_marker_uses_oauth_email()

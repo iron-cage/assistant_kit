@@ -277,6 +277,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       let cj          = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
       // Extract emailAddress nested inside oauthAccount {…}: locate "oauthAccount": first,
       // then apply parse_string_field on the suffix so only the nested key is found.
+      // BUG-582 — a running Claude process also rewrites ~/.claude.json, so this name can belong to another session
       let oauth_email = cj
         .find( "\"oauthAccount\":" )
         .and_then( | pos | crate::account::parse_string_field( &cj[ pos.. ], "emailAddress" ) )

@@ -356,6 +356,7 @@ fn ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env()
 
 /// T03/433/AC-07: switching to an anthropic account preserves any unrelated `env.*`
 /// sub-key that was already present — only the 3 `ANTHROPIC_*` keys are removed.
+// BUG-585 — the preserved key, TZ, is outside the tier lists, so deleting a user's tier-named key can't show here
 #[ test ]
 fn ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey()
 {

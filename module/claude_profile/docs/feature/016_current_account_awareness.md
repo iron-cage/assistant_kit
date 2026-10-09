@@ -21,7 +21,7 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 **Current account detection algorithm (shared):**
 1. Read `accessToken` from `~/.claude/.credentials.json` → live token.
 2. For each saved account, read `accessToken` from `{credential_store}/{name}.credentials.json`.
-3. The account whose stored token equals the live token is the current account (`is_current = true`). At most one account matches.
+3. The account whose stored token equals the live token is the current account (`is_current = true`). At most one account matches. <!-- BUG-582 — false once two slots hold one session; nothing enforces it -->
 4. When `~/.claude/.credentials.json` is absent or unreadable: `is_current = false` for all accounts (graceful degradation).
 
 **Changes to `.accounts`:**

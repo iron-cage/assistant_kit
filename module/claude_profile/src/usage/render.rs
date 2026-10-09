@@ -9,6 +9,7 @@
 
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
 use crate::account::{ TagFilter, eligible };
+use crate::output::owner_cell;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   recommended_model,
@@ -202,7 +203,10 @@ pub fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
-        if cols.owner        { row.push( aq.owner.clone() ); }
+        // Fix(BUG-588): an unowned account renders `—`, as `.accounts` does (AC-19); same in the Err arm below.
+        // Root cause: the `.usage` cell pushed `aq.owner` as-is, so an empty owner left the cell blank.
+        // Pitfall: two views of one field need one formatter, or they drift apart.
+        if cols.owner        { row.push( owner_cell( &aq.owner ) ); }
         if cols.next         { row.push( next_cell ); }
         if cols.tags         { row.push( aq.tags.join( ", " ) ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
@@ -244,7 +248,7 @@ pub fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
-        if cols.owner        { row.push( aq.owner.clone() ); }
+        if cols.owner        { row.push( owner_cell( &aq.owner ) ); }
         if cols.next         { row.push( "\u{2014}".to_string() ); }
         if cols.tags         { row.push( aq.tags.join( ", " ) ); }
         // Fix(BUG-220): only the last visible quota-data column carries error_str — non-quota
@@ -327,6 +331,7 @@ pub fn render_text(
   // BUG-344 (reverted): see flag_cell's comment above — AC-02/AC-10's "Current · <name>"
   //   line identifies the ✓ (is_current) account unconditionally; docs/feature/009_token_usage.md
   //   has no result-gating on this line either.
+  // BUG-582 — the first is_current row wins, so a second slot holding the live session goes unreported
   let footer = if let Some( cur ) = accounts.iter().find( |aq| aq.is_current )
   {
     let model_effort = match ( session_model, session_effort )

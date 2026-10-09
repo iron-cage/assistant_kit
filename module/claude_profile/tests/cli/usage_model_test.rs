@@ -780,14 +780,17 @@ fn it150_status_emoji_absent_from_json()
 
 // ── it151: past _renewal_at auto-advances at render (030 FT-10) ──────────────
 
-/// it151 — Past `_renewal_at` is auto-advanced monthly at render; shows `in Xd` (no `~`).
+/// it151 — Past `_renewal_at` is auto-advanced monthly at render; shows `in Xd` (no `~`)
+/// and keeps the stored time of day.
 ///
-/// Root Cause: `renews_label()` advances past timestamps by 30-day increments until future.
-/// The stored value is unchanged; auto-advance is a read-only render-time operation.
+/// Root Cause: `renewal_secs()` advances a past timestamp by calendar months, keeping its
+/// day-of-month and time of day, until it is in the future. The stored value is unchanged;
+/// auto-advance is a read-only render-time operation.
 ///
-/// Setup: Account has `_renewal_at: "2020-03-15T00:00:00Z"` (deeply past). After auto-advance
-/// the next day-15 occurrence lands within 30 days of today. No live credentials needed —
-/// the account will be in error state but the `~Renews` column is populated from stored data.
+/// Setup: Account has `_renewal_at: "2020-03-15T11:09:00Z"` (deeply past). After auto-advance
+/// the next day-15 occurrence lands within a month of today, at 11:09:00 UTC. No live
+/// credentials needed — the account will be in error state but the `~Renews` column and the
+/// JSON `renewal_secs` field are populated from stored data.
 ///
 /// Spec: [`tests/docs/feature/030_account_renewal_override.md` FT-10]
 /// Source: [`030_account_renewal_override.md` AC-10]
@@ -798,7 +801,7 @@ fn it151_past_renewal_at_auto_advances_in_usage()
   let home = dir.path().to_str().unwrap();
 
   write_account( dir.path(), "past@renewal.com", "max", "default", FAR_FUTURE_MS, false );
-  write_account_renewal_json( dir.path(), "past@renewal.com", "2020-03-15T00:00:00Z" );
+  write_account_renewal_json( dir.path(), "past@renewal.com", "2020-03-15T11:09:00Z" );
 
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -819,11 +822,25 @@ fn it151_past_renewal_at_auto_advances_in_usage()
     "past _renewal_at must auto-advance and show 'in Xd' (no '~'), got row:\n{renews_line}\nfull output:\n{text}",
   );
 
+  // BUG-589 — the advanced value keeps its 11:09:00 UTC end to end, not just inside renewal_secs().
+  // clp reads its own clock after `before`, so `before + secs` trails the true instant by clp's run time.
+  let before = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+  let out    = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let json   = stdout( &out );
+  let secs : u64 = json.split( "\"renewal_secs\":" ).nth( 1 )
+    .and_then( |rest| rest.split( |c : char| !c.is_ascii_digit() ).next() )
+    .and_then( |digits| digits.parse().ok() )
+    .unwrap_or_else( || panic!( "format::json must carry a numeric renewal_secs, got:\n{json}" ) );
+  let tod = ( before + secs ) % 86_400;
+  let lag = ( 40_140 + 86_400 - tod ) % 86_400; // 11:09:00 UTC is 40 140 s past midnight
+  assert!( lag <= 60, "advanced renewal must keep 11:09:00 UTC, got {tod}s past midnight, json:\n{json}" );
+
   // The file on disk must NOT have been modified — auto-advance is read-only.
   let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let on_disk = std::fs::read_to_string( store.join( "past@renewal.com.json" ) ).unwrap();
   assert!(
-    on_disk.contains( "2020-03-15T00:00:00Z" ),
+    on_disk.contains( "2020-03-15T11:09:00Z" ),
     "stored _renewal_at must NOT be modified by render-time auto-advance, got: {on_disk}",
   );
 }

@@ -230,6 +230,7 @@ fn sync_backend_env_vars( live_settings_path : &Path, meta_text : &str, src : &P
     let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_BASE_URL" );
     let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_AUTH_TOKEN" );
     let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_MODEL" );
+    // BUG-585 — both tier bundles are cleared by name on every Anthropic switch, whoever wrote them
     clear_kimi_tier_env_vars( live_settings_path );
     clear_deepseek_tier_env_vars( live_settings_path );
     if claude_core::settings_io::get_setting( live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )

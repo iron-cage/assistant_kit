@@ -157,9 +157,9 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-10: Past `_renewal_at` auto-advanced monthly at render time
 
-- **Given:** Account `test@example.com` has `_renewal_at: "2020-03-15T00:00:00Z"` (past timestamp, day-15).
-- **When:** `clp .usage`
-- **Then:** `~Renews` column for `test@example.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance. The stored value is NOT modified; auto-advance is read-only at render.
+- **Given:** Account `test@example.com` has `_renewal_at: "2020-03-15T11:09:00Z"` (past timestamp, day-15, 11:09 UTC).
+- **When:** `clp .usage`, then `clp .usage format::json`
+- **Then:** `~Renews` column for `test@example.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance. In the JSON, the clock reading taken just before the run plus `renewal_secs` falls on 11:09:00 UTC, within 60 s for clp's own run time — the advanced value keeps the stored time of day (BUG-589). The stored value is NOT modified; auto-advance is read-only at render.
 - **Exit:** 0
 - **Note:** No live credentials required — the cited test uses `write_account()` (no token) and its own doc comment confirms the account "will be in error state but the `~Renews` column is populated from stored data." This test does not assert day-of-month preservation across auto-advance steps — it only checks the exact-vs-estimate `~` prefix. AC-10's day-of-month preservation requirement is fixed and covered separately by the BUG-329 regression tests in `tests/usage/format_tests.rs` (see `docs/algorithm/010_renewal_date_computation.md` AC-5/AC-6). See BUG-329 (`/home/alice/assistant/task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`, closed) for the full mechanism and fix history — the underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
 - **Source fn:** `it151_past_renewal_at_auto_advances_in_usage` (in `tests/cli/usage_model_test.rs`)

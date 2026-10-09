@@ -32,6 +32,7 @@ fn detect_current_account(
     let Ok( s ) = std::fs::read_to_string( &path ) else { continue };
     if let Some( token ) = crate::account::parse_string_field( &s, "accessToken" )
     {
+      // BUG-582 — the first slot matching the live token wins; a second match goes unreported
       if token == live_token
       {
         return Some( acct.name.clone() );

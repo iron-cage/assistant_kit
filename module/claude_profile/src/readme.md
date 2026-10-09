@@ -11,7 +11,7 @@
 | `account.rs` | Re-export shim over `claude_profile_core::account` (authoritative implementation there). |
 | `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
-| `output.rs` | Output format extraction, JSON string escaping, and duration display. |
+| `output.rs` | Output format extraction, JSON string escaping, duration display, and the shared Owner cell text. <!-- BUG-588 — the Owner cell formatter both views share --> |
 | `commands/` | CLI command handler routines: one module per command group (accounts, account_ops, credentials, limits, token_paths, dot) plus cmd_args (argument/error helpers) and cmd_context (environment/credentials context). |
 | `usage/` | `.usage` command modules — quota fetch, render, sort, refresh, and live loop. |
 | `owner_dispatch.rs` | Shared owner batch-clear and named-dispatch logic for `.accounts` and `.usage`. |

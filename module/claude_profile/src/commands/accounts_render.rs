@@ -3,7 +3,7 @@
 use core::fmt::Write as _;
 use data_fmt::{ RowBuilder, TableFormatter, Format };
 use unilang::data::{ ErrorCode, ErrorData };
-use crate::output::{ json_escape, format_duration_secs };
+use crate::output::{ json_escape, format_duration_secs, owner_cell };
 use super::cmd_context::caps_to_json;
 
 // ── Column visibility ─────────────────────────────────────────────────────────
@@ -165,10 +165,10 @@ pub( crate ) fn render_accounts_text(
     out.push( '\n' );
     if any_field
     {
+      // BUG-588 — the shared owner_cell() keeps this value identical to the `.usage` Owner cell (and the table below)
       if cols.owner
       {
-        let owner_raw = owners.get( idx ).map_or( "", String::as_str );
-        let owner_val = if owner_raw.is_empty() { "\u{2014}" } else { owner_raw };
+        let owner_val = owner_cell( owners.get( idx ).map_or( "", String::as_str ) );
         let _ = writeln!( out, "  Owner:   {owner_val}" );
       }
       if cols.active
@@ -416,12 +416,7 @@ pub( crate ) fn render_accounts_table(
     // with_lock_marker — visible by default without adding a mostly-empty column.
     let name_cell = if acct.claim_lock { format!( "{} \u{1F512}", acct.name ) } else { acct.name.clone() };
     let mut row = vec![ flag_cell.into(), name_cell.into() ];
-    if cols.owner
-    {
-      let owner_raw = owners.get( idx ).map_or( "", String::as_str );
-      let owner_val = if owner_raw.is_empty() { "\u{2014}".to_string() } else { owner_raw.to_string() };
-      row.push( owner_val.into() );
-    }
+    if cols.owner { row.push( owner_cell( owners.get( idx ).map_or( "", String::as_str ) ).into() ); }
     if cols.active { row.push( if acct.is_active { "yes" } else { "no" }.into() ); }
     row.push( acct.subscription_type.clone().into() );
     row.push( acct.rate_limit_tier.clone().into() );

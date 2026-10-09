@@ -166,7 +166,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 0. stdout contains `saved current credentials as 'i5@example.com'`. `{credential_store}/i5@example.com.credentials.json` is created. `{credential_store}/i2@example.com.credentials.json` is NOT created or modified — the stale marker is not used when `oauthAccount.emailAddress` provides a valid name.
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
-- **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker.
+- **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker. <!-- BUG-582 — no FT covers a bare save whose ~/.claude.json names a different saved account than the live session's -->
 - **Source:** [feature/002_account_save.md AC-16](../../../docs/feature/002_account_save.md)
 
 ---

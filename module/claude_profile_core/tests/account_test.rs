@@ -110,6 +110,8 @@ fn ad_delete_succeeds_when_snapshots_absent()
 
 // ── AS: Account Save ──────────────────────────────────────────────────────────
 
+// BUG-582 — no test saves a live session that another slot already holds
+
 /// BUG-211 MRE: `save()` with `update_marker=false` must NOT write the `_active` marker file.
 ///
 /// # Root Cause

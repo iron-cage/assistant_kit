@@ -7,7 +7,7 @@
 | `paths_tests.rs` | ClaudePaths: all canonical path methods, HOME-not-set guard. |
 | `responsibility_no_process_execution_test.rs` | Guard: no std::process import anywhere in crate source. |
 | `lib_test.rs` | Library exports: COMMANDS_YAML, register_commands(), command presence. |
-| `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
+| `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs, owner_cell. |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for all cli/ submodules. |
 | `usage_integration_test.rs` | Entry point wiring all tests/usage/ integration test modules. |

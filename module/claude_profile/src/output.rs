@@ -1,4 +1,4 @@
-//! Output formatting: text/json selection, JSON string escaping, duration display.
+//! Output formatting: text/json selection, JSON string escaping, duration display, Owner cell text.
 //!
 //! Provides the `OutputOptions` struct used by command handlers to determine
 //! output format. All format decisions are centralised here rather than
@@ -236,4 +236,14 @@ pub fn json_escape( s : &str ) -> String
     }
   }
   out
+}
+
+// BUG-588 — `.usage` once pushed the raw owner, so an unowned account's cell was blank there and `—` in `.accounts`
+/// Owner cell text for the `.usage` and `.accounts` text views: the identity, or `—` when the
+/// account is unowned (Feature 037 AC-19). TSV and JSON keep the raw `""`.
+#[ inline ]
+#[ must_use ]
+pub fn owner_cell( owner : &str ) -> String
+{
+  if owner.is_empty() { "\u{2014}".to_string() } else { owner.to_string() }
 }

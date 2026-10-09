@@ -293,10 +293,33 @@ fn it255_footer_single_strategy_structural()
 /// it248 (IT-74, AC-19): Owner column visible by default on `.usage`; `cols::-owner` hides it.
 ///
 /// Case A: `.usage` — "Owner" column header present; owned account shows owner identity;
-/// unowned account shows em dash (—).
+/// unowned account shows em dash (—). The per-row checks hide every column but Account and
+/// Owner, so each row ends in its own Owner cell.
 /// Case B: `.usage cols::-owner` — "Owner" column header absent.
 ///
+/// # Root Cause
+/// The `.usage` text cell pushed `aq.owner` as-is, so an unowned account's `""` left the cell
+/// blank, while `.accounts` mapped the same value to `—`.
+///
+/// # Why Not Caught
+/// Case A asserted only that `—` appeared somewhere in stdout. These fixtures have no
+/// `accessToken`, so every row takes the `Err` arm, whose `→ Next` cell is always `—`: the
+/// check passed whatever bob's Owner cell held.
+///
+/// # Fix Applied
+/// Both arms of `render_text()` push `output::owner_cell( &aq.owner )`, the formatter
+/// `.accounts` now shares.
+///
+/// # Prevention
+/// The row checks read the Owner cell itself: bob's row must end in `—` and alice's in her
+/// identity, with nothing else on the row that could supply the em dash.
+///
+/// # Pitfall
+/// A substring check over a whole table can be satisfied by a neighbouring cell. Pin the
+/// assertion to the cell, by position or by hiding the other columns.
+///
 /// Spec: [`tests/docs/cli/command/09_usage.md` IT-74]
+#[ doc = "bug_reproducer(BUG-588)" ]
 #[ test ]
 fn it248_owner_column_visible_by_default()
 {
@@ -322,10 +345,24 @@ fn it248_owner_column_visible_by_default()
       text.contains( "testuser@testmachine" ),
       "IT-74A: alice's owner identity must appear in Owner column; got:\n{text}",
     );
-    assert!(
-      text.contains( "\u{2014}" ),
-      "IT-74A: bob's empty owner must show em dash (—) in Owner column; got:\n{text}",
-    );
+  }
+
+  // Case A, per row: only Account and Owner visible, so each row ends in its own Owner cell.
+  // BUG-588 — a bare `—` search passed on bob's → Next cell; this reads his Owner cell itself
+  {
+    let only_owner = "cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next";
+    let out        = run_cs_with_env( &[ ".usage", only_owner ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    let text   = stdout( &out );
+    let row_of = | name : &str | text.lines()
+      .find( | l | l.contains( name ) )
+      .unwrap_or_else( || panic!( "IT-74A: no row for {name}; got:\n{text}" ) )
+      .trim_end()
+      .to_string();
+    let bob = row_of( "bob@acme.com" );
+    assert!( bob.ends_with( "\u{2014}" ), "IT-74A: bob's own Owner cell must be — (unowned); got row: {bob:?}\n{text}" );
+    let alice = row_of( "alice@acme.com" );
+    assert!( alice.ends_with( "testuser@testmachine" ), "IT-74A: alice's Owner cell must be her identity; got row: {alice:?}\n{text}" );
   }
 
   // Case B: cols::-owner — Owner column header absent.

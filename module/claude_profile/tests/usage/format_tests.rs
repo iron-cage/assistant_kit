@@ -1022,8 +1022,11 @@ fn rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end()
 {
   let now_secs    = 1_772_409_600_u64; // 2026-03-02T00:00:00Z
   let result      = renewal_secs( Some( "2026-01-31T21:00:00Z" ), None, now_secs ).unwrap();
-  let ( y, m, d ) = unix_to_date( now_secs + result.0 );
+  let at          = now_secs + result.0;
+  let ( y, m, d ) = unix_to_date( at );
   assert_eq!( ( y, m, d ), ( 2026, 3, 31 ), "must clamp through Feb and land on Mar 31, got {y}-{m:02}-{d:02}" );
+  // BUG-589 — the whole instant, not just the date: the anchor's 21:00:00 UTC has to survive the clamp too
+  assert_eq!( at, 1_774_990_800, "must land on 2026-03-31T21:00:00Z, got {}s past Mar 31 00:00 UTC", at % 86_400 );
 }
 
 /// A day-29 anchor (valid only in leap-year Februaries) must clamp to day 28 advancing
@@ -1063,6 +1066,84 @@ fn rl_auto_advance_day29_clamps_in_common_february_then_recovers()
   let result      = renewal_secs( Some( "2024-01-29T00:00:00Z" ), None, now_secs ).unwrap();
   let ( _, m, d ) = unix_to_date( now_secs + result.0 );
   assert_eq!( ( m, d ), ( 3, 29 ), "must recover to day 29 in March after clamping Feb to 28, got {m:02}-{d}" );
+}
+
+/// An advanced `_renewal_at` keeps its stored time of day: `2026-01-18T11:09:00Z` advanced
+/// past `now` (2026-09-29T14:24:58Z) lands on `2026-10-18T11:09:00Z`, not on that day's
+/// 00:00 UTC.
+///
+/// # Root Cause
+/// The exact branch split the anchor once into `(year, month, day)` and rebuilt every
+/// advanced month with `date_to_unix()`, which encodes 00:00 UTC. The anchor's time of day,
+/// parsed by `parse_iso_secs()`, never reached the loop, so the first advance dropped it.
+///
+/// # Why Not Caught
+/// Every auto-advance test compared `(y, m, d)` through `unix_to_date()`, and all but one
+/// used a `T00:00:00Z` anchor, where the lost time of day changes nothing. The one
+/// `T21:00:00Z` anchor (`rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`) was
+/// checked by date only.
+///
+/// # Fix Applied
+/// `renewal_secs()` keeps the anchor's `ts % 86_400` and adds it back to each month rebuilt
+/// by `date_to_unix()`.
+///
+/// # Prevention
+/// Asserts the whole instant (`now_secs + secs`), so a midnight result misses by exactly the
+/// stored 11h 9m. The un-advanced counterpart, a future anchor keeping its time of day, is
+/// `rl_exact_from_renewal_at`.
+///
+/// # Pitfall
+/// When a timestamp is stepped in calendar units, test the instant, not the date: a
+/// `(y, m, d)` comparison passes whether or not the time of day survived.
+#[ doc = "bug_reproducer(BUG-589)" ]
+#[ test ]
+fn rl_auto_advance_keeps_anchor_time_of_day()
+{
+  let now_secs    = 1_790_691_898_u64; // 2026-09-29T14:24:58Z
+  let result      = renewal_secs( Some( "2026-01-18T11:09:00Z" ), None, now_secs ).unwrap();
+  let at          = now_secs + result.0;
+  let ( y, m, d ) = unix_to_date( at );
+  assert_eq!(
+    at, 1_792_321_740, // 2026-10-18T11:09:00Z
+    "advance must keep the anchor's 11:09:00 UTC, got {y}-{m:02}-{d:02} + {}s", at % 86_400,
+  );
+}
+
+/// On the renewal day itself, before the stored time, the next renewal is later that same
+/// day, not a month later: anchor `2026-09-01T23:59:00Z` at `now` 2026-10-01T13:46:32Z gives
+/// `2026-10-01T23:59:00Z`, 36 748 s away.
+///
+/// # Root Cause
+/// Same dropped time of day as `rl_auto_advance_keeps_anchor_time_of_day`. The month rebuilt
+/// at 00:00 UTC (2026-10-01T00:00:00Z) is already past at 13:46, so the loop advanced once
+/// more and returned 2026-11-01T00:00:00Z, a whole month late.
+///
+/// # Why Not Caught
+/// No test put `now` on a renewal day before the stored time; every auto-advance `now` fell
+/// on a day other than the anchor's day-of-month.
+///
+/// # Fix Applied
+/// The same `ts % 86_400` carry: the rebuilt candidate is 2026-10-01T23:59:00Z, still ahead
+/// of `now`, so the loop stops on the renewal day.
+///
+/// # Prevention
+/// Pins `now` between the renewal day's 00:00 and the stored 23:59, the only window where the
+/// error grows from hours to a month, and asserts the exact second count.
+///
+/// # Pitfall
+/// A loop that advances while the candidate is in the past amplifies any truncation of that
+/// candidate: rounding it down by hours can put it behind `now` and cost a full step.
+#[ doc = "bug_reproducer(BUG-589)" ]
+#[ test ]
+fn rl_auto_advance_on_renewal_day_before_stored_time_stays_same_day()
+{
+  let now_secs    = 1_790_862_392_u64; // 2026-10-01T13:46:32Z
+  let result      = renewal_secs( Some( "2026-09-01T23:59:00Z" ), None, now_secs ).unwrap();
+  let ( y, m, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!(
+    result.0, 36_748, // 2026-10-01T23:59:00Z minus now: 10h 12m 28s
+    "renewal later today at 23:59 UTC must be 36748s away, got {}s ({y}-{m:02}-{d:02})", result.0,
+  );
 }
 
 // ── next_event_label ───────────────────────────────────────────────────────

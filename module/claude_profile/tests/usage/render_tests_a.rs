@@ -660,7 +660,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
     cache_age_secs        : None,
     org_created_at        : None,
     is_owned              : true,
-    owner                 : String::new(),
+    owner                 : "testuser@testmachine".to_string(),
     claim_lock : false, reserve : false,
     inference_provider : String::new(),
     tags : Vec::new(),
@@ -670,7 +670,8 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
 
   // text renderer: ~Renews must show a real date, NOT "—". `seven_day` is populated (unlike
   // `seven_day_sonnet`, irrelevant here) so 7d Left/7d Reset don't contribute an unrelated
-  // legitimate em-dash — the only em-dash this row could show is a buggy ~Renews.
+  // legitimate em-dash, and `owner` is set because an unowned account's Owner cell is one too
+  // (Feature 037 AC-19) — the only em-dash this row could show is a buggy ~Renews.
   let text = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(

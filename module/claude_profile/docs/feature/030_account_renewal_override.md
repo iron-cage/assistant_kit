@@ -15,7 +15,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 **`_renewal_at` field semantics:**
 - Stored as a top-level key in `{name}.json`: `{"oauthAccount": {...}, "_renewal_at": "2026-06-29T21:00:00Z"}`
-- When `_renewal_at` is in the past: auto-advanced by monthly increments until the result is in the future, using the same day-of-month from the original timestamp (Stripe-style billing cycle advance)
+- When `_renewal_at` is in the past: auto-advanced by monthly increments until the result is in the future, using the same day-of-month and time of day from the original timestamp (Stripe-style billing cycle advance) <!-- BUG-589 — the advance used to rebuild each month at 00:00 UTC, dropping the stored time of day -->
 - When absent or `null`: falls back to `org_created_at`-based estimate (existing algorithm); `~Renews` shows `~` prefix
 - `save()` preserves `_renewal_at` via read-merge (not overwrite) — see [002_account_save.md](002_account_save.md)
 
@@ -59,7 +59,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 - **AC-07**: `at::` and `from_now::` used together exits 1 with an error naming the conflict.
 - **AC-08**: `at::` and `clear::` used together exits 1 with an error naming the conflict.
 - **AC-09**: `from_now::` and `clear::` used together exits 1 with an error naming the conflict.
-- **AC-10**: When `_renewal_at` is set to a past timestamp, `.usage` auto-advances it by monthly increments until the result is in the future, using the same day-of-month from the original `_renewal_at` timestamp.
+- **AC-10**: When `_renewal_at` is set to a past timestamp, `.usage` auto-advances it by monthly increments until the result is in the future, using the same day-of-month and time of day from the original `_renewal_at` timestamp.
 - **AC-11**: When `_renewal_at` is present, `.usage` renders `~Renews` as `in Xh Ym` (exact duration, no `~` prefix); when absent and `org_created_at` is available, renders as `~in Xd` (with `~` prefix, 2 significant units max); when neither, renders `?`.
 - **AC-12**: `clp .account.renewal name::alice@acme.com` with no `at::`, `from_now::`, or `clear::` provided exits 1 with a usage error.
 - **AC-13**: `clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z` when `alice@acme.com` has no credential file exits 2 (account not found).

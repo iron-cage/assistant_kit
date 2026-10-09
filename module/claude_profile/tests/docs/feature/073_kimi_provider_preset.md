@@ -69,7 +69,7 @@
 
 - **Given:** Active kimi redirect account (10 vars present).
 - **When:** `switch_account()` targets a `backend: anthropic` account.
-- **Then:** All 10 vars removed — no stale tier vars remain.
+- **Then:** All 10 vars removed — no stale tier vars remain. <!-- BUG-585 — no FT switches Anthropic → Anthropic with a user-set Kimi-tier key, which the switch deletes -->
 - **Exit:** n/a (domain fn)
 - **Source fn:** `ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars`
 - **Source:** [073_kimi_provider_preset.md AC-04](../../../docs/feature/073_kimi_provider_preset.md)

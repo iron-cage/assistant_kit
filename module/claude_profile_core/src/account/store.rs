@@ -299,6 +299,7 @@ pub fn save(
     }
     else
     {
+      // BUG-582 — the live session is filed under `name` without checking that another slot doesn't already hold it
       let live = std::fs::read_to_string( paths.credentials_file() )?;
       atomic_write_secret( &dest, &live )?;
     }

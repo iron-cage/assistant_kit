@@ -119,6 +119,7 @@ pub fn fetch_quota_for_list(
     // Checked before G1 (ownership): ownership gating exists to protect Anthropic quota
     // from cross-machine races, which is moot for a backend with no Anthropic quota at
     // all. acct.backend is already in scope from list(), so no extra disk read is needed.
+    // BUG-587 — this branch continues without a trace line, unlike every other skip in the loop
     if acct.backend == AccountBackend::Redirect
     {
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );

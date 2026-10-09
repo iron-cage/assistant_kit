@@ -232,6 +232,7 @@ fn t06_use_redirect_account_writes_env_vars_and_skips_touch()
   );
 }
 
+// BUG-585 — keeps only UNRELATED_VAR; a user key with a tier name is deleted on any Anthropic switch
 #[ test ]
 fn t07_use_anthropic_after_redirect_clears_env_vars()
 {
@@ -687,6 +688,7 @@ fn t20_save_redirect_self_heals_stray_model_in_meta()
 /// End-to-end over the real binary: save → use → usage. No HTTP: the redirect row is
 /// produced by the R1 bypass, `should_refresh` rejects the placeholder, and touch skips
 /// with the redirect reason.
+// BUG-587 — no test here runs `.usage trace::1`, so the redirect row's missing fetch line went unseen
 #[ test ]
 fn t21_usage_tsv_active_redirect_row_current_static()
 {

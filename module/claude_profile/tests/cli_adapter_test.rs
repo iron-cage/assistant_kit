@@ -459,7 +459,7 @@ mod adapter
 #[ cfg( feature = "enabled" ) ]
 mod output
 {
-  use claude_profile::output::{ OutputFormat, OutputOptions, json_escape };
+  use claude_profile::output::{ OutputFormat, OutputOptions, json_escape, owner_cell };
   use std::collections::HashMap;
   use unilang::data::CommandDefinition;
   use unilang::semantic::VerifiedCommand;
@@ -594,6 +594,20 @@ mod output
   fn json_escape_unicode()
   {
     assert_eq!( json_escape( "cafe\u{0301}" ), "cafe\u{0301}" );
+  }
+
+  // O-20: owner_cell unowned (empty owner) → em dash
+  #[ test ]
+  fn owner_cell_unowned_is_em_dash()
+  {
+    assert_eq!( owner_cell( "" ), "\u{2014}" );
+  }
+
+  // O-21: owner_cell owned → the identity unchanged
+  #[ test ]
+  fn owner_cell_owned_passes_through()
+  {
+    assert_eq!( owner_cell( "user@host" ), "user@host" );
   }
 }
 

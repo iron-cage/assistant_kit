@@ -72,7 +72,7 @@
 
 - **Given:** Active deepseek redirect account (9 vars present).
 - **When:** `switch_account()` targets a `backend: anthropic` account.
-- **Then:** All 9 vars removed — no stale tier vars remain.
+- **Then:** All 9 vars removed — no stale tier vars remain. <!-- BUG-585 — no FT switches Anthropic → Anthropic with a user-set DeepSeek-tier key, which the switch deletes -->
 - **Exit:** n/a (domain fn)
 - **Source fn:** `ft09_078_switch_from_deepseek_to_anthropic_clears_tier_env_vars`
 - **Source:** [078_deepseek_provider_preset.md AC-04](../../../docs/feature/078_deepseek_provider_preset.md)

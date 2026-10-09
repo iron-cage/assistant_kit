@@ -11,7 +11,7 @@
 
 `claude_profile` must copy `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`, creating or overwriting the named entry. It also extracts the `oauthAccount` subtree from `~/.claude.json` and writes it into `{name}.json` — containing `{"oauthAccount": {...}}` alongside other per-account metadata — to preserve account identity for later enumeration by `.accounts`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is never captured in the per-account snapshot. The credential store path is resolved per FR-6 (see `001_account_store_init.md`).
 
-**Name resolution** — when `name::` is omitted, `oauthAccount.emailAddress` from `~/.claude.json` is the primary inference source (this field is updated by both clp account switches and external OAuth login). If absent or empty, the per-machine active marker file (`_active_{hostname}_{user}` — see Feature 025) is the fallback. If neither source provides a name, exits 1 with a clear message directing the user to pass `name::` explicitly.
+**Name resolution** — when `name::` is omitted, `oauthAccount.emailAddress` from `~/.claude.json` is the primary inference source (this field is updated by both clp account switches and external OAuth login). If absent or empty, the per-machine active marker file (`_active_{hostname}_{user}` — see Feature 025) is the fallback. If neither source provides a name, exits 1 with a clear message directing the user to pass `name::` explicitly. <!-- BUG-582 — a running Claude process also rewrites ~/.claude.json, and no step checks the live session against the inferred name -->
 
 **Name validation** — account names must be valid email addresses:
 - Non-empty

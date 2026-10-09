@@ -236,8 +236,9 @@ fn days_in_month( year : u64, month : u64 ) -> u64
 ///
 /// Priority:
 /// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; advance month-by-month,
-///    clamping the day-of-month to each target month's length via `days_in_month()`, until
-///    the timestamp is in the future; return `(secs, false)`.
+///    clamping the day-of-month to each target month's length via `days_in_month()` and
+///    keeping the anchor's time of day, until the timestamp is in the future; return
+///    `(secs, false)`.
 /// 2. **Estimate** (`org_created_at_opt` set): derive the billing day-of-month from the
 ///    `org_created_at` string and find the next occurrence, clamped the same way;
 ///    return `(secs, true)`.
@@ -260,11 +261,16 @@ pub fn renewal_secs(
   {
     let mut ts = parse_iso_secs( renewal_at )?;
     let ( mut cur_year, mut cur_month, orig_day ) = unix_to_date( ts );
+    // Fix(BUG-589): keep the anchor's time of day across the monthly advance.
+    // Root cause: date_to_unix() returns 00:00 UTC, so rebuilding each month from (y, m, d) dropped the
+    //   stored time — early by up to 23h 59m, and a whole month late on the renewal day before that time.
+    // Pitfall: a calendar-month step has to rebuild the whole instant, not just the date.
+    let time_of_day = ts % 86_400;
     while ts < now_secs
     {
       cur_month += 1;
       if cur_month > 12 { cur_month = 1; cur_year += 1; }
-      ts = date_to_unix( cur_year, cur_month, orig_day.min( days_in_month( cur_year, cur_month ) ) );
+      ts = date_to_unix( cur_year, cur_month, orig_day.min( days_in_month( cur_year, cur_month ) ) ) + time_of_day;
     }
     return Some( ( ts.saturating_sub( now_secs ), false ) );
   }

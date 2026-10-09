@@ -779,7 +779,7 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 
 **Notes:**
 - `_renewal_at` is stored as a top-level key in `{name}.json` alongside `oauthAccount`. It is preserved when `clp .account.save` re-saves that account (read-merge).
-- Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time — no need to re-set after each billing cycle.
+- Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time, keeping their day-of-month and time of day — no need to re-set after each billing cycle. <!-- BUG-589 — the advanced value used to lose its time of day -->
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
 - See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.

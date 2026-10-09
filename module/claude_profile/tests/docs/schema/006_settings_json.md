@@ -52,7 +52,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 
 - **Given:** `settings.json` pre-seeded with `{"model":"claude-opus-4-8","theme":"dark"}` — `theme` is a field beyond `model`/`effortLevel`, owned by the Claude binary.
 - **When:** `clp .account.use name::alice@example.com set_model::default touch::0` runs — `set_model::default` removes the `model` key via `set_session_model()`.
-- **Then:** `settings.json` no longer contains `"model"`, but still contains `"theme"` — the unrelated field survives the read-modify-write.
+- **Then:** `settings.json` no longer contains `"model"`, but still contains `"theme"` — the unrelated field survives the read-modify-write. <!-- BUG-585 — the non-managed fields here never include a tier-named `env` key the user set -->
 - **Source fn:** `ft04_set_model_default_removes_key_preserves_others` (cli/set_model_test.rs) — corrected; previous citation (`acc28_save_succeeds_without_settings_json`) tested a different command (`.account.save`) under a settings.json-absent scenario, not the pre-existing-extra-field preservation this case claims
 - **Source:** [docs/schema/006_settings_json.md §Write Rules](../../../docs/schema/006_settings_json.md)
 

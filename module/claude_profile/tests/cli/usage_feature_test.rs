@@ -324,6 +324,7 @@ fn f18_ft01_live_0_single_fetch()
 /// `accessToken` field, so `read_token()` fails instantly after the sleep.
 ///
 /// Source: `tests/docs/feature/018_live_monitor.md § FT-06`.
+// BUG-587 — the per-account check below has only Anthropic accounts, so a redirect row missing from the fetch trace passes
 #[ cfg( unix ) ]
 #[ test ]
 fn f18_ft06_live_stagger_per_account_trace()

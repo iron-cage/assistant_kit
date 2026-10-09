@@ -300,7 +300,8 @@ fn ft15_accounts_refresh_touch_inert()
 /// FT-19 (AC-19): Owner column visible by default; shows owner from `{name}.json`; `cols::-owner` hides it.
 ///
 /// Case A: `.accounts` — Owner: present, alice shows owner identity, bob shows em dash (—).
-/// Case B: `.accounts cols::-owner` — no Owner: line.
+/// Case C: `.accounts cols::-owner` — no Owner: line. Case B (`.usage`) is
+/// `ft19_usage_owner_cells_match_accounts`.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-19]
 fn ft19_owner_column_default_visible()
@@ -333,15 +334,76 @@ fn ft19_owner_column_default_visible()
     );
   }
 
-  // Case B: cols::-owner — Owner column hidden.
+  // Case C: cols::-owner — Owner column hidden.
   {
     let out  = run_cs_with_env( &[ ".accounts", "cols::-owner" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
     let text = stdout( &out );
     assert!(
       !text.contains( "Owner:" ),
-      "FT-19B: Owner: must be hidden with cols::-owner; got:\n{text}",
+      "FT-19C: Owner: must be hidden with cols::-owner; got:\n{text}",
     );
+  }
+}
+
+// BUG-588 — FT-19 case B: `.usage` shows the same Owner values as `.accounts`, `—` included
+#[ test ]
+/// FT-19 case B (AC-19): on the same fixture, `.usage` shows the same Owner values as
+/// `.accounts` — alice's identity, and `—` for unowned bob.
+///
+/// `.accounts` prints each account's `Owner:` line right after its name. `.usage` runs with
+/// every column but Account and Owner hidden, so each row ends in its own Owner cell.
+///
+/// # Root Cause
+/// `.usage` pushed `aq.owner` into its Owner cell as-is, so an unowned account's `""` left it
+/// blank, while `.accounts` mapped the same value to `—`: one field, two formatters.
+///
+/// # Why Not Caught
+/// FT-19 names this case, but `ft19_owner_column_default_visible` only ever ran `.accounts`,
+/// and the `.usage` test (it248) checked for `—` anywhere in stdout.
+///
+/// # Fix Applied
+/// Both views call `output::owner_cell()`, which returns the identity or `—`.
+///
+/// # Prevention
+/// Compares the two commands' Owner value per account, so either view drifting from the
+/// shared rule fails here.
+///
+/// # Pitfall
+/// When one field is shown by two commands, test them against each other, not each against a
+/// loose pattern of its own.
+#[ doc = "bug_reproducer(BUG-588)" ]
+fn ft19_usage_owner_cells_match_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "" );
+
+  let out        = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let accounts   = stdout( &out );
+  let only_owner = "cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next";
+  let out        = run_cs_with_env( &[ ".usage", only_owner ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let usage      = stdout( &out );
+
+  let account_lines : Vec< &str > = accounts.lines().collect();
+  for ( name, owner ) in [ ( "alice@acme.com", "testuser@testmachine" ), ( "bob@acme.com", "\u{2014}" ) ]
+  {
+    let at = account_lines.iter().position( | l | *l == name )
+      .unwrap_or_else( || panic!( "FT-19B: .accounts has no block for {name}; got:\n{accounts}" ) );
+    let owner_line = account_lines.get( at + 1 ).copied().unwrap_or_default().trim();
+    assert_eq!( owner_line, format!( "Owner:   {owner}" ), "FT-19B: .accounts Owner line for {name}; got:\n{accounts}" );
+    let row = usage.lines()
+      .find( | l | l.contains( name ) )
+      .unwrap_or_else( || panic!( "FT-19B: .usage has no row for {name}; got:\n{usage}" ) )
+      .trim_end();
+    assert!( row.ends_with( owner ), "FT-19B: .usage Owner cell for {name} must match .accounts ({owner}); got row: {row:?}\n{usage}" );
   }
 }
 

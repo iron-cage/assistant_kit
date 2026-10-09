@@ -884,7 +884,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Two accounts: `alice@acme.com` with owner `testuser@testmachine`; `bob@acme.com` with empty owner. Neither has a live token.
 - **When (Case A):** `clp .usage`
-- **Then (Case A):** Exit 0. Stdout contains `Owner` column header. Contains `testuser@testmachine`. Contains `—` (em dash U+2014) for bob's unowned slot.
+- **Then (Case A):** Exit 0. Stdout contains `Owner` column header. Contains `testuser@testmachine`. Rerun with every column but Account and Owner hidden (`cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next`), so each row ends in its own Owner cell: bob's row ends in `—` (em dash U+2014, unowned) and alice's in `testuser@testmachine`. <!-- BUG-588 — a bare `—` search passed on bob's → Next cell while his Owner cell was blank -->
 - **When (Case B):** `clp .usage cols::-owner`
 - **Then (Case B):** Exit 0. Stdout does NOT contain `Owner` column header.
 - **Exit:** 0

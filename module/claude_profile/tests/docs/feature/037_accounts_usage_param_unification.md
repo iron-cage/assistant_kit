@@ -277,11 +277,11 @@
 - **When (case A):** `clp .accounts` (no cols modifier) executed.
 - **Then (case A):** Owner column header present. `alice` row: Owner = `testuser@testmachine`. `bob` row: Owner = `—`.
 - **When (case B):** `clp .usage` (no cols modifier) executed.
-- **Then (case B):** Owner column header present. Same owner values as case A.
+- **Then (case B):** Owner column header present. Same owner values as case A. <!-- BUG-588 — case B had no test, and `.usage` rendered bob's Owner cell blank -->
 - **When (case C):** `clp .accounts cols::-owner` executed.
 - **Then (case C):** No Owner column header in output.
 - **Exit:** 0
-- **Source fn:** `ft19_owner_column_default_visible`
+- **Source fn:** `ft19_owner_column_default_visible` (cases A and C), `ft19_usage_owner_cells_match_accounts` (case B) (`accounts_ft_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-19](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
