@@ -195,8 +195,9 @@ fn t9_project_tier_overrides_clr_config_dir_user_tier()
 
 // ── T10 ──────────────────────────────────────────────────────────────────────
 
-/// T10: with `HOME` unset, a set `CLR_CONFIG_DIR` still locates the user tier. See T8 for BUG-007.
-// test_kind: bug_reproducer(BUG-007)
+/// T10: with `HOME` unset, a set `CLR_CONFIG_DIR` still locates the user tier. T8 is the
+/// tagged reproducer for BUG-007; this test covers the `HOME`-unset variant and carries no
+/// separate `bug_reproducer` tag of its own (TG012 — one reproducer function per bug).
 #[ test ]
 fn t10_clr_config_dir_honored_without_home()
 {

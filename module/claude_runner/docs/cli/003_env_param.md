@@ -355,7 +355,10 @@ point, not a user-facing feature in its own right.
   - `isolated`: the default-model lookup (`resolve_isolated_default_model()`)
   - `clp .model scope::subprocess`, `clp .provider.select`, and `clp .usage`'s Gate 10
 
-  Project-level `.clr.toml` discovery in the current directory is unaffected.
+  Project-level `.clr.toml` discovery in the current directory is unaffected for
+  `run`/`ask`/`topic`. For `isolated`, it is unaffected only when a user tier also resolves
+  (`CLR_CONFIG_DIR` set, or `HOME` set) — with neither set, `resolve_isolated_default_model()`
+  returns before checking project `.clr.toml` at all (predates BUG-007, not decided by it).
 - **Mechanism:** `claude_runner_core::user_config_path()` is the one resolver all of them
   call (BUG-007, BUG-560):
   - a non-empty value gives `$CLR_CONFIG_DIR/config.toml`;
@@ -370,7 +373,7 @@ point, not a user-facing feature in its own right.
 
 | Variable | Default | Type | Notes |
 |----------|---------|------|-------|
-| `CLR_CONFIG_DIR` | `$HOME/.clr` | path | Relocates the user-level `config.toml` for `run`/`ask`/`topic`, `isolated` and clp's config commands alike; project `.clr.toml` discovery is separate and unaffected |
+| `CLR_CONFIG_DIR` | `$HOME/.clr` | path | Relocates the user-level `config.toml` for `run`/`ask`/`topic`, `isolated` and clp's config commands alike; project `.clr.toml` discovery is separate and unaffected for `run`/`ask`/`topic` — for `isolated`, only when a user tier also resolves |
 
 **No precedence rule** — this variable is always applied (there is no corresponding CLI flag).
 

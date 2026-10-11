@@ -137,8 +137,9 @@ fn tc063_finds_one_claude_process()
   assert!( found, "live process with argv[0]=claude (PID {pid}) must be found by scanner" );
 }
 
-/// TC-064: two live `claude`-named processes are both listed. See TC-063 for BUG-006.
-// test_kind: bug_reproducer(BUG-006)
+/// TC-064: two live `claude`-named processes are both listed. TC-063 is the tagged
+/// reproducer for BUG-006; this test covers the two-process variant and carries no
+/// separate `bug_reproducer` tag of its own (TG012 — one reproducer function per bug).
 #[ test ]
 fn tc064_finds_two_claude_processes()
 {

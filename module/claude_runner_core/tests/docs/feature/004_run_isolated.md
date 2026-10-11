@@ -21,12 +21,13 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 | FT-6 | `ClaudeCommand` built with `with_home_isolation()` does not include `--chrome` in args | Unit |
 | FT-7 | `resolve_isolated_default_model()` reads the user tier from `$CLR_CONFIG_DIR/config.toml` when set, `HOME` optional; project `.clr.toml` still wins | Unit |
 | FT-8 | `user_config_path()` → `$CLR_CONFIG_DIR/config.toml`, else `$HOME/.clr/config.toml`, else `None` (empty counts as unset) | Unit |
+| FT-9 | Timeout-with-refreshed-credentials result preserves recovered `stdout`/`stderr` on both timeout branches (BUG-005) | Unit |
 
 ## Test Coverage Summary
 
-- Unit (offline, no credentials needed): 8 tests (FT-1 through FT-8)
+- Unit (offline, no credentials needed): 9 tests (FT-1 through FT-9)
 
-**Total:** 8 test cases
+**Total:** 9 test cases
 
 ---
 
@@ -107,3 +108,13 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 - **Then:** a non-empty override yields `<override>/config.toml` (a relative override is taken verbatim); otherwise a non-empty `HOME` yields `<HOME>/.clr/config.toml`; otherwise `None` — never a cwd-relative path (AC-43)
 - **Source fn:** `t01_override_wins_over_home` through `t11_wrapper_none_without_env` (in `tests/config_path_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-43
+
+---
+
+### FT-9: Timeout-with-refreshed-credentials result preserves recovered `stdout`/`stderr` (BUG-005)
+
+- **Given:** a fake `claude` that prints a marker to stdout, rewrites `.claude/.credentials.json` in its isolated HOME, then outlives the deadline
+- **When:** `run_isolated()` times out with `credentials.is_some()` true
+- **Then:** returns `Ok(IsolatedRunResult { exit_code: -1, stdout, credentials: Some(..), .. })` where `stdout` contains the pre-deadline marker — the already-recovered output is forwarded, not discarded as `String::new()`
+- **Source fn:** `timeout_with_credentials_preserves_partial_stdout` (in `tests/bug_005_test.rs`)
+- **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-37

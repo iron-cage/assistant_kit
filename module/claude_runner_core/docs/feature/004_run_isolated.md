@@ -100,7 +100,9 @@ pub fn run_isolated(
     if different AND valid UTF-8: credentials = Some(new_json)
     else: credentials = None
 7.  unconditionally remove temp dir (even on timeout or error paths)
-8.  if timed_out AND credentials is Some: return Ok (credentials refreshed before timeout fired)
+8.  if timed_out AND credentials is Some: return Ok { exit_code: -1, stdout, stderr, credentials }
+      (credentials refreshed before timeout fired; stdout/stderr carry whatever was recovered
+      before the kill, same recovered values as the TimeoutWithOutput branch below — BUG-005)
     if timed_out AND credentials is None: return RunnerError::TimeoutWithOutput { partial_stdout }
     else: return Ok(IsolatedRunResult { exit_code, stdout, stderr, credentials })
 ```
@@ -150,7 +152,7 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
 - **AC-36**: When the subprocess does not modify `.claude.json`, `credentials` is `None`.
-- **AC-37**: When `timeout_secs` elapses before the subprocess exits and no credentials were refreshed, `run_isolated()` kills the child process and returns `Err(RunnerError::TimeoutWithOutput { secs, partial_stdout })` where `partial_stdout` contains any output captured before the kill. When credentials were refreshed before the timeout fired, returns `Ok` so callers receive the refreshed credentials.
+- **AC-37**: When `timeout_secs` elapses before the subprocess exits and no credentials were refreshed, `run_isolated()` kills the child process and returns `Err(RunnerError::TimeoutWithOutput { secs, partial_stdout })` where `partial_stdout` contains any output captured before the kill. When credentials were refreshed before the timeout fired, returns `Ok(IsolatedRunResult { exit_code: -1, stdout, stderr, credentials })` where `stdout`/`stderr` carry the same recovered-before-kill data as the `TimeoutWithOutput` branch, not empty strings (BUG-005).
 - **AC-38**: The temp directory is removed in all code paths — success, timeout, and I/O error — with no temp-dir leak.
 - **AC-39**: `run_isolated()` does not call `Command::new("claude")` directly; it routes through `ClaudeCommand::with_home()` and the existing `execute()` path (single-execution-point invariant).
 - **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
