@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BUG-007: `clr isolated` ignored `CLR_CONFIG_DIR` when resolving its default model**
   - `resolve_isolated_default_model()` hand-built `$HOME/.clr/config.toml`, so with `CLR_CONFIG_DIR` set `clr run` and `clr isolated` read different user-tier files under the same environment
   - Both now go through `claude_runner_core::user_config_path()`: `$CLR_CONFIG_DIR/config.toml` when set and non-empty, else `$HOME/.clr/config.toml`, else no user tier
-  - Behavior change: with `HOME` unset or empty and no override, `clr run`/`ask`/`topic` and `clr isolated` no longer read a cwd-relative `.clr/config.toml` — there's simply no user tier
+  - Behavior change: with `HOME` unset or empty and no override, `clr run`/`ask`/`topic` and `clr isolated` no longer read a cwd-relative `.clr/config.toml` — there's simply no user tier. For `isolated` specifically this also skips the project `.clr.toml` check (its cascade returns as soon as the user tier resolves to nothing), while `run`/`ask`/`topic` still read project `.clr.toml` independently of the user tier — a pre-existing split this fix doesn't decide (D-14)
   - The runner's private `user_config_dir()` copy in `src/cli/config.rs` is gone
   - Tests: `claude_runner_core` `tests/config_path_test.rs` (T01–T11), `tests/isolated_model_resolution_test.rs` (T8–T10); `claude_runner` `tests/isolated_defaults_test.rs` (`bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir`), `tests/config_file_test.rs` (T23)
 

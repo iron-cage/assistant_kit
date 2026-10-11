@@ -460,11 +460,18 @@ pub fn run_isolated_ext
     // If credentials were updated during the timeout window, preserve them.
     if credentials.is_some()
     {
+      // Fix(BUG-005): forward the already-recovered stdout/stderr instead of
+      //   substituting String::new() for live, populated data.
+      // Root cause: this branch predates Fix(BUG-243)'s output-recovery mechanism —
+      //   the placeholders were accurate when written and went stale silently once
+      //   BUG-243 made real output available here, same as on the sibling branch below.
+      // Pitfall: exit_code: -1 is this crate's only producer of -1, so every -1 a
+      //   caller observes arrives with whatever these two fields carry.
       return Ok( IsolatedRunResult
       {
         exit_code   : -1,
-        stdout      : String::new(),
-        stderr      : String::new(),
+        stdout,
+        stderr,
         credentials,
       } );
     }

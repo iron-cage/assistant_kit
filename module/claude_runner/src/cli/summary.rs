@@ -404,6 +404,23 @@ pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
   extract_json_value_shallow( envelope_body( json ), "structured_output" )
 }
 
+/// Read the `"num_turns"` field from a CLR JSON envelope, gated on the same
+/// `"subtype"`/`"type":"result"` compound check as [`extract_session_id`].
+///
+/// Returns `None` when the envelope doesn't pass the gate or carries no `"num_turns"`
+/// key — callers must not treat `None` as zero. Used by `run_print_mode()` to detect a
+/// zero-turn `exit 0` "success" that silently encodes a limit/auth/API failure (BUG-590).
+#[ inline ]
+#[ must_use ]
+pub( super ) fn num_turns( json : &str ) -> Option< u64 >
+{
+  let body      = envelope_body( json );
+  let is_result = extract_str_shallow( body, "subtype" ).is_some()
+    || extract_str_shallow( body, "type" ).as_deref() == Some( "result" );
+  if !is_result { return None; }
+  extract_u64_shallow( body, "num_turns" )
+}
+
 /// Extract an arbitrary JSON value (object, array, string, or scalar) for `key`, matching
 /// only at bracket-depth 0 relative to the start of `s`.
 ///

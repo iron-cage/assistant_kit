@@ -198,7 +198,14 @@ fn t08_lim_it_run_isolated_timeout_zero_is_unlimited()
 
 // ── T09 ───────────────────────────────────────────────────────────────────────
 
-/// T09: Timeout-with-credentials result type: `Ok(IsolatedRunResult { exit_code: -1 })`.
+/// T09: Timeout-with-credentials result SHAPE: `Ok(IsolatedRunResult { exit_code: -1, .. })`.
+///
+/// **Scope note (BUG-005):** this test hand-constructs an `IsolatedRunResult` literal and
+/// asserts only on `exit_code`/`credentials` — it never calls `run_isolated`/`run_isolated_ext`
+/// and exercises no production code path. It documents the canonical result shape for
+/// "timeout + credentials updated", nothing more. For production-path coverage of this
+/// branch (including that recovered `stdout`/`stderr` survive it), see
+/// `bug_005_test.rs::timeout_with_credentials_preserves_partial_stdout`.
 ///
 /// When `run_isolated()` times out but the subprocess already wrote refreshed credentials
 /// (OAuth token-refresh at startup before blocking on stdin), the function returns

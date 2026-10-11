@@ -42,6 +42,7 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T10, BUG-007) |
 | `config_path_test.rs` | Test `user_config_path()` decision table over `CLR_CONFIG_DIR` × `HOME` (T01–T11, BUG-007/BUG-560) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
+| `bug_005_test.rs` | BUG-005 reproducer: timeout-with-credentials branch preserves partial stdout |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
 | `stdin_file_test.rs` | Test stdin content materialization to temp file (`with_stdin_content`) |
 | `ps_table_test.rs` | Test `render_ps_table()` text/JSON formatting (T01–T07) |
@@ -85,8 +86,8 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
   - Layer 5 - Negative criteria (15 checks): forbidden patterns = 0
   - Layer 6 - Positive tests (65 tests): new pattern works
 - Process scanning and signal delivery (1 test file):
-  - `/proc` enumeration: returns Vec without panic, excludes self PID, finds spawned processes, handles deleted CWD
-  - Signal sending: `send_sigterm` / `send_sigkill` with valid and invalid PIDs (TC-061–TC-070)
+  - `/proc` enumeration: returns Vec without panic, excludes self PID, finds spawned processes, handles deleted CWD, skips a live process whose argv[0] is not `claude` (TC-061–TC-066, TC-071)
+  - Signal sending: `send_sigterm` / `send_sigkill` with valid and invalid PIDs (TC-067–TC-070)
 - Bug reproducers with 5-section documentation:
   - issue-token-limit-default: Migration from factory pattern didnt preserve 200K default (later corrected to 128K, BUG-429)
   - Root Cause, Why Not Caught Initially, Fix Applied, Prevention, Pitfall documented

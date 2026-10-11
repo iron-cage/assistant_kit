@@ -13,6 +13,10 @@
 //! | T11 | fake-claude writes quota pattern to stderr, exits 1 | `"Error: [Account]"` prefix |
 //! | T11a | fake-claude writes the real captured session-limit form to stderr, exits 1 | `"Error: [Account]"` prefix, no `[Unknown]` |
 //! | T11b | fake-claude writes the real captured weekly-limit form to stdout, exits 1 | `"Error: [Account]"` prefix, no `[Unknown]` |
+//! | T12 | fake-claude exits 0 with a zero-turn envelope whose `result` embeds a quota pattern (BUG-590) | `"Error: [Account]"` prefix, exit 1 |
+//! | T13 | fake-claude exits 0 with a zero-turn envelope whose `result` embeds an auth pattern (BUG-590) | `"Error: [Auth]"` prefix, exit 1 |
+//! | T14 | fake-claude exits 0 with a zero-turn envelope whose `result` has no failure pattern (BUG-590 guard) | exit 0, no `[Class]` label |
+//! | T15 | fake-claude exits 0 with a 3-turn envelope whose `result` embeds a failure-looking pattern (BUG-590 guard) | exit 0, no `[Class]` label |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -44,7 +48,7 @@
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env, stderr_str };
+use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_cli_with_env, stderr_str, stdout_str };
 
 // ── T09 ───────────────────────────────────────────────────────────────────────
 
@@ -298,5 +302,169 @@ fn tc_12_runner_spawn_failed_prefix()
   assert!(
     err.contains( "[Runner]" ),
     "TC-12 (BUG-298): stderr must contain '[Runner]' prefix; got:\n{err}"
+  );
+}
+
+// ── T12 ───────────────────────────────────────────────────────────────────────
+
+/// T12 (BUG-590): fake-claude exits 0 with a zero-turn JSON envelope whose `result`
+/// text embeds the plain quota-limit pattern → clr must re-classify and exit 1 with
+/// `"Error: [Account]"`, never silently report the zero-turn envelope as success.
+///
+/// ## Root Cause
+/// `claude` can report a session-limit/auth/API failure as a zero-turn "success" —
+/// `exit 0`, `"is_error":false`, `"num_turns":0` — and `classify_error()` returns `None`
+/// unconditionally whenever `exit_code == 0`, so the failure is structurally invisible
+/// to it regardless of what the envelope's `result` text says.
+///
+/// ## Why Not Caught
+/// Every existing classifier test (T09–T11b) drove a genuinely non-zero exit code;
+/// none exercised an `exit 0` subprocess carrying a failure pattern in its own output.
+///
+/// ## Fix Applied
+/// `run_print_mode()` now probes a copy of the output with `exit_code` forced to `1`
+/// whenever the real exit code is `0` and `summary::num_turns()` reads `0` from the
+/// envelope. If that probe's `classify_error()` names anything but `Unknown`, the
+/// attempt's real exit code is promoted to `1` so the existing retry/exit path runs.
+///
+/// ## Prevention
+/// Any zero-turn `exit 0` envelope carrying a recognizable failure pattern must now
+/// route through the same `[Class]` labeling as a genuine non-zero exit.
+///
+/// ## Pitfall
+/// The probe must never fire on `num_turns != 0` or on `exit_code != 0` already — see
+/// T15 and the existing T09–T11b coverage respectively; only the exit-0/zero-turn
+/// combination is structurally blind to `classify_error()`.
+// test_kind: bug_reproducer(BUG-590)
+#[ test ]
+fn t12_bug590_zero_turn_exit0_quota_pattern_reclassified_to_account()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    r#"echo '{"type":"result","subtype":"success","is_error":false,"num_turns":0,"result":"You'\''ve hit your limit"}'; exit 0"#,
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert_eq!(
+    exit_code( &out ), 1,
+    "T12 (BUG-590): clr must exit 1 for a zero-turn exit-0 quota-limit envelope; stderr:\n{err}"
+  );
+  assert!(
+    err.contains( "Error: [Account]" ),
+    "T12 (BUG-590): stderr must contain 'Error: [Account]' prefix; got:\n{err}"
+  );
+  assert!(
+    err.contains( "You've hit your limit" ),
+    "T12 (BUG-590): stderr must contain the envelope's own result text; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "[Unknown]" ),
+    "T12 (BUG-590): [Unknown] must be absent — that is the exact pre-fix misclassification; got:\n{err}"
+  );
+}
+
+// ── T13 ───────────────────────────────────────────────────────────────────────
+
+/// T13 (BUG-590): fake-claude exits 0 with a zero-turn JSON envelope whose `result`
+/// text embeds the auth-failure pattern → clr must re-classify and exit 1 with
+/// `"Error: [Auth]"`. Divergence from T12: `AuthError` class, confirming the probe
+/// in `run_print_mode()` is not hardcoded to a single `ErrorKind` variant.
+// test_kind: bug_reproducer(BUG-590)
+#[ test ]
+fn t13_bug590_zero_turn_exit0_auth_pattern_reclassified_to_auth()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    r#"echo '{"type":"result","subtype":"success","is_error":false,"num_turns":0,"result":"Your organization does not have access to Claude"}'; exit 0"#,
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert_eq!(
+    exit_code( &out ), 1,
+    "T13 (BUG-590): clr must exit 1 for a zero-turn exit-0 auth-failure envelope; stderr:\n{err}"
+  );
+  assert!(
+    err.contains( "Error: [Auth]" ),
+    "T13 (BUG-590): stderr must contain 'Error: [Auth]' prefix; got:\n{err}"
+  );
+  assert!(
+    err.contains( "Your organization does not have access to Claude" ),
+    "T13 (BUG-590): stderr must contain the envelope's own result text; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "[Unknown]" ),
+    "T13 (BUG-590): [Unknown] must be absent — that is the exact pre-fix misclassification; got:\n{err}"
+  );
+}
+
+// ── T14 ───────────────────────────────────────────────────────────────────────
+
+/// T14 (BUG-590 guard): fake-claude exits 0 with a zero-turn envelope whose `result`
+/// carries no recognizable failure pattern → clr must stay exit 0 and print the
+/// result normally, never treat "zero turns" alone as a failure signal.
+///
+/// Guards against the blanket "zero-turn-exit-0-as-failure" approach BUG-590's own
+/// report explicitly rejected: a genuinely empty-but-successful zero-turn run (e.g.
+/// an instantly-satisfied trivial prompt) must not be misreported as a failure.
+#[ test ]
+fn t14_bug590_zero_turn_exit0_no_pattern_stays_success()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    r#"echo '{"type":"result","subtype":"success","is_error":false,"num_turns":0,"result":"done"}'; exit 0"#,
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert_eq!(
+    exit_code( &out ), 0,
+    "T14 (BUG-590 guard): a pattern-free zero-turn exit-0 envelope must stay exit 0; stderr:\n{err}"
+  );
+  assert!(
+    !err.contains( "Error: [" ),
+    "T14 (BUG-590 guard): no [Class] label must fire for a pattern-free zero-turn envelope; got:\n{err}"
+  );
+  assert!(
+    stdout_str( &out ).contains( "done" ),
+    "T14 (BUG-590 guard): the result text must still be printed on the success path"
+  );
+}
+
+// ── T15 ───────────────────────────────────────────────────────────────────────
+
+/// T15 (BUG-590 guard): fake-claude exits 0 with a 3-turn envelope whose `result`
+/// embeds a failure-looking pattern → clr must stay exit 0, because the probe in
+/// `run_print_mode()` only fires when `num_turns` reads exactly `0`.
+///
+/// Guards the other half of the same rule: a nonzero-turn run that merely *mentions*
+/// failure-pattern text (e.g. quoting it, discussing it) must never be reclassified —
+/// the zero-turn signal is what distinguishes a real silent failure from ordinary text.
+#[ test ]
+fn t15_bug590_nonzero_turn_exit0_error_text_stays_success()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    r#"echo '{"type":"result","subtype":"success","is_error":false,"num_turns":3,"result":"mentioned: Your organization does not have access to Claude, but handled it"}'; exit 0"#,
+  );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+  assert_eq!(
+    exit_code( &out ), 0,
+    "T15 (BUG-590 guard): a 3-turn envelope must stay exit 0 regardless of result text; stderr:\n{err}"
+  );
+  assert!(
+    !err.contains( "Error: [" ),
+    "T15 (BUG-590 guard): no [Class] label must fire when num_turns != 0; got:\n{err}"
+  );
+  assert!(
+    stdout_str( &out ).contains( "Your organization does not have access to Claude" ),
+    "T15 (BUG-590 guard): the result text must still be printed verbatim on the success path"
   );
 }

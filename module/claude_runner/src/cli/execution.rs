@@ -1,5 +1,5 @@
 use std::io::IsTerminal;
-use claude_runner_core::{ ClaudeCommand, ExecutionOutput, signal_exit_code };
+use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit_code };
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
 use super::retry_classify::{ ClassAttempts, classify_to_class, class_fields, delay_suffix, first_message, resolve_count, resolve_delay };
@@ -748,7 +748,7 @@ pub( super ) fn run_print_mode(
     // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
     // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
     // Fix(BUG-299): handle Err(spawn_err) from execute_print_attempt() via apply_runner_retry().
-    let output = match execute_print_attempt( active, timeout_secs )
+    let mut output = match execute_print_attempt( active, timeout_secs )
     {
       Ok( o )  => o,
       Err( e ) =>
@@ -757,6 +757,25 @@ pub( super ) fn run_print_mode(
         continue;
       }
     };
+
+    // Fix(BUG-590): claude can report a session-limit/auth/API failure as a zero-turn
+    //   "success" — exit 0, is_error:false, num_turns:0 — which classify_error() never
+    //   sees because it returns None whenever exit_code == 0. Probe a copy forced to
+    //   exit_code 1 and promote the real exit code only when it names an actual failure
+    //   kind, so a genuinely empty-but-successful zero-turn run still falls through as
+    //   success — never a blanket "zero turns == failure" rule.
+    // Root cause: classify_error() is gated on exit_code != 0, so a failure the CLI
+    //   mis-reports as exit 0 is structurally invisible to it regardless of content.
+    // Pitfall: read num_turns via summary::num_turns() (depth-aware, gated), never a
+    //   substring scan — the field can also appear inside a nested object at another depth.
+    if output.exit_code == 0 && super::summary::num_turns( &output.stdout ) == Some( 0 )
+    {
+      let probe = ExecutionOutput { exit_code : 1, ..output.clone() };
+      if probe.classify_error().is_some_and( | kind | kind != ErrorKind::Unknown )
+      {
+        output.exit_code = 1;
+      }
+    }
 
     // Fix(BUG-317): suppress double-emission of CLR-synthesized timeout label.
     // Root cause: execute_print_attempt() stores the timeout label in output.stderr (exit 4);
