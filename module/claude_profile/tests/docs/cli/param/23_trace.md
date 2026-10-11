@@ -25,6 +25,8 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 | EC-15 | DEPRECATED — `.account.rotate` removed; trace acceptance now covered by `.usage trace::1` (EC-1) | Acceptance: removed |
 | EC-16 | REMOVED — `.token.status` removed; trace acceptance now covered by `.credentials.status trace::1` (EC-8) | Acceptance: removed |
 | EC-17 | `.paths trace::1` — accepted; timestamped diagnostic line emitted for path resolution | Acceptance: `.paths` |
+| EC-18 | `.usage trace::1` — every account with a `refresh` line also has a fetch-stage line, across the redirect, not-owned, occupied, stale-skip and live branches | Stage Parity: `.usage` |
+| EC-19 | `.account.use trace::1` — every stderr line carries the timestamp prefix, the switch's `settings_io` calls included | Prefix Contract: `.account.use` |
 
 ## Test Coverage Summary
 
@@ -44,8 +46,10 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - ~~Acceptance\: `.account.rotate`~~: DEPRECATED (EC-15 — command removed)
 - ~~Acceptance\: `.token.status`~~: REMOVED (EC-16 — command removed)
 - Acceptance\: `.paths`: 1 test (EC-17)
+- Stage Parity\: `.usage`: 1 test (EC-18)
+- Prefix Contract\: `.account.use`: 1 test (EC-19)
 
-**Total:** 17 edge cases
+**Total:** 19 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (trace enabled — diagnostics on stderr) ↔ EC-5 (absent by default — no diagnostic output)
 
@@ -66,7 +70,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 - **Given:** `.usage` environment with valid credentials.
 - **When:** `clp .usage trace::0`
-- **Then:** stderr contains no timestamped diagnostic lines; behavior identical to default; exit 0.
+- **Then:** stderr is empty — no diagnostic line, timestamped or not (BUG-586); behavior identical to default; exit 0.
 - **Exit:** 0
 - **Source fn:** `it049_trace_0_no_trace_on_stderr` (in `tests/cli/usage_live_test.rs`) — renumbered from `it059` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
@@ -96,7 +100,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 - **Given:** `.usage` environment with valid credentials.
 - **When:** `clp .usage` (no `trace::` param)
-- **Then:** stderr contains no timestamped diagnostic lines; behavior identical to `trace::0`; exit 0.
+- **Then:** stderr is empty — no diagnostic line, timestamped or not; behavior identical to `trace::0`; exit 0.
 - **Exit:** 0
 - **Source fn:** `it052_trace_default_off` (in `tests/cli/usage_live_test.rs`) — renumbered from `it062` when the `it0NN` series shifted by -10
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
@@ -220,4 +224,30 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** Exits 0; stderr contains a timestamped diagnostic line for base path; no "Unknown parameter" error.
 - **Exit:** 0
 - **Source fn:** `it_trace_paths_accepted` (in `tests/cli/token_paths_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-18: `.usage trace::1` — every account is named in the fetch stage
+
+- **Given:** One account per skip branch BUG-587's Prevention lists, plus one on the live path: a redirect account, an account owned by another machine,
+  an account marked active on another machine, an account with a fresh quota cache, and a plain account whose credentials carry no `accessToken` (so no HTTP).
+- **When:** `clp .usage trace::1 touch::0 stalest::5 max_age::3600`
+- **Then:** Exits 0; each account traces its own fetch branch — `fetch  kimi  skipped (reason: redirect backend)`, `skipped (reason: not owned)`, `skipped (reason: occupied elsewhere)`,
+  `stale-skip: not in stalest set (cache-rendered)`, and `<name>  reading …` on the live path — and every account with a `refresh  <name>` line also has a fetch-stage line (BUG-587).
+- **Exit:** 0
+- **Source fn:** `mre_bug_587_trace_names_every_account_in_fetch_stage` (in `tests/cli/usage_feature_test.rs` — the `bug_reproducer(BUG-587)`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-19: `.account.use trace::1` — every stderr line carries the timestamp prefix
+
+- **Given:** Account `target@example.com` saved with no `accessToken`, so the post-switch touch is skipped and clp traces its expiry check;
+  another account's live credentials; no running claude process (`CLR_PROC_DIR` on an empty dir).
+- **When:** `clp .account.use name::target@example.com trace::1`
+- **Then:** Exits 0; stderr has the `expiry check: valid` trace line, and every stderr line starts with `YYYY-MM-DD · HH:MM:SS UTC · `.
+  The switch's `settings_io` calls pass `trace` = `false`, so no unprefixed `remove_env_var(...)` line appears (BUG-586).
+- **Exit:** 0
+- **Source fn:** `bug_586_traced_switch_prefixes_every_stderr_line` (in `tests/cli/account_relogin_test.rs` — a `bug_reproducer(BUG-586)`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)

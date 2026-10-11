@@ -10,7 +10,7 @@ including model-capability constraints and touch trigger conditions.
 |----|------------|----------|--------|
 | AC-1 | `idle` (resets_at=None) — touch trigger fires for 7d absent window | Transition | ✅ |
 | AC-2 | `idle` (resets_at=None) — touch trigger confirmed by predicate | Transition | ✅ |
-| AC-3 | `active` (resets_at=Some) — all windows running, touch skips | Transition | ✅ |
+| AC-3 | `active` (each `resets_at` ahead of now) — all windows running, touch skips | Transition | ✅ |
 | AC-4 | `exhausted` (7d) — account skipped from touch | Boundary | ✅ |
 | AC-5 | Model-capability constraint — Haiku cannot activate 7d-Sonnet window (BUG-289) | Invariant | ✅ |
 | AC-6 | `exhausted` (5h) — account skipped from touch, full exhaustion only (TSK-418) | Boundary | ✅ |
@@ -45,13 +45,16 @@ including model-capability constraints and touch trigger conditions.
 
 ### AC-3: `active` — all windows running, touch trigger skips
 
-- **Given:** An account where all quota windows have `resets_at = Some(timestamp)` (all windows
-  in `active` state, none idle).
-- **When:** `apply_touch()` evaluates the idle-window predicate.
-- **Then:** Touch does NOT fire. The `reason: already active` skip-reason is emitted in trace mode.
+- **Given:** An account whose 5h window has `resets_at = Some("2099-01-01T00:00:00Z")`, still ahead of now,
+  and whose 7d and 7d-Sonnet fields are absent, which counts as running. Every window is `active`; none is idle or already past.
+  <!-- BUG-584 — a resets_at that has already passed is an ended window, not an active one -->
+- **When:** `touch_skip_reason()` judges the account, then `apply_touch()` processes it.
+- **Then:** Touch does NOT fire: the skip reason is `skipped (reason: already active)`, which trace mode would print (the test runs with trace off).
   All windows are `active` — no window needs to be opened.
+- **Note:** the counterpart is a cache-rendered row whose 5h `resets_at` passed 30 min ago. Its window has ended, so the touch fires
+  (`mre_bug584_lapsed_cached_5h_window_is_not_already_active`, `tests/usage/touch_tests_b.rs`).
 - **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` in
-  `tests/usage/touch_tests.rs`
+  `tests/usage/touch_tests_b.rs`
 - **Source:** [state_machine/003_session_window_lifecycle.md](../../../docs/state_machine/003_session_window_lifecycle.md)
 
 ---

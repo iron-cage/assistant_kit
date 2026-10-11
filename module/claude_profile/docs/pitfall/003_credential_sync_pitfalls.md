@@ -75,7 +75,10 @@ Since 2026-08-18 the detection gap is closed on the watchdog side: `watchdog.sh`
 
 `save()`'s `oauthAccount` merge block read this machine's own live `~/.claude.json` and merged its `oauthAccount` (email + org identity) into the target's `{name}.json` metadata file unconditionally — with no check that `name` was actually the live session's own account. Background refresh/touch loops (`refresh_token_with_live_path()`) call `save()` for every account in the credential store, including non-active ones, so refreshing `target@test.com` on a machine whose live session was `live@test.com` silently merged `live@test.com`'s org identity into `target@test.com`'s own file.
 
-**Fix:** `save()`'s merge block now gates on `update_marker || live_is_name` (BUG-343 fix). `update_marker == true` (explicit `.account.save`/`.account.relogin`) always merges by design — those calls snapshot "whatever is currently live" under the caller's chosen name (docs/feature/002_account_save.md AC-05/AC-12). Otherwise, the live session's own `oauthAccount.emailAddress` must equal `name` before merging.
+**Fix:** `save()`'s merge block now gates on `update_marker || live_is_name` (BUG-343 fix). `update_marker == true` (explicit `.account.save`/`.account.relogin`)
+merges by design — those calls snapshot "whatever is currently live" under the caller's chosen name (docs/feature/002_account_save.md steps 5-6), except
+that `save()` refuses a live session another slot already holds, and a slot re-saving the session it holds keeps its stored `oauthAccount` unless
+`~/.claude.json` names that account or `name` (BUG-582). Otherwise, the live session's own `oauthAccount.emailAddress` must equal `name` before merging.
 
 **Rule:** Never merge "the machine's live session" data into a named account's file without first confirming `name` IS the live session's own account — a `save()` call reachable from a background/full-account-list loop cannot assume its target is locally active.
 

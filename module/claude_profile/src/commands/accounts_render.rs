@@ -165,7 +165,7 @@ pub( crate ) fn render_accounts_text(
     out.push( '\n' );
     if any_field
     {
-      // BUG-588 — the shared owner_cell() keeps this value identical to the `.usage` Owner cell (and the table below)
+      // BUG-588 — owner_cell() formats this, the table below and the `.usage` Owner cell the same way
       if cols.owner
       {
         let owner_val = owner_cell( owners.get( idx ).map_or( "", String::as_str ) );

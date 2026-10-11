@@ -1,7 +1,7 @@
 //! Active-account switching and post-switch live-state patching (env vars, model restore).
 
 use std::path::Path;
-use claude_core::ClaudePaths;
+use claude_core::{ ClaudePaths, settings_io };
 use claude_core::file_io::{ atomic_write, atomic_write_secret };
 use super::types::AccountBackend;
 use super::validate::{ validate_name, validate_redirect_name };
@@ -70,15 +70,17 @@ fn write_kimi_tier_env_vars( live_settings_path : &Path, model : &str )
 {
   for key in KIMI_MODEL_TIER_ENV_VARS
   {
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, key, model );
+    let _ = settings_io::set_env_var( live_settings_path, key, model, false );
   }
-  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", "max" );
-  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", kimi_auto_compact_window( model ) );
+  let _ = settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", "max", false );
+  let _ = settings_io::set_env_var(
+    live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", kimi_auto_compact_window( model ), false,
+  );
 }
 
 /// Feature 073: remove all 7 Kimi-tier env vars — shared by both the
-/// "switched to a non-kimi redirect account" and "switched to an anthropic account"
-/// cleanup paths, so a stale Kimi-tier var from a prior kimi switch never survives
+/// "switched to a non-kimi redirect account" and "left a redirect session for an anthropic
+/// account" cleanup paths, so a stale Kimi-tier var from a prior kimi switch never survives
 /// into an unrelated account. Also invoked on a switch straight to a deepseek-tagged
 /// redirect account (Feature 078) — see the 3-way dispatch in
 /// `patch_live_state_after_switch()` below.
@@ -86,10 +88,10 @@ fn clear_kimi_tier_env_vars( live_settings_path : &Path )
 {
   for key in KIMI_MODEL_TIER_ENV_VARS
   {
-    let _ = claude_core::settings_io::remove_env_var( live_settings_path, key );
+    let _ = settings_io::remove_env_var( live_settings_path, key, false );
   }
-  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL" );
-  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW" );
+  let _ = settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", false );
+  let _ = settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", false );
 }
 
 /// Feature 078: DeepSeek-tier env var names whose value mirrors `redirect_model`
@@ -139,28 +141,31 @@ fn write_deepseek_tier_env_vars( live_settings_path : &Path, model : &str )
 {
   for key in DEEPSEEK_PRO_TIER_ENV_VARS
   {
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, key, model );
+    let _ = settings_io::set_env_var( live_settings_path, key, model, false );
   }
   for key in DEEPSEEK_FLASH_TIER_ENV_VARS
   {
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, key, DEEPSEEK_FLASH_MODEL );
+    let _ = settings_io::set_env_var( live_settings_path, key, DEEPSEEK_FLASH_MODEL, false );
   }
-  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", "max" );
-  let _ = claude_core::settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", DEEPSEEK_AUTO_COMPACT_WINDOW );
+  let _ = settings_io::set_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", "max", false );
+  let _ = settings_io::set_env_var(
+    live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", DEEPSEEK_AUTO_COMPACT_WINDOW, false,
+  );
 }
 
 /// Feature 078: remove all 6 DeepSeek-tier env vars — shared by the
-/// "switched to a non-deepseek redirect account" and "switched to an anthropic account"
-/// cleanup paths, plus a switch straight to a kimi-tagged redirect account, so a stale
-/// DeepSeek-tier var from a prior deepseek switch never survives into an unrelated account.
+/// "switched to a non-deepseek redirect account" and "left a redirect session for an
+/// anthropic account" cleanup paths, plus a switch straight to a kimi-tagged redirect
+/// account, so a stale DeepSeek-tier var from a prior deepseek switch never survives into an
+/// unrelated account.
 fn clear_deepseek_tier_env_vars( live_settings_path : &Path )
 {
   for key in DEEPSEEK_PRO_TIER_ENV_VARS.into_iter().chain( DEEPSEEK_FLASH_TIER_ENV_VARS )
   {
-    let _ = claude_core::settings_io::remove_env_var( live_settings_path, key );
+    let _ = settings_io::remove_env_var( live_settings_path, key, false );
   }
-  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL" );
-  let _ = claude_core::settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW" );
+  let _ = settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_EFFORT_LEVEL", false );
+  let _ = settings_io::remove_env_var( live_settings_path, "CLAUDE_CODE_AUTO_COMPACT_WINDOW", false );
 }
 
 /// Patch live `~/.claude.json` and `~/.claude/settings.json` from the unified `{name}.json`
@@ -177,9 +182,11 @@ fn clear_deepseek_tier_env_vars( live_settings_path : &Path )
 /// Feature 071 (AC-06/AC-07): sync env.ANTHROPIC_* to the switched-to account's backend.
 /// Redirect: writes `BASE_URL/AUTH_TOKEN/MODEL` from the account's own snapshot + credential
 /// file, plus Feature 073/078's Kimi-tier or DeepSeek-tier bundle when `inference_provider`
-/// matches. Anthropic: removes all three, then prunes the whole `env` object if now empty —
-/// `remove_env_var()` alone leaves `"env": {}` behind; this composition lives here, not in
-/// the shared `claude_core::settings_io` formatter (see docs/feature/071 design note).
+/// matches. Anthropic: removes all three, plus both tier bundles when `env` held
+/// `ANTHROPIC_BASE_URL` (a redirect session is being left, BUG-585), then prunes the whole
+/// `env` object if now empty — `remove_env_var()` alone leaves `"env": {}` behind; this
+/// composition lives here, not in the shared `claude_core::settings_io` formatter (see
+/// docs/feature/071 design note).
 /// Extracted out of `patch_live_state_after_switch()` (`clippy::too_many_lines`) once the
 /// number of supported inference-tier bundles grew from one (Kimi) to two.
 fn sync_backend_env_vars( live_settings_path : &Path, meta_text : &str, src : &Path, backend : AccountBackend )
@@ -190,9 +197,9 @@ fn sync_backend_env_vars( live_settings_path : &Path, meta_text : &str, src : &P
     let access_token = parse_string_field( &creds_text, "accessToken" ).unwrap_or_default();
     let base_url     = parse_string_field( meta_text, "base_url" ).unwrap_or_default();
     let model        = parse_string_field( meta_text, "redirect_model" ).unwrap_or_default();
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, "ANTHROPIC_BASE_URL", &base_url );
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, "ANTHROPIC_AUTH_TOKEN", &access_token );
-    let _ = claude_core::settings_io::set_env_var( live_settings_path, "ANTHROPIC_MODEL", &model );
+    let _ = settings_io::set_env_var( live_settings_path, "ANTHROPIC_BASE_URL", &base_url, false );
+    let _ = settings_io::set_env_var( live_settings_path, "ANTHROPIC_AUTH_TOKEN", &access_token, false );
+    let _ = settings_io::set_env_var( live_settings_path, "ANTHROPIC_MODEL", &model, false );
 
     // Feature 073/078: Kimi-tier or DeepSeek-tier vars ride alongside the 3 above,
     // gated on an exact `inference_provider` match; either branch also clears the
@@ -227,15 +234,27 @@ fn sync_backend_env_vars( live_settings_path : &Path, meta_text : &str, src : &P
   }
   else
   {
-    let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_BASE_URL" );
-    let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_AUTH_TOKEN" );
-    let _ = claude_core::settings_io::remove_env_var( live_settings_path, "ANTHROPIC_MODEL" );
-    // BUG-585 — both tier bundles are cleared by name on every Anthropic switch, whoever wrote them
-    clear_kimi_tier_env_vars( live_settings_path );
-    clear_deepseek_tier_env_vars( live_settings_path );
-    if claude_core::settings_io::get_setting( live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )
+    // Fix(BUG-585): the tier bundles are clp's only while a redirect session is live, and the
+    //   redirect branch above always writes ANTHROPIC_BASE_URL alongside them. Clearing them
+    //   on every Anthropic switch deleted keys the user had set for their own sessions.
+    // Root cause: the tier keys were removed by NAME alone, with no sign that clp wrote them.
+    // Pitfall: read the marker before the base-3 removal below deletes it.
+    let leaving_redirect = settings_io::get_setting( live_settings_path, "env" )
+      .ok()
+      .flatten()
+      .and_then( | env | settings_io::json_parse_flat_object( &env ).ok() )
+      .is_some_and( | pairs | pairs.iter().any( | ( key, _, _ ) | key == "ANTHROPIC_BASE_URL" ) );
+    let _ = settings_io::remove_env_var( live_settings_path, "ANTHROPIC_BASE_URL", false );
+    let _ = settings_io::remove_env_var( live_settings_path, "ANTHROPIC_AUTH_TOKEN", false );
+    let _ = settings_io::remove_env_var( live_settings_path, "ANTHROPIC_MODEL", false );
+    if leaving_redirect
     {
-      let _ = claude_core::settings_io::remove_setting( live_settings_path, "env" );
+      clear_kimi_tier_env_vars( live_settings_path );
+      clear_deepseek_tier_env_vars( live_settings_path );
+    }
+    if settings_io::get_setting( live_settings_path, "env" ).ok().flatten().as_deref() == Some( "{}" )
+    {
+      let _ = settings_io::remove_setting( live_settings_path, "env", false );
     }
   }
 }
@@ -323,6 +342,7 @@ fn patch_live_state_after_switch( name : &str, credential_store : &Path, paths :
   }
   let _ = atomic_write( &live_settings_path, &serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
 
+  // BUG-586 — this sync's settings_io calls pass `false`; clp traces a switch in its own lines
   sync_backend_env_vars( &live_settings_path, &meta_text, src, backend );
 }
 

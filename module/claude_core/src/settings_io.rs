@@ -140,19 +140,39 @@ fn read_all_settings_typed( path : &Path ) -> Result< Vec< ( String, String, Sto
   json_parse_flat_object( &src )
 }
 
+// Fix(BUG-586): the four mutators below print their parameter trace only when the caller
+//   passes `trace`; the caller's verbosity contract decides, not the primitive.
+// Root cause: each opened with an ungated eprintln!, so clp's account switch printed one line
+//   per call at trace::0, which promises no output, and unprefixed lines under trace::1.
+// Pitfall: a shared primitive can't know each caller's verbosity contract; take it as input.
 /// Write (or update) a single key in a JSON settings file, creating the file
 /// if absent.  Uses atomic write (tmp file + rename).
 ///
 /// Returns the `StoredAs` variant that was chosen for the value.
+///
+/// With `trace`, first prints one parameter-trace line to stderr, the value
+/// passed through `redact_for_trace`.
 ///
 /// # Errors
 ///
 /// Returns `Err` if the file cannot be read (except `NotFound`, which is
 /// treated as an empty file) or if the write fails.
 #[ inline ]
-pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< StoredAs, io::Error >
+pub fn set_setting(
+  path      : &Path,
+  key       : &str,
+  raw_value : &str,
+  trace     : bool,
+) -> Result< StoredAs, io::Error >
 {
-  eprintln!( "set_setting(path={}, key={key:?}, raw_value={})", path.display(), redact_for_trace( key, raw_value ) );
+  if trace
+  {
+    eprintln!(
+      "set_setting(path={}, key={key:?}, raw_value={})",
+      path.display(),
+      redact_for_trace( key, raw_value ),
+    );
+  }
   let mut pairs = read_or_empty( path )?;
   upsert_pair( &mut pairs, key, raw_value );
   let stored_as = infer_type( raw_value );
@@ -164,14 +184,16 @@ pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< Stor
 /// Remove a top-level key from a JSON settings file.  No-op if the key or
 /// file is absent.  Uses atomic write.
 ///
+/// With `trace`, first prints one parameter-trace line to stderr.
+///
 /// # Errors
 ///
 /// Returns `Err` if the file cannot be read (except `NotFound`, which is a
 /// no-op) or if the write fails.
 #[ inline ]
-pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
+pub fn remove_setting( path : &Path, key : &str, trace : bool ) -> Result< (), io::Error >
 {
-  eprintln!( "remove_setting(path={}, key={key:?})", path.display() );
+  if trace { eprintln!( "remove_setting(path={}, key={key:?})", path.display() ); }
   let mut pairs = match read_all_settings( path )
   {
     Ok( p )  => p,
@@ -192,13 +214,23 @@ pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
 /// Creates the `"env"` key if absent.  Environment variable values are
 /// always stored as JSON strings.  Uses atomic write.
 ///
+/// With `trace`, first prints one parameter-trace line to stderr, the value
+/// passed through `redact_for_trace`.
+///
 /// # Errors
 ///
 /// Returns `Err` if the file cannot be read or written.
 #[ inline ]
-pub fn set_env_var( path : &Path, key : &str, value : &str ) -> Result< (), io::Error >
+pub fn set_env_var( path : &Path, key : &str, value : &str, trace : bool ) -> Result< (), io::Error >
 {
-  eprintln!( "set_env_var(path={}, key={key:?}, value={})", path.display(), redact_for_trace( key, value ) );
+  if trace
+  {
+    eprintln!(
+      "set_env_var(path={}, key={key:?}, value={})",
+      path.display(),
+      redact_for_trace( key, value ),
+    );
+  }
   let mut pairs = read_or_empty( path )?;
   let env_idx   = pairs.iter().position( |( k, _ )| k == "env" );
 
@@ -224,13 +256,15 @@ pub fn set_env_var( path : &Path, key : &str, value : &str ) -> Result< (), io::
 /// Remove a key from the `"env"` sub-object.  No-op if the key or
 /// `"env"` block is absent.  Uses atomic write.
 ///
+/// With `trace`, first prints one parameter-trace line to stderr.
+///
 /// # Errors
 ///
 /// Returns `Err` if the file cannot be read or written.
 #[ inline ]
-pub fn remove_env_var( path : &Path, key : &str ) -> Result< (), io::Error >
+pub fn remove_env_var( path : &Path, key : &str, trace : bool ) -> Result< (), io::Error >
 {
-  eprintln!( "remove_env_var(path={}, key={key:?})", path.display() );
+  if trace { eprintln!( "remove_env_var(path={}, key={key:?})", path.display() ); }
   let mut pairs = match read_all_settings( path )
   {
     Ok( p )  => p,

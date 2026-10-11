@@ -873,8 +873,8 @@ fn it048_jitter_abc_rejected()
 
 // ── it049 ──────────────────────────────────────────────────────────────────────
 
-/// it049 (EC-2): `trace::0` explicit disable — no timestamped trace lines
-/// appear on stderr; exit 0.
+// BUG-586 — it049/it052 assert the whole stderr empty; an unprefixed line has no " · " to catch
+/// it049 (EC-2): `trace::0` explicit disable — stderr is empty; exit 0.
 ///
 /// Uses a no-token account so the fetch path is exercised (increasing the chance
 /// of accidental trace leakage if the disable is broken).
@@ -888,10 +888,9 @@ fn it049_trace_0_no_trace_on_stderr()
 
   let out = run_cs_with_env( &[ ".usage", "trace::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  let err = stderr( &out );
-  assert!(
-    !err.contains( " · " ),
-    "trace::0 must not emit trace lines on stderr, got:\n{err}",
+  assert_eq!(
+    stderr( &out ), "",
+    "trace::0 must write nothing to stderr, not merely no timestamped line",
   );
 }
 
@@ -938,10 +937,10 @@ fn it051_trace_yes_rejected()
 
 // ── it052 ──────────────────────────────────────────────────────────────────────
 
-/// it052 (EC-5): default behavior (no `trace::` param) — no timestamped
-/// trace lines appear on stderr; trace is off by default (default = 0).
+/// it052 (EC-5): default behavior (no `trace::` param) — stderr is empty;
+/// trace is off by default (default = 0).
 ///
-/// Uses a no-token account to exercise the fetch path; absence of timestamped trace lines
+/// Uses a no-token account to exercise the fetch path; an empty stderr
 /// confirms the default is correctly set to disabled.
 /// Source: `tests/docs/cli/param/23_trace.md § EC-5`.
 #[ test ]
@@ -953,10 +952,9 @@ fn it052_trace_default_off()
 
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  let err = stderr( &out );
-  assert!(
-    !err.contains( " · " ),
-    "default (no trace:: param) must not emit trace lines on stderr, got:\n{err}",
+  assert_eq!(
+    stderr( &out ), "",
+    "default (no trace:: param) must write nothing to stderr, not merely no timestamped line",
   );
 }
 

@@ -88,11 +88,12 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-85 | `owner::0 name::X` clears owner field when G8 passes on `.usage` (Feature 064) | Feature 064 — owner mutation |
 | IT-86 | `assign::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
 | IT-87 | `unclaim::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
+| IT-88 | Two saved accounts holding the live session both get `✓`, and a warning names them; never in JSON or TSV (BUG-582) | Current Marker |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test (IT-1)
-- Current Marker: 1 test (IT-2)
+- Current Marker: 2 tests (IT-2, IT-88)
 - Error Inline: 2 tests (IT-3, IT-9)
 - Output Format: 2 tests (IT-4, IT-36)
 - Edge Case: 1 test (IT-5)
@@ -132,7 +133,12 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Feature 064 — owner mutation: 1 test (IT-85)
 - Feature 064 — REMOVED_TOGGLE: 2 tests (IT-86, IT-87)
 
-**Total:** 94 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); IT-81–IT-83 added by Plan 022 (`who::` parameter and sessions table); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
+**Total:** 83 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`;
+IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields);
+IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group);
+IT-81–IT-83 added by Plan 022 (`who::` parameter and sessions table); IT-88 added by BUG-582 (shared-session warning, source fn it273); source functions it17–it33 map to spec IT-18–IT-34;
+it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test;
+kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -884,7 +890,10 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Two accounts: `alice@acme.com` with owner `testuser@testmachine`; `bob@acme.com` with empty owner. Neither has a live token.
 - **When (Case A):** `clp .usage`
-- **Then (Case A):** Exit 0. Stdout contains `Owner` column header. Contains `testuser@testmachine`. Rerun with every column but Account and Owner hidden (`cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next`), so each row ends in its own Owner cell: bob's row ends in `—` (em dash U+2014, unowned) and alice's in `testuser@testmachine`. <!-- BUG-588 — a bare `—` search passed on bob's → Next cell while his Owner cell was blank -->
+- **Then (Case A):** Exit 0. Stdout contains `Owner` column header. Contains `testuser@testmachine`.
+  Rerun with every column but Account and Owner hidden (`cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next`),
+  so each row ends in its own Owner cell: bob's row ends in `—` (em dash U+2014, unowned) and alice's in `testuser@testmachine`.
+  <!-- BUG-588 — a bare `—` search passed on bob's → Next cell while his Owner cell was blank -->
 - **When (Case B):** `clp .usage cols::-owner`
 - **Then (Case B):** Exit 0. Stdout does NOT contain `Owner` column header.
 - **Exit:** 0
@@ -1037,3 +1046,18 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exit 1. Migration message: "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)". No files modified.
 - **Exit:** 1
 - **Source:** [feature/064_active_marker_and_owner_redesign.md AC-07](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### IT-88: Two saved accounts holding the live session both get `✓`, and a warning names them (BUG-582)
+
+- **Given:** Saved accounts `i4@example.com` and `i7@example.com`, with the live `accessToken` equal to i7's. Every token is locally expired, so no row
+  reaches HTTP.
+- **When:** `clp .usage refresh::0 touch::0`; again after i4's slot is given i7's token too; and that with `format::plain`, `format::json` and
+  `format::tsv`.
+- **Then:** Exit 0 each time. With one match there's no warning. With two, both rows carry `✓` and the text output contains
+  `⚠ 2 saved accounts hold the live session: i4@example.com, i7@example.com` (the full line ends `— only one owns it; re-login the rest`).
+  `format::plain` carries the same warning with `!` for `⚠`; the JSON and TSV outputs never carry it.
+- **Exit:** 0
+- **Source fn:** `it273_shared_session_warning_names_both_slots` (in `usage_core_test.rs`)
+- **Source:** [feature/016_current_account_awareness.md AC-12](../../../../docs/feature/016_current_account_awareness.md)

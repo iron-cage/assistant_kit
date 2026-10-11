@@ -10,6 +10,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use super::types::UsageOutputFormat;
 use super::fetch::fetch_quota_for_list;
+use claude_profile_core::account::trace_ts;
 use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field, resolve_selected_provider, apply_no_color };
 use super::live::execute_live_mode;
 use super::forecast::burn_warnings;
@@ -122,7 +123,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   // them from combining.
   let now_secs = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
   let stale_selected = super::stalest::reduction_applies( params.stalest, params.rotate )
-    .then( || super::stalest::select_stalest( &acct_list, &credential_store, params.stalest, params.max_age, now_secs ) );
+    .then( || super::stalest::select_stalest(
+      &acct_list, &credential_store, &live_creds_file, params.solo, params.stalest, params.max_age, now_secs,
+    ) );
+  // BUG-583 — trace::1 names the selected set, so a starved tick no longer reads like an idle one
+  if let Some( selected ) = stale_selected.as_ref().filter( | _ | params.trace )
+  {
+    let line = super::stalest::selection_trace( selected, params.stalest, params.max_age );
+    eprintln!( "{}{line}", trace_ts() );
+  }
   let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo, stale_selected.as_ref() );
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if

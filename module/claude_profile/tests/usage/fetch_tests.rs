@@ -1,7 +1,9 @@
 // Integration tests for fetch.rs — relocated from src/usage/fetch_tests.rs.
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
-use claude_profile::usage::test_bridge::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
+use claude_profile::usage::test_bridge::{
+  inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list, select_stalest,
+};
 use claude_profile::usage::test_bridge::types::AccountQuota;
 use claude_profile::usage::test_bridge::FAR_FUTURE_MS;
 
@@ -1302,4 +1304,93 @@ fn ft06_072_fetch_threads_inference_provider_and_defaults_empty_when_missing()
     "T04: missing-key account must default to empty (not error, not a sentinel), got: {:?}", legacy.inference_provider,
   );
   assert!( legacy.result.is_ok(), "T04: legacy (missing-key) row must not error, got: {:?}", legacy.result );
+}
+
+// ── BUG-591: a failed fetch must count as an attempt ──────────────────────────
+
+/// MRE BUG-591: a `stalest::1` tick whose fetch fails leaves the account ranked as just
+/// attempted, so the next tick refreshes the other stale account instead.
+///
+/// # Root Cause
+/// Only the Class-A no-subscription verdict wrote anything when a fetch failed. A 429, a 5xx,
+/// a 401/403, a transport error or a locally expired token left both `fetched_at` and
+/// `last_error_at` where they were, so `select_stalest`'s attempt key stayed at the last
+/// success and the failing account took the slot again on every tick.
+///
+/// # Why Not Caught
+/// The loopback seam answered 200 to every usage request, and the BUG-559 ranking tests
+/// stamp `last_error_at` by hand, so no test fed a real failed fetch into the next selection.
+///
+/// # Fix Applied
+/// `fetch_quota_for_list` calls `write_quota_cache_attempt` once the live result is an `Err`,
+/// `select_stalest` ranks on `last_attempt_at` as well, and the cache read folds the newest
+/// stamp across copies tied on `fetched_at`, so the stamp is read back.
+///
+/// # Prevention
+/// Two real ticks through the selector and the fetch loop, with the seam answering 429 for
+/// one token: the second tick's only usage GET must carry the other token.
+///
+/// # Pitfall
+/// The failing account's last success sits in another host's cache subtree, so its stamp
+/// lands in a copy with an equal `fetched_at`. A read that took one tied copy alone could get
+/// the unstamped one, and the second tick would pick the failing account again.
+#[ doc = "bug_reproducer(BUG-591)" ]
+#[ test ]
+fn mre_bug_591_failed_fetch_moves_stalest_on()
+{
+  let store = tempfile::TempDir::new().unwrap();
+  // Both last succeeded on another host, failing@ five hours before other@, so it ranks first.
+  let foreign = store.path().join( "cache" ).join( "fixturehost_fixtureuser" );
+  std::fs::create_dir_all( &foreign ).unwrap();
+  for ( name, token, fetched_at ) in
+  [
+    ( "failing@test.com", "tok-failing", "2026-08-16T04:00:00Z" ),
+    ( "other@test.com",   "tok-other",   "2026-08-16T09:00:00Z" ),
+  ]
+  {
+    std::fs::write(
+      store.path().join( format!( "{name}.credentials.json" ) ),
+      format!( r#"{{"accessToken":"{token}","subscriptionType":"pro","expiresAt":{FAR_FUTURE_MS}}}"# ),
+    ).unwrap();
+    std::fs::write(
+      foreign.join( format!( "{name}.json" ) ),
+      format!( r#"{{"fetched_at":"{fetched_at}","five_hour":{{"utilization":30.0}}}}"# ),
+    ).unwrap();
+  }
+  // Built from the credential files, the way `.usage` builds its list.
+  let accounts    = claude_profile_core::account::list( store.path() ).unwrap();
+  let absent_live = store.path().join( ".absent_credentials.json" );
+  let server      = crate::quota_seam::QuotaSeamServer::start_rate_limiting( &[ "tok-failing" ] );
+  // One watchdog tick: `.usage stalest::1 max_age::7200` selects, then fetches the selection.
+  let tick = ||
+  {
+    let now      = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap().as_secs();
+    let selected = select_stalest( &accounts, store.path(), &absent_live, false, 1, 7200, now );
+    let _ = fetch_quota_for_list(
+      &accounts, store.path(), &absent_live, false, false, false, Some( &selected ),
+    );
+  };
+  let usage_tokens = | from : usize | -> Vec< String >
+  {
+    server.requests()[ from.. ].iter()
+      .filter( | r | r.line.starts_with( "GET /api/oauth/usage" ) )
+      .filter_map( | r | r.bearer.clone() )
+      .collect()
+  };
+
+  crate::quota_seam::with_seam_env( server.origin(), ||
+  {
+    tick();
+    assert_eq!(
+      usage_tokens( 0 ), vec![ "tok-failing".to_string() ],
+      "precondition: the first tick must fetch the stalest account and get its 429",
+    );
+    let first = server.requests().len();
+    tick();
+    assert_eq!(
+      usage_tokens( first ), vec![ "tok-other".to_string() ],
+      "BUG-591: a fetch that just failed must count as an attempt, so the next tick \
+       refreshes the other stale account instead of picking the failing one again",
+    );
+  } );
 }

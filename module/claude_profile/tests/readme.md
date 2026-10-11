@@ -7,7 +7,7 @@
 | `paths_tests.rs` | ClaudePaths: all canonical path methods, HOME-not-set guard. |
 | `responsibility_no_process_execution_test.rs` | Guard: no std::process import anywhere in crate source. |
 | `lib_test.rs` | Library exports: COMMANDS_YAML, register_commands(), command presence. |
-| `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs, owner_cell. |
+| `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs, owner_cell. <!-- BUG-588 — owner_cell's O-20/O-21 --> |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for all cli/ submodules. |
 | `usage_integration_test.rs` | Entry point wiring all tests/usage/ integration test modules. |
@@ -161,7 +161,7 @@ tests/
 | Token classification (library) | `token_tests.rs` | status, status_with_threshold, parse_expires_at |
 | Path resolution (library) | `paths_tests.rs` | ClaudePaths construction and all path methods |
 | Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
-| Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs |
+| Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs, owner_cell |
 | Binary alias smoke | `cli_clp_alias_test.rs` | `clp` and `claude_profile` aliases run and self-identify |
 | Help CLI | `cli/accounts_help_test.rs` | --help, .help, no-args, unknown command (h01–h07) |
 | Accounts CLI (A) | `cli/accounts_list_test.rs` | list text/json, empty dir, sorted, field-presence (acc01–acc25) |

@@ -77,12 +77,15 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-03: `from_now::-30m` past value stored; `.usage` auto-advances monthly
 
-- **Given:** Account `test@example.com` exists (write step); separately, `past@renewal.com` with `_renewal_at: "2020-03-15T00:00:00Z"` (render step — a different, independent test/account).
+- **Given:** Account `test@example.com` exists (write step); separately, `past@renewal.com` with `_renewal_at: "2020-03-15T11:09:00Z"` (render step — a different, independent test/account).
 - **When:** `clp .account.renewal name::test@example.com from_now::-30m`; then, separately, `clp .usage` against an account with a deeply-past `_renewal_at`.
 - **Then (write):** Exits 0. `_renewal_at` is written as an ISO-8601 UTC string starting with `"202"` (not `"2099"`).
 - **Then (render):** `.usage` auto-advances the past timestamp; `~Renews` column shows `in Xd` (exact, no `~` prefix) rather than an estimate.
 - **Exit:** 0 (both steps)
-- **Note:** The write step's cited test only performs a coarse year-prefix check (`starts_with "202"`, `not "2099"`) — it does not independently verify the value is exactly `~30m` in the past. The render step's cited test uses a separate account/fixture than the write step (no shared state) and only checks the `in `/no-`~` prefix — it does not assert the resulting day-count falls within 30 days. Neither step requires live credentials: both use `write_account()` (no token), and `it151` confirms in its own doc comment "No live credentials needed."
+- **Note:** The write step's cited test only performs a coarse year-prefix check (`starts_with "202"`, `not "2099"`) — it does not independently verify the value is exactly `~30m` in the past.
+  The render step's cited test uses a separate account/fixture than the write step (no shared state).
+  It checks the `in `/no-`~` prefix and, through `format::json`, that the advanced value keeps the stored 11:09:00 UTC (BUG-589) — it does not assert the resulting day-count falls within 30 days.
+  Neither step requires live credentials: both use `write_account()` (no token), and `it151` confirms in its own doc comment "No live credentials needed."
 - **Source fn:** `ft03_account_renewal_from_now_negative` (write, in `tests/cli/account_renewal_test.rs`); `it151_past_renewal_at_auto_advances_in_usage` (render, in `tests/cli/usage_model_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-03](../../../docs/feature/030_account_renewal_override.md)
 
@@ -157,11 +160,18 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-10: Past `_renewal_at` auto-advanced monthly at render time
 
-- **Given:** Account `test@example.com` has `_renewal_at: "2020-03-15T11:09:00Z"` (past timestamp, day-15, 11:09 UTC).
+- **Given:** Account `past@renewal.com` has `_renewal_at: "2020-03-15T11:09:00Z"` (past timestamp, day-15, 11:09 UTC).
 - **When:** `clp .usage`, then `clp .usage format::json`
-- **Then:** `~Renews` column for `test@example.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance. In the JSON, the clock reading taken just before the run plus `renewal_secs` falls on 11:09:00 UTC, within 60 s for clp's own run time — the advanced value keeps the stored time of day (BUG-589). The stored value is NOT modified; auto-advance is read-only at render.
+- **Then:** `~Renews` column for `past@renewal.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance.
+  In the JSON, the clock reading taken just before the run plus `renewal_secs` falls on 11:09:00 UTC, within 60 s for clp's own run time — the advanced value keeps the stored time of day (BUG-589).
+  The stored value is NOT modified; auto-advance is read-only at render.
+  <!-- BUG-589 — this case checked only the `~` prefix, never the advanced value's time of day -->
 - **Exit:** 0
-- **Note:** No live credentials required — the cited test uses `write_account()` (no token) and its own doc comment confirms the account "will be in error state but the `~Renews` column is populated from stored data." This test does not assert day-of-month preservation across auto-advance steps — it only checks the exact-vs-estimate `~` prefix. AC-10's day-of-month preservation requirement is fixed and covered separately by the BUG-329 regression tests in `tests/usage/format_tests.rs` (see `docs/algorithm/010_renewal_date_computation.md` AC-5/AC-6). See BUG-329 (`/home/alice/assistant/task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`, closed) for the full mechanism and fix history — the underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
+- **Note:** No live credentials required
+  — the cited test uses `write_account()` (no token), so the account is in error state while the `~Renews` column and the JSON `renewal_secs` field still come from stored data.
+  Beyond the exact-vs-estimate `~` prefix, the test checks only the advanced value's time of day, not its day-of-month.
+  AC-10's day-of-month preservation and clamping are covered by the BUG-329 regression tests in `tests/usage/format_tests.rs`,
+  and the exact advanced instant by the BUG-589 ones (see `tests/docs/algorithm/010_renewal_date_computation.md` AC-5 for day-of-month and clamping, AC-7 and AC-8 for time of day).
 - **Source fn:** `it151_past_renewal_at_auto_advances_in_usage` (in `tests/cli/usage_model_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-10](../../../docs/feature/030_account_renewal_override.md)
 

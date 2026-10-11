@@ -39,7 +39,8 @@ pub( crate ) use types::{
 pub( crate ) use fetch_cache::read_cached_quota;
 // Fix(audit-accounts-no-color): shared with `.accounts` (commands/accounts.rs), which
 // registers no_color:: but previously never applied it — sole emoji→plain mapping.
-pub( crate ) use render::apply_no_color;
+// BUG-582 — `shared_session_warning` is shared the same way, so both views warn alike.
+pub( crate ) use render::{ apply_no_color, shared_session_warning };
 pub use api::usage_routine;
 
 // ── Test support ──────────────────────────────────────────────────────────────

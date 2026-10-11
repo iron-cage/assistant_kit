@@ -42,14 +42,15 @@ AC test cases for `docs/algorithm/010_renewal_date_computation.md`. Tests `renew
 
 - **Given:** `renewal_at_opt = Some("2020-01-01T00:00:00Z")`, `now_secs` = Unix seconds for `2030-01-01T00:00:00Z` (~10 years later)
 - **When:** `renews_label(renewal_at_opt, None, now_secs)` is called
-- **Then:** Returns a string starting `"in "` (no `~`) landing within 30 days of `now_secs` — the `while ts < now_secs` loop in the exact branch advanced the timestamp by 122 flat 30-day steps
+- **Then:** Returns a string starting `"in "` (no `~`) landing within 30 days of `now_secs` — the `while ts < now_secs` loop in the exact branch advanced the timestamp by 120 calendar-month steps
 - **Source fn:** `rl_auto_advance_past_renewal_at` (in `tests/usage/format_tests.rs`)
 
 ### AC-5: Exact branch auto-advance preserves original day-of-month, clamped at month-length boundaries
 
 - **Given:** `renewal_at_opt = Some(<past ISO timestamp with day-of-month D>)`, where advancing month-by-month crosses at least one month shorter than D
 - **When:** `renewal_secs(renewal_at_opt, None, now_secs)` is called
-- **Then (per feature/030 AC-10):** the auto-advanced timestamp's day-of-month equals D, except in a month shorter than D, where it clamps to `min(D, days_in_month(target_year, target_month))`. The time of day is covered by AC-7 and AC-8.
+- **Then (per feature/030 AC-10):** the auto-advanced timestamp's day-of-month equals D, except in a month shorter than D, where it clamps to `min(D, days_in_month(target_year, target_month))`.
+  The time of day is covered by AC-7 and AC-8.
 - **Status:** ✅ **Fixed and covered** by 4 tests: a single-step isolation case, a ~10-year/120-step accumulation case, and two direct clamping cases (day-31 anchor through February; day-29 anchor through a common-year February, then recovering to day 29 in March). Previously not covered by any existing test — `rl_auto_advance_past_renewal_at` (AC-4 above) only asserted a `≤30d` bound, and `it151_past_renewal_at_auto_advances_in_usage` (`tests/docs/feature/030_account_renewal_override.md` FT-10) only asserted the exact-vs-estimate `~` prefix — which is why the flat-step drift went undetected. Fixed by BUG-329 (`task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`, closed) — the underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
 - **Source fn:** `rl_auto_advance_single_step_preserves_day_across_31_day_month`, `rl_auto_advance_multi_year_preserves_day_of_month`, `rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`, `rl_auto_advance_day29_clamps_in_common_february_then_recovers` (in `tests/usage/format_tests.rs`)
 
@@ -65,8 +66,11 @@ AC test cases for `docs/algorithm/010_renewal_date_computation.md`. Tests `renew
 
 - **Given:** `renewal_at_opt = Some("2026-01-18T11:09:00Z")`, `now_secs` = Unix seconds for `2026-09-29T14:24:58Z`
 - **When:** `renewal_secs(renewal_at_opt, None, now_secs)` is called
-- **Then (per feature/030 AC-10):** `now_secs + secs` is exactly `2026-10-18T11:09:00Z` — the advanced instant keeps the stored 11:09:00, not that day's 00:00 UTC. A clamped advance keeps it too: the AC-5 day-31 anchor `2026-01-31T21:00:00Z` lands on exactly `2026-03-31T21:00:00Z`.
-- **Status:** ✅ **Fixed and covered.** Before the BUG-589 fix every advanced month was rebuilt at 00:00 UTC. The AC-5 tests compare `(y, m, d)` only and four of them anchor at `T00:00:00Z`, so none of them could see it.
+- **Then (per feature/030 AC-10):** `now_secs + secs` is exactly `2026-10-18T11:09:00Z` — the advanced instant keeps the stored 11:09:00, not that day's 00:00 UTC.
+  A clamped advance keeps it too: the AC-5 day-31 anchor `2026-01-31T21:00:00Z` lands on exactly `2026-03-31T21:00:00Z`.
+- **Status:** ✅ **Fixed and covered.** Before the BUG-589 fix every advanced month was rebuilt at 00:00 UTC.
+  The AC-5 tests compared `(y, m, d)` only, and three of the four anchor at `T00:00:00Z`, so none of them could see it.
+  <!-- BUG-589 — no test checked the advanced instant, only its date -->
 - **Source fn:** `rl_auto_advance_keeps_anchor_time_of_day`, `rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end` (in `tests/usage/format_tests.rs`)
 
 ### AC-8: Renewal day before the stored time resolves to that same day

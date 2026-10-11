@@ -41,7 +41,11 @@ This asymmetry is why `resolve_model(Auto)` selects Sonnet when `son_idle=true` 
 
 ### Touch Trigger
 
-An account qualifies for touch when any timer is in `idle` state (`resets_at = None`). Touch sends a `["--print", "."]` subprocess which makes an API call, transitioning the idle window(s) to `active`. See [subprocess/004](../subprocess/004_session_touch_invocation.md).
+An account qualifies for touch when any timer is in `idle` state (`resets_at = None`) or its `resets_at` has already passed.
+A cache-rendered row keeps the `resets_at` it was fetched with, so a past instant means the window has ended even though a value is present.
+<!-- BUG-584 — a resets_at that has already passed is an ended window, not an active one -->
+Touch sends a `["--print", "."]` subprocess which makes an API call, transitioning the idle window(s) to `active`.
+See [subprocess/004](../subprocess/004_session_touch_invocation.md).
 
 ### `5h Reset` in Display when `resets_at = None`
 

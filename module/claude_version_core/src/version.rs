@@ -6,6 +6,7 @@
 use claude_core::ClaudePaths;
 use claude_core::process::find_claude_processes;
 use claude_core::settings_io::{ get_setting, set_setting, remove_setting, set_env_var, remove_env_var };
+// BUG-586 — clp calls these mutators too; the 15 calls in this file keep pattern 002's trace on
 use crate::CoreError;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -881,21 +882,21 @@ pub fn lock_version( is_latest : bool, resolved : &str )
     }
 
     let auto_val = if is_latest { "true" } else { "false" };
-    let _ = set_setting( &settings_file, "autoUpdates", auto_val );
+    let _ = set_setting( &settings_file, "autoUpdates", auto_val, true );
 
     if is_latest
     {
-      let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER" );
-      let _ = remove_env_var( &settings_file, "DISABLE_UPDATES" );
-      let _ = remove_setting( &settings_file, "autoUpdatesChannel" );
-      let _ = remove_setting( &settings_file, "minimumVersion" );
+      let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER", true );
+      let _ = remove_env_var( &settings_file, "DISABLE_UPDATES", true );
+      let _ = remove_setting( &settings_file, "autoUpdatesChannel", true );
+      let _ = remove_setting( &settings_file, "minimumVersion", true );
     }
     else
     {
-      let _ = set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1" );
-      let _ = set_env_var( &settings_file, "DISABLE_UPDATES", "1" );
-      let _ = set_setting( &settings_file, "autoUpdatesChannel", "stable" );
-      let _ = set_setting( &settings_file, "minimumVersion", resolved );
+      let _ = set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1", true );
+      let _ = set_env_var( &settings_file, "DISABLE_UPDATES", "1", true );
+      let _ = set_setting( &settings_file, "autoUpdatesChannel", "stable", true );
+      let _ = set_setting( &settings_file, "minimumVersion", resolved, true );
     }
   }
 
@@ -929,10 +930,10 @@ pub fn unlock_settings_for_install()
   if let Some( paths ) = ClaudePaths::new()
   {
     let settings_file = paths.settings_file();
-    let _ = set_setting( &settings_file, "autoUpdates", "true" );
-    let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER" );
-    let _ = remove_env_var( &settings_file, "DISABLE_UPDATES" );
-    let _ = remove_setting( &settings_file, "minimumVersion" );
+    let _ = set_setting( &settings_file, "autoUpdates", "true", true );
+    let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER", true );
+    let _ = remove_env_var( &settings_file, "DISABLE_UPDATES", true );
+    let _ = remove_setting( &settings_file, "minimumVersion", true );
   }
 }
 
@@ -1114,10 +1115,10 @@ pub fn store_preferred_version( spec : &str, resolved : &str, is_latest : bool )
   {
     let _ = std::fs::create_dir_all( parent );
   }
-  set_setting( &settings_file, "preferredVersionSpec", spec )
+  set_setting( &settings_file, "preferredVersionSpec", spec, true )
     .map_err( CoreError::IoError )?;
   let resolved_val = if is_latest { "null" } else { resolved };
-  set_setting( &settings_file, "preferredVersionResolved", resolved_val )
+  set_setting( &settings_file, "preferredVersionResolved", resolved_val, true )
     .map_err( CoreError::IoError )?;
   Ok( () )
 }

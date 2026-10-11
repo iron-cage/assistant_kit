@@ -17,7 +17,15 @@ trace::1   → print timestamped diagnostic lines to stderr; stdout output uncha
 - Output goes to stderr so it does not interfere with `format::json` parsing on stdout.
 - Each diagnostic line is prefixed with a UTC timestamp in `YYYY-MM-DD · HH:MM:SS UTC · ` format — the explicit `UTC` marker disambiguates it from any other (e.g. local-clocked) timestamp source appearing in the same combined log stream (BUG-338) — enabling correlation with watchdog and other time-stamped output.
 - Token values in GET lines are truncated to the first 20 characters followed by `...` (`sk-ant-oA3Txy6P1wRmV2...`).
-- The fetch phase emits one `reading` line, one `GET` line (with token prefix and expiry status), and one `result` line per account. The refresh phase emits one `should_retry` line per account, then detailed lifecycle step lines from `refresh_account_token` for accounts where a refresh is attempted. <!-- BUG-587 — the fetch skip branches print their own lines, not listed here, and the redirect bypass prints none -->
+- The fetch phase names every saved account.
+  On the live path that's a `reading` line, then a `GET` line (with token prefix and expiry status) and a `result` line, or a `cannot read token` line instead.
+  An account that skips the API gets one line saying why: `fetch  <name>  skipped (reason: redirect backend)`, `… (reason: not owned)`, `… (reason: occupied elsewhere)`,
+  `fetch  <name>  solo-skip: approximated (age: Ns)`, `fetch  <name>  stale-skip: not in stalest set (cache-rendered)`, `<name>  cache-first (Ns old, skipping API)`,
+  or `<name>  token expired (local) — skipping API calls`.
+  The refresh phase emits one `should_retry` line per account, then detailed lifecycle step lines from `refresh_account_token` for accounts where a refresh is attempted.
+  <!-- BUG-587 — the redirect bypass used to leave its account out of the fetch stage -->
+- When the `stalest::K` reduction applies, the fetch phase opens with one `stalest  selected (k=K, max_age=Ns): <names>` line, names sorted, `none` if empty ([080](080_stalest.md#trace-output)).
+  <!-- BUG-583 — the selection is traced once, before the fetch loop, so the trace shows which accounts got the slots -->
 - Full trace output for an expired account whose OAuth refresh succeeds:
   ```
   2026-06-25 · 16:40:04 UTC · alice@example.com  reading /home/user/.pro/.../alice@example.com.credentials.json

@@ -1009,13 +1009,15 @@ fn rl_auto_advance_multi_year_preserves_day_of_month()
 ///
 /// # Prevention
 /// Direct regression port of BUG-329's own filed MRE — day-31 anchor advancing through
-/// February must land on March 31, not roll over to April 1.
+/// February must land on March 31, not roll over to April 1. Since BUG-589 the test also
+/// asserts the whole instant, 2026-03-31T21:00:00Z, so the clamped advance has to keep the
+/// anchor's time of day as well as its day.
 ///
 /// # Pitfall
 /// `now_secs` is pinned just past Feb 28 (2026-03-02), not some later "rounder" date —
-/// an unclamped overflow lands on Mar 3, and any `now_secs` at or after Mar 3 lets the
-/// loop take one extra iteration and self-correct to the SAME Mar 31 the clamped path
-/// reaches, silently passing a fix that omits clamping entirely.
+/// an unclamped overflow lands on Mar 3 at the anchor's 21:00, and any `now_secs` after
+/// that instant lets the loop take one extra iteration and self-correct to the SAME
+/// Mar 31 the clamped path reaches, silently passing a fix that omits clamping entirely.
 #[ doc = "bug_reproducer(BUG-329)" ]
 #[ test ]
 fn rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end()
@@ -1026,7 +1028,10 @@ fn rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end()
   let ( y, m, d ) = unix_to_date( at );
   assert_eq!( ( y, m, d ), ( 2026, 3, 31 ), "must clamp through Feb and land on Mar 31, got {y}-{m:02}-{d:02}" );
   // BUG-589 — the whole instant, not just the date: the anchor's 21:00:00 UTC has to survive the clamp too
-  assert_eq!( at, 1_774_990_800, "must land on 2026-03-31T21:00:00Z, got {}s past Mar 31 00:00 UTC", at % 86_400 );
+  assert_eq!(
+    at, 1_774_990_800,
+    "must land on 2026-03-31T21:00:00Z, got {}s past Mar 31 00:00 UTC", at % 86_400,
+  );
 }
 
 /// A day-29 anchor (valid only in leap-year Februaries) must clamp to day 28 advancing
@@ -1073,19 +1078,20 @@ fn rl_auto_advance_day29_clamps_in_common_february_then_recovers()
 /// 00:00 UTC.
 ///
 /// # Root Cause
-/// The exact branch split the anchor once into `(year, month, day)` and rebuilt every
-/// advanced month with `date_to_unix()`, which encodes 00:00 UTC. The anchor's time of day,
-/// parsed by `parse_iso_secs()`, never reached the loop, so the first advance dropped it.
+/// In `renewal_secs()` (`src/usage/format.rs:262-267` before the fix), the exact branch split
+/// the anchor once into `(year, month, day)` and rebuilt every advanced month with
+/// `date_to_unix()`, which encodes 00:00 UTC. The anchor's time of day, parsed by
+/// `parse_iso_secs()`, never reached the loop, so the first advance dropped it.
 ///
 /// # Why Not Caught
-/// Every auto-advance test compared `(y, m, d)` through `unix_to_date()`, and all but one
-/// used a `T00:00:00Z` anchor, where the lost time of day changes nothing. The one
-/// `T21:00:00Z` anchor (`rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`) was
-/// checked by date only.
+/// No auto-advance test checked the advanced instant: each compared `(y, m, d)` through
+/// `unix_to_date()` or only the label's shape, and all but one used a `T00:00:00Z` anchor,
+/// where the lost time of day changes nothing. The one `T21:00:00Z` anchor
+/// (`rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`) was checked by date only.
 ///
 /// # Fix Applied
-/// `renewal_secs()` keeps the anchor's `ts % 86_400` and adds it back to each month rebuilt
-/// by `date_to_unix()`.
+/// `renewal_secs()` (`src/usage/format.rs:269-275`) keeps the anchor's `ts % 86_400` and adds
+/// it back to each month rebuilt by `date_to_unix()`.
 ///
 /// # Prevention
 /// Asserts the whole instant (`now_secs + secs`), so a midnight result misses by exactly the
@@ -1114,17 +1120,20 @@ fn rl_auto_advance_keeps_anchor_time_of_day()
 /// `2026-10-01T23:59:00Z`, 36 748 s away.
 ///
 /// # Root Cause
-/// Same dropped time of day as `rl_auto_advance_keeps_anchor_time_of_day`. The month rebuilt
-/// at 00:00 UTC (2026-10-01T00:00:00Z) is already past at 13:46, so the loop advanced once
-/// more and returned 2026-11-01T00:00:00Z, a whole month late.
+/// Same dropped time of day as `rl_auto_advance_keeps_anchor_time_of_day`: the rebuild at
+/// `src/usage/format.rs:267` (before the fix) placed the month at 00:00 UTC
+/// (2026-10-01T00:00:00Z), already past at 13:46, so the loop advanced once more and
+/// returned 2026-11-01T00:00:00Z, a whole month late.
 ///
 /// # Why Not Caught
-/// No test put `now` on a renewal day before the stored time; every auto-advance `now` fell
-/// on a day other than the anchor's day-of-month.
+/// No auto-advance test put `now` on a renewal day before the stored time. The two that do
+/// land `now` on the anchor's day-of-month (2030-01-01T00:00:00Z against a day-1
+/// `T00:00:00Z` anchor) sit exactly at the stored time, where a midnight rebuild changes
+/// nothing.
 ///
 /// # Fix Applied
-/// The same `ts % 86_400` carry: the rebuilt candidate is 2026-10-01T23:59:00Z, still ahead
-/// of `now`, so the loop stops on the renewal day.
+/// The same `ts % 86_400` carry (`src/usage/format.rs:269-275`): the rebuilt candidate is
+/// 2026-10-01T23:59:00Z, still ahead of `now`, so the loop stops on the renewal day.
 ///
 /// # Prevention
 /// Pins `now` between the renewal day's 00:00 and the stored 23:59, the only window where the

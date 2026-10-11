@@ -55,7 +55,7 @@ clp .usage solo::1 live::1 interval::60
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`renew`/`renews`→`0`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
-| `touch::` | `bool` | `1` | Activate accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending minimal prompt via isolated subprocess; re-fetch quota |
+| `touch::` | `bool` | `1` | Activate accounts with any quota timer absent or already past (no active 5h, 7d, or 7d-Sonnet window) by sending minimal prompt via isolated subprocess; re-fetch quota |
 | `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku or keep), `low`, `normal`, `high`, `max` |
 | `count::` | `u64` | `0` | Maximum rows to display (0 = all rows) |
@@ -89,12 +89,17 @@ clp .usage solo::1 live::1 interval::60
 3. `(when only_active::1)` Pre-filter: retain only the `is_active` account (filesystem `_active_{hostname}_{user}` marker; no HTTP required)
 4. `fetch_quota_for_list()`: call `GET /api/oauth/usage` per account; call `GET /api/oauth/account` in parallel thread. `(when backend == redirect)` skip both HTTP calls entirely — produce an `Err("redirect backend — no Anthropic quota")` placeholder row instead, checked before the non-owned gate. `(when solo::1)` only the current+owned account gets live HTTP fetch; all others get `approximate_quota()` (historical cached data via dedicated function — no direct cache file reads)
 5. `(when refresh::1)` `apply_refresh()`: for 401/403 errors or 429 + locally-expired token, refresh via isolated subprocess and re-fetch. `(when solo::1)` refresh fires only for the current+owned account
-6. `(when touch::1)` `apply_touch()`: for each account with any quota timer absent, spawn isolated subprocess to activate idle window; re-fetch quota (runs after refresh so refreshed accounts are touched). `(when solo::1)` touch fires only for the current+owned account
+6. `(when touch::1)` `apply_touch()`: for each account with any quota timer absent or already past, spawn isolated subprocess to activate idle window;
+   re-fetch quota (runs after refresh so refreshed accounts are touched). `(when solo::1)` touch fires only for the current+owned account
 7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when current account has valid quota)` write resolved model via `apply_model_override()`
 8. Post-filter: apply `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::`, `count::`, `offset::` predicates
 9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`)
 10. Four-group status partition (`🟢`→`🟡 h-exhausted`→`🟡 weekly-exhausted`→`🔴 Dead`); apply `sort::` strategy + `desc::` direction within each group
-11. `(when format::text)` Render table + footer; `(when format::text|plain and alert:: > 0)` append `⚠ 5h burn` warning lines for accounts forecast to exhaust their 5h window within `alert::` minutes ([feature/077](../../feature/077_burn_rate_alert.md)); `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
+11. `(when format::text)` Render table + footer; `(when format::text|plain and two or more shown rows carry ✓)` put the shared-session warning under the table, above the footer
+    `⚠ N saved accounts hold the live session: a, b — only one owns it; re-login the rest` ([feature/016](../../feature/016_current_account_awareness.md)
+    AC-12, BUG-582); `(when format::text|plain and alert:: > 0)` append `⚠ 5h burn` warning lines for accounts forecast to exhaust their 5h window
+    within `alert::` minutes ([feature/077](../../feature/077_burn_rate_alert.md)); `(when get:: provided)` extract single field from first match;
+    `(when live::1)` loop with `interval::` + `jitter::` delay
 12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner — Gate 8 (foreign-owned, `force::1`-bypassable) and Gate 9 (claim-locked, unconditional — never bypassed) are applied inside this call, so a claim-locked account can never be `winner`; Gate 11 ([feature/076](../../feature/076_identity_tag_filter.md)) — tag-filter mismatch against the current Identity's `_filter_*` file — also applies inside the winner selection (`find_first_eligible()`), unconditional like Gate 9, and when it excluded ≥1 account the output includes `N excluded by tag filter include=[…] exclude=[…]`; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
 
 **Examples:**
@@ -148,7 +153,10 @@ clp .usage live::1 interval::60 jitter::10
 - `lock::`/`reserve::` writes are ungated regardless of ownership — any machine can set or clear `claim_lock`/`reserve` on any account, including non-owned ones. `claim_lock` blocks explicit selection (G9, `force::1`-bypassable) and automatic selection (Gate 9, unconditional); `reserve` only deprioritizes automatic selection (sort key, no gate). See [feature/070_account_claim_and_reservation_control.md](../../feature/070_account_claim_and_reservation_control.md).
 - Claim-locked accounts are marked by default: text and `format::tsv` append ` 🔒` to the account-name cell (suffix — name-prefix matching stays intact); `no_color::1`/`format::plain` render it as `(locked)`; `format::json` includes `"claim_lock"` and `"reserve"` on every row. See [feature/070](../../feature/070_account_claim_and_reservation_control.md) AC-18.
 - `no_color::1` covers the `get::` single-value path (e.g. `get::status` emits `ok`, not 🟢) and maps the `●` status header to `status`; `format::tsv`/`format::json` are exempt (machine formats). See [param/047](../param/047_no_color.md).
-- `touch::` (default `1`) activates accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
+- `touch::` (default `1`) activates accounts with any quota timer absent or already past (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt;
+  pass `touch::0` to suppress. Runs after `refresh::` when both active.
+  See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
+  <!-- BUG-584 — a 5h or tracked weekly resets_at that has already passed counts as idle -->
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Haiku by default; Sonnet when `son_idle=true` (7d-Sonnet window present but not yet started — activates idle window). See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 - `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `low` for any model; no flag for `imodel::haiku` or `imodel::keep`. Low effort prevents extended thinking in keep-alive subprocesses, avoiding timeouts. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 

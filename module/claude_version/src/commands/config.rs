@@ -150,7 +150,8 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
             format!( "failed to create settings directory: {e}" ) )
         )?;
       }
-      set_setting( &target, key, value ).map_err( | e |
+      // BUG-586 — this call and the unset arm's remove_setting keep pattern 002's parameter trace on
+      set_setting( &target, key, value, true ).map_err( | e |
         ErrorData::new( ErrorCode::InternalError, format!( "failed to write settings: {e}" ) )
       )?;
       Ok( OutputData::new( format!( "set {key} = {value}\n" ), "text" ) )
@@ -168,7 +169,7 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
       }
 
       let target = config_scope_target( &scope_str )?;
-      remove_setting( &target, key ).map_err( | e |
+      remove_setting( &target, key, true ).map_err( | e |
         ErrorData::new( ErrorCode::InternalError, format!( "failed to unset setting: {e}" ) )
       )?;
       Ok( OutputData::new( format!( "unset {key}\n" ), "text" ) )

@@ -318,7 +318,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-22: `imodel::auto` selects sonnet when `son_idle=true` (5h running, 7d absent)
 
-- **Given:** Account quota data where `five_h_running=true` (`five_hour.resets_at=Some(_)`), `d7_running=true` (7d window absent → `map_or(true, ...)=true`), and `seven_day_sonnet.resets_at=None` (`son_idle=true`). Helper: `mk_aq_with_son_idle()`.
+- **Given:** Account quota data where `five_h_running=true` (`five_hour.resets_at` an hour ahead of now), `d7_running=true` (7d window absent → `map_or(true, ...)=true`),
+  and `seven_day_sonnet.resets_at=None` (`son_idle=true`). Helper: `mk_aq_with_son_idle()`.
+  <!-- BUG-584 — a reset counts as running only while it's ahead of now, so the helper's 5h reset and the 7d fixtures sit ahead -->
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → `son_idle` gate fires. The 7d-Sonnet window activates only on Sonnet-family API calls; Haiku cannot start it. Fix(BUG-289, BUG-290, TSK-292).
 - **Exit:** n/a (unit test)
@@ -351,7 +353,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-25: `imodel::auto` selects sonnet when 7d running via explicit Some path and `son_idle=true`
 
-- **Given:** Account where `seven_day=Some({resets_at:Some("2026-06-15T10:00:00Z")})` (7d session active via Some-branch). Other timers: `five_hour=running, seven_day_sonnet=Some({resets_at:None})` (`son_idle=true`).
+- **Given:** Account where `seven_day=Some({resets_at:Some("2099-01-01T00:00:00Z")})` (7d session active via Some-branch).
+  Other timers: `five_hour=running, seven_day_sonnet=Some({resets_at:None})` (`son_idle=true`).
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → gate fires. Exercises the `seven_day=Some(running)` Some-branch of `map_or` — verifies that path correctly resolves to Sonnet.
 - **Exit:** n/a (unit test)

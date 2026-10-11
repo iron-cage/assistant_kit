@@ -28,7 +28,7 @@ Both steps are a **surgical merge** — only the `oauthAccount` key is inserted/
 
 | JSON path | Type | Semantics | Read by | Feature |
 |-----------|------|-----------|---------|---------|
-| `oauthAccount.emailAddress` | string | Primary email address — used as default account name during `.account.save` when `name::` is omitted | `read_live_cred_meta()`, `account_save_routine()` | [002](../feature/002_account_save.md), [012](../feature/012_live_credentials_status.md) |
+| `oauthAccount.emailAddress` | string | Primary email address — names an `.account.save` that omits `name::` when no single saved slot holds the live session (BUG-582) | `read_live_cred_meta()`, `account_save_routine()` | [002](../feature/002_account_save.md), [012](../feature/012_live_credentials_status.md) |
 | `oauthAccount.displayName` | string | Human-readable display name | `read_live_cred_meta()` | [014](../feature/014_rich_account_metadata.md) |
 | `oauthAccount.organizationRole` | string | Organization role (`admin`, `member`, etc.) | `read_live_cred_meta()` | [014](../feature/014_rich_account_metadata.md) |
 | `oauthAccount.billingType` | string | Billing type (`stripe_subscription`, etc.) | `read_live_cred_meta()` | [014](../feature/014_rich_account_metadata.md) |
@@ -75,5 +75,5 @@ No error is ever raised for absent metadata in `~/.claude.json`.
 
 | File | Relationship |
 |------|-------------|
-| [002_account_json.md](002_account_json.md) | `oauthAccount` subtree is snapshotted into `{name}.json` at save time |
+| [002_account_json.md](002_account_json.md) | `oauthAccount` subtree is snapshotted into `{name}.json` at save time, unless a re-save keeps the stored one ([feature/002](../feature/002_account_save.md) step 6a) |
 | [003_file_topology.md](003_file_topology.md) | `claude_json_file()` path method |

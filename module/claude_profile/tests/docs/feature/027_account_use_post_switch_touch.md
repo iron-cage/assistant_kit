@@ -26,7 +26,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-12 | `trace::1 touch::1` active account — read+fetch+scheduled+model+spawned lines (no idle-check, BUG-285) | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-13 | `trace::1 touch::1` fetch failure + `expiresAt` future — fetch-err + expiry-valid emitted; idle/model omitted | AC-10, AC-11, AC-14 | Integration |
 | FT-14 | `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted | AC-15 | Integration |
-| FT-15 | `trace::0` (default) — no timestamped `account.use` diagnostic lines emitted | AC-15 | Integration |
+| FT-15 | `trace::0` (default) — stderr empty: no diagnostic line at all | AC-15 | Integration |
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
 | FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
@@ -62,7 +62,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-12 | trace::1 touch::1 active account — read+fetch+scheduled+model+spawned lines (no idle-check, BUG-285) | AC-10, AC-11, AC-12, AC-13, AC-14 | Trace Output |
 | FT-13 | trace::1 touch::1 fetch failure + expiresAt future — fetch-err + expiry-valid lines; idle/model omitted | AC-10, AC-11, AC-14 | Trace Output |
 | FT-14 | trace::1 touch::0 — no trace lines emitted | AC-15 | Trace Suppression |
-| FT-15 | trace::0 (default) — no trace lines emitted | AC-15 | Trace Default |
+| FT-15 | trace::0 (default) — stderr empty | AC-15 | Trace Default |
 | FT-16 | trace:: in .account.use --help with default 0 | AC-16 | Help Output |
 | FT-17 | touch::1 + fetch Err + expired expiresAt + refresh::1 (default) → refresh fails → exits 3 | AC-17 | BUG-213 + BUG-230 MRE |
 | FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
@@ -234,13 +234,16 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-15: `trace::0` (default) — no timestamped `account.use` diagnostic lines emitted
+### FT-15: `trace::0` (default) — stderr empty: no diagnostic line at all
 
-- **Given:** Account `target@example.com` saved. Note: the cited test passes `touch::0` explicitly (the same fixture as FT-02), not a fully-default invocation with implicit `touch::1` — no test in this suite exercises a fully-default invocation with an explicit stderr assertion.
+- **Given:** Account `target@example.com` saved, and no running claude process (`CLR_PROC_DIR` on an empty dir).
+  Note: the cited test passes `touch::0` explicitly (the same fixture as FT-02), not a fully-default invocation with implicit `touch::1`.
 - **When:** `clp .account.use name::target@example.com touch::0` (default `trace::0`)
-- **Then:** Exits 0. Stdout contains `switched` (generic substring). `aw22` itself makes no assertion on stderr — the "no diagnostic lines" property is not directly checked here; it is structurally guaranteed by every `account.use` trace line being written inside an `if trace { eprintln!(...) }` guard (confirmed via `src/commands/account_ops.rs`), so `trace::0` (the default, since `trace::1` is never passed) unconditionally suppresses all diagnostic output regardless of `touch::`.
+- **Then:** Exits 0. Stdout contains `switched` (generic substring). Stderr is empty: no line from clp's own `if trace` guards,
+  and none from the `settings_io` calls inside `switch_account`, which pass `trace` = `false` (BUG-586).
 - **Exit:** 0
-- **Source fn:** `aw22_touch_disabled_switch_succeeds` (in `account_relogin_test.rs`)
+- **Source fn:** `mre_bug_586_untraced_switch_leaves_stderr_empty` (in `account_relogin_test.rs` — the `bug_reproducer(BUG-586)`);
+  `aw22_touch_disabled_switch_succeeds` runs the same switch without reading stderr
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---

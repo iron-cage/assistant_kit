@@ -20,6 +20,9 @@
 //! | ft04   | `ft04_check_mark_follows_live_token_not_active`  | AC-02          | no  |
 //! | ft05   | `ft05_unreadable_credential_store_exits_2`       | AC-06          | no  |
 //! | mre162 | `mre_bug_162_jwt_exp_ms`                          | AC-25 / BUG-162 | no |
+//! | mre587 | `mre_bug_587_trace_names_every_account_in_fetch_stage` | param 023 EC-18 / BUG-587 | no |
+//! | mre583 | `mre_bug_583_stalest_slot_goes_to_fetchable_account` | 028 AC-18 / BUG-583 | no |
+//! | 583s   | `bug_583_solo_stalest_selects_none_without_a_live_session` | 028 AC-18 / BUG-583 | no |
 //!
 //! ### Feature 018 — Live Quota Monitor Mode
 //!
@@ -67,7 +70,7 @@ use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token,
-  write_account_owner,
+  write_account_owner, seed_quota_cache,
   write_live_credentials_with_token, require_live_api,
   FAR_FUTURE_MS,
 };
@@ -324,7 +327,6 @@ fn f18_ft01_live_0_single_fetch()
 /// `accessToken` field, so `read_token()` fails instantly after the sleep.
 ///
 /// Source: `tests/docs/feature/018_live_monitor.md § FT-06`.
-// BUG-587 — the per-account check below has only Anthropic accounts, so a redirect row missing from the fetch trace passes
 #[ cfg( unix ) ]
 #[ test ]
 fn f18_ft06_live_stagger_per_account_trace()
@@ -382,6 +384,231 @@ fn f18_ft06_live_stagger_per_account_trace()
   assert!(
     err.contains( "beta@test.com" ),
     "trace must include beta@test.com, got:\n{err}",
+  );
+}
+
+// ── BUG-587: every account in the refresh stage is named in the fetch stage ──────
+
+/// mre587 (param 023 EC-18): `.usage trace::1` names every account in the fetch stage,
+/// whichever branch handles it — redirect bypass, not owned, occupied elsewhere,
+/// stale-skip, or the live path.
+///
+/// # Root Cause
+/// `fetch_quota_for_list()` traces each early exit at the exit itself. The redirect bypass
+/// (R1) had none, so a redirect account appeared in the refresh and touch stages but never
+/// in fetch.
+///
+/// # Why Not Caught
+/// The per-account trace test above (f18-FT-06) uses two Anthropic accounts that both take
+/// the live path, so it never reached a branch that could skip its trace line.
+///
+/// # Fix Applied
+/// R1 prints `fetch  <name>  skipped (reason: redirect backend)` before its `continue`.
+///
+/// # Prevention
+/// One fixture account per skip branch the bug's Prevention lists (R1, G1, G1b, stale-skip)
+/// plus one on the live path. The parity check runs over every account that has a `refresh`
+/// line rather than a fixed list, so any fixture account that reaches a silent branch fails here.
+///
+/// # Pitfall
+/// Live-path lines carry no `fetch` prefix (`<name>  reading …`); a check that only looks
+/// for `fetch  <name>` would call the live path silent.
+#[ doc = "bug_reproducer(BUG-587)" ]
+#[ test ]
+fn mre_bug_587_trace_names_every_account_in_fetch_stage()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  let save = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test", "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save, 0 );
+  // No accessToken in these fixtures: the live-path account ends on `cannot read token`, no HTTP.
+  for name in [ "notowned@example.com", "occupied@example.com", "fresh@example.com", "plain@example.com" ]
+  {
+    write_account( dir.path(), name, "max", "default", FAR_FUTURE_MS, false );
+  }
+  write_account_owner( dir.path(), "notowned@example.com", "other@remote" );
+  std::fs::write( store.join( "_active_laptop_bob" ), "occupied@example.com" ).unwrap();
+  seed_quota_cache( dir.path(), "fresh@example.com", Some( 10.0 ), Some( 20.0 ) );
+
+  // max_age::3600 leaves only cacheless accounts eligible, so fresh@ is never selected and
+  // takes the stale-skip branch; touch::0 keeps its cache-rendered idle row from being touched.
+  let out = run_cs_with_env(
+    &[ ".usage", "trace::1", "touch::0", "stalest::5", "max_age::3600" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // Every trace line starts with `YYYY-MM-DD · HH:MM:SS UTC · `.
+  let bodies : Vec< &str > = err.lines()
+    .filter_map( | l | l.split_once( " UTC · " ).map( | ( _, b ) | b ) )
+    .collect();
+
+  let branches = [
+    ( "kimi",                 "fetch  kimi  skipped (reason: redirect backend)" ),
+    ( "notowned@example.com", "fetch  notowned@example.com  skipped (reason: not owned)" ),
+    ( "occupied@example.com", "fetch  occupied@example.com  skipped (reason: occupied elsewhere)" ),
+    ( "fresh@example.com",    "fetch  fresh@example.com  stale-skip: not in stalest set (cache-rendered)" ),
+    ( "plain@example.com",    "plain@example.com  reading " ),
+  ];
+  for ( name, line ) in branches
+  {
+    assert!(
+      bodies.iter().any( | b | b.starts_with( line ) ),
+      "mre587: {name} must take its own fetch branch and trace `{line}`, got stderr:\n{err}",
+    );
+  }
+
+  // The invariant itself: no account with a refresh line is missing from the fetch stage.
+  let refreshed : Vec< &str > = bodies
+    .iter()
+    .filter_map( | b | b.strip_prefix( "refresh  " )?.split( "  " ).next() )
+    .collect();
+  assert!(
+    !refreshed.is_empty(),
+    "mre587: no `refresh  <name>` line found, so the parity check would check nothing, got stderr:\n{err}",
+  );
+  for name in refreshed
+  {
+    let fetch_prefix = format!( "fetch  {name}  " );
+    let live_prefix  = format!( "{name}  " );
+    assert!(
+      bodies.iter().any( | b | b.starts_with( &fetch_prefix ) || b.starts_with( &live_prefix ) ),
+      "mre587: {name} has a refresh line but no fetch-stage line, got stderr:\n{err}",
+    );
+  }
+}
+
+// ── BUG-583: no stalest slot goes to an account the fetch loop skips ─────────────
+
+/// bug_reproducer(BUG-583): with two `stalest::` slots and the two oldest accounts occupied
+/// on other machines, the third, free account over `max_age` must take the fetch path.
+///
+/// # Root Cause
+/// `select_stalest()` judged eligibility on `inference_provider` alone; the fetch loop also skips
+/// redirect, not-owned and occupied-elsewhere accounts, and under `solo::1` all but the live
+/// session. Both slots went to the occupied pair, G1b skipped them, and a3 was stale-skipped.
+///
+/// # Why Not Caught
+/// No selection test wrote an `_active_*` marker, and no CLI test checked which accounts a
+/// `stalest::K` tick sent down the fetch path.
+///
+/// # Fix Applied
+/// `select_stalest()` ranks only what `passes_fetch_gates()` admits, and `trace::1` names
+/// the selected set.
+///
+/// # Prevention
+/// The fleet mirrors the bug's MRE, and the selection line is asserted, so a starved tick
+/// can't pass for an idle one.
+///
+/// # Pitfall
+/// Live-path lines carry no `fetch` prefix (`<name>  reading …`), so a3 taking the fetch path
+/// shows as a `reading` line and no stale-skip line, never as a `fetch  a3` line.
+#[ doc = "bug_reproducer(BUG-583)" ]
+#[ test ]
+fn mre_bug_583_stalest_slot_goes_to_fetchable_account()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // No accessToken in these fixtures: the selected account ends on `cannot read token`, no HTTP.
+  for name in [ "a1@example.com", "a2@example.com", "a3@example.com" ]
+  {
+    write_account( dir.path(), name, "max", "default", FAR_FUTURE_MS, false );
+  }
+  // a1 and a2 are each the live session on another machine; a3 is free.
+  std::fs::write( store.join( "_active_hostb_userb" ), "a1@example.com" ).unwrap();
+  std::fs::write( store.join( "_active_hostc_userc" ), "a2@example.com" ).unwrap();
+  // Every cache is long past max_age::7200, and a1 and a2 are the oldest.
+  for ( name, fetched_at ) in
+  [
+    ( "a1@example.com", "2026-01-01T00:00:00Z" ),
+    ( "a2@example.com", "2026-01-01T01:00:00Z" ),
+    ( "a3@example.com", "2026-01-01T02:00:00Z" ),
+  ]
+  {
+    let cache = serde_json::json!(
+    {
+      "cache" : { "fetched_at" : fetched_at, "five_hour" : { "left_pct" : 50.0 } }
+    } );
+    std::fs::write(
+      store.join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+    ).unwrap();
+  }
+
+  let out = run_cs_with_env(
+    &[ ".usage", "trace::1", "touch::0", "refresh::0", "stalest::2", "max_age::7200" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // Every trace line starts with `YYYY-MM-DD · HH:MM:SS UTC · `.
+  let bodies : Vec< &str > = err.lines()
+    .filter_map( | l | l.split_once( " UTC · " ).map( | ( _, b ) | b ) )
+    .collect();
+
+  assert!(
+    bodies.contains( &"stalest  selected (k=2, max_age=7200s): a3@example.com" ),
+    "mre583: the stalest set must hold only the free account, got stderr:\n{err}",
+  );
+  assert!(
+    !bodies.iter().any( | b | b.starts_with( "fetch  a3@example.com  stale-skip" ) ),
+    "mre583: a3@example.com must not be stale-skipped, got stderr:\n{err}",
+  );
+  assert!(
+    bodies.iter().any( | b | b.starts_with( "a3@example.com  reading " ) ),
+    "mre583: a3@example.com must take the fetch path, got stderr:\n{err}",
+  );
+}
+
+/// `solo::1` reaches the stalest selection (BUG-583): with no live session here, the solo gate
+/// skips every account, so `stalest::1` selects none instead of spending its slot on the
+/// oldest one. No account is current, so the run makes no HTTP call.
+#[ test ]
+fn bug_583_solo_stalest_selects_none_without_a_live_session()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  for ( name, fetched_at ) in
+  [
+    ( "a1@example.com", "2026-01-01T00:00:00Z" ),
+    ( "a2@example.com", "2026-01-01T01:00:00Z" ),
+  ]
+  {
+    write_account( dir.path(), name, "max", "default", FAR_FUTURE_MS, false );
+    let cache = serde_json::json!(
+    {
+      "cache" : { "fetched_at" : fetched_at, "five_hour" : { "left_pct" : 50.0 } }
+    } );
+    std::fs::write(
+      store.join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+    ).unwrap();
+  }
+
+  let out = run_cs_with_env(
+    &[ ".usage", "trace::1", "touch::0", "refresh::0", "solo::1", "stalest::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  let bodies : Vec< &str > = err.lines()
+    .filter_map( | l | l.split_once( " UTC · " ).map( | ( _, b ) | b ) )
+    .collect();
+
+  assert!(
+    bodies.contains( &"stalest  selected (k=1, max_age=0s): none" ),
+    "BUG-583: under solo::1 with no live session no account is selectable, got stderr:\n{err}",
   );
 }
 

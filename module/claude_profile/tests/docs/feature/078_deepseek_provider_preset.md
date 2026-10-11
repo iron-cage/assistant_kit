@@ -22,15 +22,20 @@
 | FT-10 | AC-10 | End-to-end: preset save + `.account.use` writes all 9 vars via CLI | `t27_use_preset_deepseek_account_writes_deepseek_tier_env_vars` |
 | FT-11 | AC-11 | Switch kimi→deepseek clears all 7 Kimi-tier vars, writes all 6 DeepSeek-tier vars | `ft11_078_switch_from_kimi_to_deepseek_clears_kimi_writes_deepseek` |
 | FT-12 | AC-11 | Switch deepseek→kimi clears all 6 DeepSeek-tier vars, writes all 7 Kimi-tier vars | `ft12_078_switch_from_deepseek_to_kimi_clears_deepseek_writes_kimi` |
+| FT-13 | AC-04 | Switch anthropic→anthropic keeps a user-set DeepSeek-tier key (no redirect session to leave) | `mre_bug_585_anthropic_switch_keeps_user_tier_keys` |
 
 ### Notes
 
-- ✅ Implemented — domain-level cases (FT-01–FT-05, FT-11, FT-12) live in `claude_profile_core/tests/account_backend_test.rs` (`ft06`–`ft12_078` fn prefix); CLI-surface cases (FT-06–FT-10) in `tests/cli/account_redirect_backend_test.rs` (`t24`–`t27`, plus the shared `t16`).
+- ✅ Implemented — domain-level cases (FT-01–FT-05, FT-11–FT-13) live in `claude_profile_core/tests/account_backend_test.rs`
+  (`ft06`–`ft12_078` fn prefix, plus `mre_bug_585_anthropic_switch_keeps_user_tier_keys`);
+  CLI-surface cases (FT-06–FT-10) in `tests/cli/account_redirect_backend_test.rs` (`t24`–`t27`, plus the shared `t16`).
 - All FT cases use temporary isolated `$HOME`/credential stores; no real user environment.
 - FT-01–FT-05, FT-11, FT-12 exercise `switch_account()`'s DeepSeek-tier branch directly (`DEEPSEEK_PRO_TIER_ENV_VARS`/`DEEPSEEK_FLASH_TIER_ENV_VARS`, `DEEPSEEK_FLASH_MODEL`, `DEEPSEEK_AUTO_COMPACT_WINDOW`, `write_deepseek_tier_env_vars()`/`clear_deepseek_tier_env_vars()` in `claude_profile_core/src/account/switch.rs`); FT-06–FT-09 exercise `account_save_routine()`'s preset parsing/gating extended to `deepseek`; FT-10 ties both through the CLI.
 - FT-09 shares its source fn with Feature 073's own AC-09 case (`t16_save_preset_unrecognized_value_exits_1`, [073_kimi_provider_preset.md](073_kimi_provider_preset.md) FT-09) — one test now asserts stderr names *both* recognized values (`kimi`, `deepseek`), rather than a second near-duplicate test.
 - FT-02 pins the deliberate divergence from Kimi's AC-02 (`kimi-k3*`-conditional window): DeepSeek's compact window is a flat constant with no model-name branching, per DeepSeek's own integration guide — the test asserts the *same* `"786432"` value across two different `redirect_model` inputs, not a branch.
-- FT-11/FT-12 are the only cases in either Feature 073 or Feature 078's own test-doc that switch directly between two *different* tier-var-bearing redirect providers in one hop — every other case switches redirect↔anthropic or redirect↔non-tier-provider-redirect. These pin the cross-provider clearing behavior documented in [078_deepseek_provider_preset.md](../../../docs/feature/078_deepseek_provider_preset.md)'s Design section.
+- FT-11/FT-12 are the only cases in either Feature 073 or Feature 078's own test-doc that switch directly between two *different* tier-var-bearing redirect providers in one hop —
+  every other case switches redirect↔anthropic or redirect↔non-tier-provider-redirect, except FT-13 (anthropic→anthropic).
+  These pin the cross-provider clearing behavior documented in [078_deepseek_provider_preset.md](../../../docs/feature/078_deepseek_provider_preset.md)'s Design section.
 - Base-3-variable write/clear mechanics are Feature 071's — see `tests/docs/feature/071_redirect_backend_accounts.md` FT-06/FT-07; this spec covers only the 6 additional DeepSeek-tier variables, the preset sugar, and the cross-provider clear.
 
 ---
@@ -72,7 +77,7 @@
 
 - **Given:** Active deepseek redirect account (9 vars present).
 - **When:** `switch_account()` targets a `backend: anthropic` account.
-- **Then:** All 9 vars removed — no stale tier vars remain. <!-- BUG-585 — no FT switches Anthropic → Anthropic with a user-set DeepSeek-tier key, which the switch deletes -->
+- **Then:** All 9 vars removed — no stale tier vars remain. <!-- BUG-585 — the counterpart, an anthropic→anthropic switch that keeps a user-set tier key, is FT-13 -->
 - **Exit:** n/a (domain fn)
 - **Source fn:** `ft09_078_switch_from_deepseek_to_anthropic_clears_tier_env_vars`
 - **Source:** [078_deepseek_provider_preset.md AC-04](../../../docs/feature/078_deepseek_provider_preset.md)
@@ -164,3 +169,15 @@
 - **Exit:** n/a (domain fn)
 - **Source fn:** `ft12_078_switch_from_deepseek_to_kimi_clears_deepseek_writes_kimi`
 - **Source:** [078_deepseek_provider_preset.md AC-11](../../../docs/feature/078_deepseek_provider_preset.md)
+
+---
+
+### FT-13: Switch anthropic→anthropic keeps a user-set DeepSeek-tier key
+
+- **Given:** Live `env` holds DeepSeek-tier key names the user set (`CLAUDE_CODE_EFFORT_LEVEL`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`)
+  and no `ANTHROPIC_BASE_URL`, so no redirect session is live.
+- **When:** `switch_account()` targets a `backend: anthropic` account.
+- **Then:** Both keys keep their values; only leaving a redirect session clears the tier vars (FT-04). (BUG-585)
+- **Exit:** n/a (domain fn)
+- **Source fn:** `mre_bug_585_anthropic_switch_keeps_user_tier_keys` (shared with [073_kimi_provider_preset.md](073_kimi_provider_preset.md) FT-11; the two keys are in both tier bundles)
+- **Source:** [078_deepseek_provider_preset.md AC-04](../../../docs/feature/078_deepseek_provider_preset.md)

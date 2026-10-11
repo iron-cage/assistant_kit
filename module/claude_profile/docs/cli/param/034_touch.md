@@ -1,6 +1,9 @@
 # Parameter: 34. `touch::`
 
-Activate idle quota windows by sending a minimal prompt via an isolated subprocess. Trigger condition: any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` — meaning no active session for that quota dimension.
+<!-- BUG-584 — a timer whose resets_at has already passed counts as idle, not running -->
+Activate idle quota windows by sending a minimal prompt via an isolated subprocess.
+Trigger condition: any of the three quota timers absent or already past — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` —
+meaning no active session for that quota dimension.
 
 - **Default:** `1` (on — idle accounts are activated automatically)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; effective only under `#[cfg(feature = "enabled")]` �� in offline builds the parameter is accepted but has no effect
@@ -14,7 +17,12 @@ touch::0   → no subprocess spawned; idle accounts remain idle
 ```
 
 **Notes:**
-- Trigger condition: account's quota fetch succeeded (valid token, no error) AND at least one quota timer is absent (`five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` = None). Accounts with errored quota (expired token, auth failure) are never touched. Accounts where all three timers are present (all windows active) are skipped. If the `seven_day` or `seven_day_sonnet` field is absent entirely (no weekly-quota tracking on the plan), that dimension is treated as running and does not trigger touch.
+- Trigger condition: account's quota fetch succeeded (valid token, no error) AND at least one quota timer is absent or already past
+  (`five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` = None, or an instant before now).
+  A cache-rendered row keeps the `resets_at` it was fetched with, so a timer whose reset has passed counts as idle even though it's present.
+  Accounts with errored quota (expired token, auth failure) are never touched.
+  Accounts where all three timers are present and still ahead of now (all windows active) are skipped.
+  If the `seven_day` or `seven_day_sonnet` field is absent entirely (no weekly-quota tracking on the plan), that dimension is treated as running and does not trigger touch.
 - **Full skip-guard list** (`touch_skip_reason`, 6 guards checked in order): `solo::1` with the account not current (solo-skip) → account not owned (`is_owned = false`) → account occupied on another machine (`is_occupied_elsewhere`) → quota fetch errored (`result = Err`) → cached `touch_idle = false` (a subprocess already activated this account this cycle) → already-active (all three timers running), h-exhausted, or 7d-exhausted. The h/7d-exhaustion floor (Fix(TSK-418)) fires whenever `5h Left <= 0%` or `7d Left <= 0%`, even when a quota timer is absent — a fully-exhausted account is skipped regardless of whether it would otherwise look idle.
 - **On `.usage`:** Uses the same `account::refresh_account_token()` lifecycle as `refresh::` — `read credentials -> run_isolated(["--print", "."]) -> write credentials -> save`. After the subprocess completes, quota is re-fetched unconditionally for that account. No account-restore step runs after touch operations complete — the snapshot+restore pattern was removed (Fix(BUG-211): the post-loop restore raced with concurrent `.account.use` switches during the ~35s subprocess window). `touch::` does not affect `format::json` output structure.
 - **On `.usage`:** When both `refresh::1` and `touch::1` are active, refresh runs first (retries auth errors); touch runs second on post-refresh results. Accounts whose refresh already started a session are skipped by touch.

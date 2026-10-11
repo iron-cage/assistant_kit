@@ -181,6 +181,7 @@ fn it_imodel_auto_selects_sonnet_when_d7_idle()
   );
 }
 
+// BUG-584 — a 7d reset counts as running only while it's ahead of now, so FT-25/26/29/30 use 2099
 /// FT-25: `imodel::auto` selects Sonnet when 7d running via explicit Some path and `son_idle=true`.
 #[ test ]
 fn it_imodel_auto_selects_sonnet_when_d7_running_explicit()
@@ -191,7 +192,7 @@ fn it_imodel_auto_selects_sonnet_when_d7_running_explicit()
     data.seven_day = Some( claude_quota::PeriodUsage
     {
       utilization : 10.0,
-      resets_at   : Some( "2026-06-15T10:00:00Z".to_string() ),
+      resets_at   : Some( "2099-01-01T00:00:00Z".to_string() ),
     } );
   }
   let model    = resolve_model( &aq, SubprocessModel::Auto );
@@ -213,7 +214,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_absent_d7_some_running()
     data.seven_day  = Some( claude_quota::PeriodUsage
     {
       utilization : 20.0,
-      resets_at   : Some( "2026-06-15T10:00:00Z".to_string() ),
+      resets_at   : Some( "2099-01-01T00:00:00Z".to_string() ),
     } );
   }
   let model    = resolve_model( &aq, SubprocessModel::Auto );
@@ -275,7 +276,7 @@ fn it_imodel_auto_selects_haiku_when_d7_some_running_and_son_absent()
     data.seven_day = Some( claude_quota::PeriodUsage
     {
       utilization : 10.0,
-      resets_at   : Some( "2026-06-15T10:00:00Z".to_string() ),
+      resets_at   : Some( "2099-01-01T00:00:00Z".to_string() ),
     } );
     data.seven_day_sonnet = None;
   }
@@ -319,7 +320,7 @@ fn it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running()
     data.seven_day = Some( claude_quota::PeriodUsage
     {
       utilization : 10.0,
-      resets_at   : Some( "2026-06-15T10:00:00Z".to_string() ),
+      resets_at   : Some( "2099-01-01T00:00:00Z".to_string() ),
     } );
     if let Some( ref mut son ) = data.seven_day_sonnet
     {

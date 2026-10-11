@@ -245,7 +245,7 @@ pub fn touch_skip_reason(
   }
 
   // Guard: skip accounts with all timers running, h-exhausted, or 7d-exhausted.
-  // AC-02: trigger fires when ANY quota timer is absent and quota is valid (not exhausted).
+  // AC-02: fires when ANY quota timer is absent or already past and quota is valid (not exhausted).
   // Fix(BUG-214): d7_left guard skips 7d-weekly-exhausted accounts (seven_day_left <= 0%).
   // Root cause(BUG-214): guard lacked seven_day_left check; 7d-exhausted accounts fired
   //   subprocess that received HTTP 429 (~2.3s penalty, no session opened).
@@ -263,9 +263,18 @@ pub fn touch_skip_reason(
   // Pitfall: do not reintroduce a shared threshold with the display/sort classification —
   //   "is a touch worth firing" and "should a human be warned" are different questions that
   //   only happened to share a constant by historical accident.
-  let five_h_running = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_some();
-  let d7_running     = data.seven_day.as_ref().map_or( true, |p| p.resets_at.is_some() );
-  let son_running    = data.seven_day_sonnet.as_ref().map_or( true, |p| p.resets_at.is_some() );
+  // Fix(BUG-584): a window runs only until its reset instant. A cache-rendered row keeps the
+  //   `resets_at` it was fetched with, so a presence test called a window that ended hours
+  //   ago "already active" while the renderer showed the same value as `(stale)`.
+  // Root cause: the running test checked that `resets_at` exists, never that it's still ahead.
+  // Pitfall: for a present reset, keep this the exact complement of format.rs's `is_past`
+  //   (same parser, `t < now` is past): at one instant a `(stale)` reset is never called running.
+  let now     = now_unix_secs();
+  let running = | p : &claude_quota::PeriodUsage | p.resets_at.as_deref()
+    .is_some_and( | r | claude_quota::iso_to_unix_secs( r ).map_or( true, | t | t >= now ) );
+  let five_h_running = data.five_hour.as_ref().is_some_and( running );
+  let d7_running     = data.seven_day.as_ref().map_or( true, running );
+  let son_running    = data.seven_day_sonnet.as_ref().map_or( true, running );
   let all_running    = five_h_running && d7_running && son_running;
   let h_left  = five_hour_left( aq );
   let d7_left = seven_day_left( aq );
@@ -279,11 +288,14 @@ pub fn touch_skip_reason(
   None
 }
 
-/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
+/// Activate `aq`'s idle quota windows by spawning an isolated subprocess.
 ///
 /// The trigger requires both conditions:
 /// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
-/// - `five_hour.resets_at.is_none()` — 5h window is idle (no active session).
+/// - a quota timer isn't running: the 5h `resets_at`, or a tracked weekly one, is absent or past.
+///
+/// `touch_skip_reason` checks both conditions along with the other skip guards: solo mode,
+/// ownership, occupancy, redirect backend, the touch record and exhaustion.
 ///
 /// After a successful touch, quota is re-fetched so the table shows the concrete
 /// `5h Reset` value. When the quota endpoint has not yet propagated the new session

@@ -496,7 +496,7 @@ pub fn mk_aq_no_sonnet_data() -> AccountQuota
 
 /// Build an `AccountQuota` with `five_hour.resets_at` set to the given value.
 ///
-/// Used by `apply_touch` trigger tests to distinguish active (Some) from idle (None) 5h windows.
+/// Used by `apply_touch` trigger tests: `None` or a past reset is idle; any other value is running.
 pub fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
 {
   AccountQuota
@@ -537,13 +537,16 @@ pub fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
 /// Build an `AccountQuota` with `son_idle=true`.
 ///
 /// Produces: `five_h_running=true`, `d7_running=true` (absent), `son_idle=true`.
-/// - `five_hour.resets_at=Some(...)` → `five_h_running=true`
+/// - `five_hour.resets_at` an hour ahead of now → `five_h_running=true`
 /// - `seven_day=None` (absent → `d7_running=true` per `map_or` semantics)
 /// - `seven_day_sonnet=Some({resets_at:None})` → `son_idle=true`
 ///
 /// Used by `resolve_model` `son_idle` gate tests (BUG-289/BUG-290 fix).
 pub fn mk_aq_with_son_idle() -> AccountQuota
 {
+  let now_secs = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() );
   AccountQuota
   {
     fallback_reason : None,
@@ -558,7 +561,8 @@ pub fn mk_aq_with_son_idle() -> AccountQuota
       five_hour        : Some( claude_quota::PeriodUsage
       {
         utilization : 50.0,
-        resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        // BUG-584 — ahead of now, since guard 7 counts a reset that has passed as idle
+        resets_at   : Some( reset_iso_at( now_secs, 3600 ) ),
       } ),
       seven_day        : None,
       seven_day_sonnet : Some( claude_quota::PeriodUsage

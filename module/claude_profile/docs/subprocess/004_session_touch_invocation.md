@@ -21,10 +21,10 @@ An account is submitted for touch when ALL of the following are true:
 | `aq.is_owned == true` AND `aq.is_occupied_elsewhere == false` | G4 gate (BUG-302 fix) |
 | NOT solo gate | `solo::1` skips non-current accounts |
 | `touch_idle = false` cache flag absent (or cache absent) | Defense-in-depth: skip if subprocess already activated this account (AC-16; avoids API lag re-triggers) |
-| At least one quota timer absent: | |
-| `five_hour.resets_at == None` | 5h window not started |
-| OR `seven_day` present AND `seven_day.resets_at == None` | 7d window not started |
-| OR `seven_day_sonnet` present AND `seven_day_sonnet.resets_at == None` | 7d-Sonnet window not started |
+| At least one quota timer absent or already past: | A cache-rendered row keeps the `resets_at` it was fetched with, so a past instant means the window has ended |
+| `five_hour.resets_at == None` or before now | 5h window not started, or already ended |
+| OR `seven_day` present AND `seven_day.resets_at == None` or before now | 7d window not started, or already ended |
+| OR `seven_day_sonnet` present AND `seven_day_sonnet.resets_at == None` or before now | 7d-Sonnet window not started, or already ended |
 | `five_hour_left(aq) > 0.0%` | Skip h-exhausted accounts (fully exhausted only — distinct from the 15%-remaining `H_EXHAUSTED_THRESHOLD` used for display/sort classification; TSK-190/TSK-418) |
 | `seven_day_left(aq) > 0.0%` | Skip weekly-exhausted accounts |
 
@@ -37,7 +37,7 @@ Source: `src/usage/touch.rs`
 | `"skipped (reason: redirect backend)"` | `aq.is_redirect_backend()` — redirect-backend row (Feature 071); checked before the error guard so a redirect account is never mislabeled "error account" |
 | `"skipped (reason: error account)"` | `aq.result` is `Err` |
 | `"skipped (reason: touch_idle=false)"` | Cache flag indicates already activated |
-| `"skipped (reason: already active)"` | All three timers have active windows |
+| `"skipped (reason: already active)"` | All three timers running: each tracked `resets_at` present and ahead of now (an untracked weekly field counts as running) <!-- BUG-584 — a reset that has already passed is idle, not active --> |
 | `"skipped (reason: h-exhausted)"` | `five_hour_left ≤ 0.0%` (fully exhausted only, TSK-418 — NOT the 15%-remaining `H_EXHAUSTED_THRESHOLD` display/sort constant) |
 | `"skipped (reason: 7d-exhausted)"` | `seven_day_left ≤ 0.0%` |
 | `"skipped (reason: not owned)"` | `is_owned = false` |

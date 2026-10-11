@@ -17,10 +17,12 @@ Staleness eligibility threshold for [`stalest::`](080_stalest.md) — only accou
 Applied inside the stale-first ranking before the K-selection: accounts with cache age ≤ SECS are removed from eligibility. The fetch set is then the K oldest of the *remaining* accounts — possibly fewer than K, possibly empty.
 
 - Age comparison is strict: an account exactly SECS old is **not** eligible.
-- Missing cache = infinite age — always eligible.
+- Missing cache = infinite age — always over the threshold.
 - With an empty eligible set, the invocation performs zero HTTP fetches; every row renders from cache.
 
-The combination `stalest::1 max_age::SECS` gives a background scheduler a self-terminating drain loop: each tick refreshes the single stalest account still over the threshold, and once the whole fleet is fresher than SECS the ticks become free (cache-only) until staleness re-accumulates.
+The combination `stalest::1 max_age::SECS` gives a background scheduler a self-terminating drain loop: each tick spends its one slot on the stalest [ranked](080_stalest.md#semantics) account
+that's still over the threshold, and once every ranked account is fresher than SECS the ticks become free (cache-only) until staleness re-accumulates.
+<!-- BUG-583 — accounts the fetch loop skips are never ranked, so the one slot never goes to one of them -->
 
 ### Validation
 
@@ -43,7 +45,7 @@ clp .usage stalest::1 max_age::7200 trace::1  # observe drain order and skips
 
 | Value | Meaning |
 |-------|---------|
-| `0` (default) | No eligibility threshold — `stalest::` selects from the whole fleet |
+| `0` (default) | No eligibility threshold — `stalest::` selects from every ranked account |
 | `SECS ≥ 1` | Only accounts with cache age > SECS are fetch-eligible |
 
 ### Referenced Type

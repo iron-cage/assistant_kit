@@ -64,6 +64,7 @@
 use std::fs;
 
 use claude_version::settings_io::{ infer_type, StoredAs, get_setting, set_setting, set_env_var, remove_env_var, read_all_settings };
+// BUG-586 — direct calls to the re-exported claude_core mutators, which clp's switch calls too
 use tempfile::TempDir;
 
 // ─── infer_type ─────────────────────────────────────────────────────────────
@@ -227,7 +228,7 @@ fn tc066_set_nan_produces_valid_json_roundtrip()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "x", "NaN" ).unwrap();
+  set_setting( &path, "x", "NaN", true ).unwrap();
 
   // File must be readable without error
   let pairs = read_all_settings( &path ).unwrap();
@@ -242,7 +243,7 @@ fn tc067_set_inf_produces_valid_json_roundtrip()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "x", "inf" ).unwrap();
+  set_setting( &path, "x", "inf", true ).unwrap();
 
   let pairs = read_all_settings( &path ).unwrap();
   assert_eq!( pairs.len(), 1 );
@@ -259,7 +260,7 @@ fn tc039_set_setting_creates_file_when_absent()
   let dir = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   assert!( !path.exists() );
-  set_setting( &path, "key1", "val1" ).unwrap();
+  set_setting( &path, "key1", "val1", true ).unwrap();
   assert!( path.exists(), "settings.json must be created" );
 }
 
@@ -269,8 +270,8 @@ fn tc040_set_setting_adds_new_key_to_existing_file()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "a", "1" ).unwrap();
-  set_setting( &path, "b", "2" ).unwrap();
+  set_setting( &path, "a", "1", true ).unwrap();
+  set_setting( &path, "b", "2", true ).unwrap();
   let v = get_setting( &path, "a" ).unwrap();
   assert_eq!( v.as_deref(), Some( "1" ) );
   let v2 = get_setting( &path, "b" ).unwrap();
@@ -283,8 +284,8 @@ fn tc041_set_setting_overwrites_existing_key()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "k", "old" ).unwrap();
-  set_setting( &path, "k", "new" ).unwrap();
+  set_setting( &path, "k", "old", true ).unwrap();
+  set_setting( &path, "k", "new", true ).unwrap();
   let v = get_setting( &path, "k" ).unwrap();
   assert_eq!( v.as_deref(), Some( "new" ) );
 }
@@ -295,7 +296,7 @@ fn tc042_bool_true_written_without_quotes()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "flag", "true" ).unwrap();
+  set_setting( &path, "flag", "true", true ).unwrap();
   let raw = fs::read_to_string( &path ).unwrap();
   assert!( raw.contains( "true" ), "JSON must contain bare true" );
   assert!( !raw.contains( "\"true\"" ), "JSON must not quote boolean" );
@@ -307,7 +308,7 @@ fn tc043_integer_written_without_quotes()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "count", "42" ).unwrap();
+  set_setting( &path, "count", "42", true ).unwrap();
   let raw = fs::read_to_string( &path ).unwrap();
   assert!( raw.contains( "42" ), "JSON must contain bare 42" );
   assert!( !raw.contains( "\"42\"" ), "JSON must not quote integer" );
@@ -319,7 +320,7 @@ fn tc044_zero_written_as_number_not_false()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "n", "0" ).unwrap();
+  set_setting( &path, "n", "0", true ).unwrap();
   let raw = fs::read_to_string( &path ).unwrap();
   assert!( raw.contains( ": 0" ) || raw.contains( ":0" ), "JSON must contain 0 as number" );
   assert!( !raw.contains( "false" ), "0 must not be written as false" );
@@ -331,7 +332,7 @@ fn tc045_empty_string_written_as_empty_json_string()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "s", "" ).unwrap();
+  set_setting( &path, "s", "", true ).unwrap();
   let raw = fs::read_to_string( &path ).unwrap();
   assert!( raw.contains( "\"\"" ), "empty string must appear as \"\" in JSON" );
 }
@@ -342,7 +343,7 @@ fn tc046_value_with_double_quote_escaped()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "s", r#"say "hi""# ).unwrap();
+  set_setting( &path, "s", r#"say "hi""#, true ).unwrap();
   let v = get_setting( &path, "s" ).unwrap();
   assert_eq!( v.as_deref(), Some( r#"say "hi""# ) );
 }
@@ -353,7 +354,7 @@ fn tc047_value_with_backslash_escaped()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "s", r"back\slash" ).unwrap();
+  set_setting( &path, "s", r"back\slash", true ).unwrap();
   let v = get_setting( &path, "s" ).unwrap();
   assert_eq!( v.as_deref(), Some( r"back\slash" ) );
 }
@@ -364,7 +365,7 @@ fn tc048_key_with_dot_stored_as_literal()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "foo.bar", "val" ).unwrap();
+  set_setting( &path, "foo.bar", "val", true ).unwrap();
   let v = get_setting( &path, "foo.bar" ).unwrap();
   assert_eq!( v.as_deref(), Some( "val" ) );
 }
@@ -375,7 +376,7 @@ fn tc049_atomic_write_leaves_no_tmp_file()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "k", "v" ).unwrap();
+  set_setting( &path, "k", "v", true ).unwrap();
   let tmp = dir.path().join( "settings.json.tmp" );
   assert!( !tmp.exists(), "temp file must not remain after successful write" );
 }
@@ -393,7 +394,7 @@ fn tc050_write_to_read_only_dir_returns_error()
   let mut perms = fs::metadata( dir.path() ).unwrap().permissions();
   perms.set_mode( 0o555 );
   fs::set_permissions( dir.path(), perms ).unwrap();
-  let result = set_setting( &path, "k", "v" );
+  let result = set_setting( &path, "k", "v", true );
   // Restore permissions so TempDir can clean up
   let mut perms2 = fs::metadata( dir.path() ).unwrap().permissions();
   perms2.set_mode( 0o755 );
@@ -409,7 +410,7 @@ fn tc051_get_setting_returns_value_for_existing_key()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "mykey", "myval" ).unwrap();
+  set_setting( &path, "mykey", "myval", true ).unwrap();
   let v = get_setting( &path, "mykey" ).unwrap();
   assert_eq!( v.as_deref(), Some( "myval" ) );
 }
@@ -420,7 +421,7 @@ fn tc052_get_setting_returns_none_for_missing_key()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "existing", "1" ).unwrap();
+  set_setting( &path, "existing", "1", true ).unwrap();
   let v = get_setting( &path, "nonexistent" ).unwrap();
   assert_eq!( v, None );
 }
@@ -504,7 +505,7 @@ fn tc058_set_then_get_roundtrip()
 
   for ( key, val ) in &[ ( "k1", "hello" ), ( "k2", "42" ), ( "k3", "true" ), ( "k4", "" ) ]
   {
-    set_setting( &path, key, val ).unwrap();
+    set_setting( &path, key, val, true ).unwrap();
     let v = get_setting( &path, key ).unwrap();
     assert_eq!(
       v.as_deref(),
@@ -520,8 +521,8 @@ fn tc059_set_new_key_preserves_existing_keys()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "existing", "alpha" ).unwrap();
-  set_setting( &path, "new_key",  "beta"  ).unwrap();
+  set_setting( &path, "existing", "alpha", true ).unwrap();
+  set_setting( &path, "new_key",  "beta",  true ).unwrap();
   let v = get_setting( &path, "existing" ).unwrap();
   assert_eq!( v.as_deref(), Some( "alpha" ), "existing key must be preserved" );
 }
@@ -532,7 +533,7 @@ fn tc060_value_with_newline_stored_safely()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_setting( &path, "s", "line1\nline2" ).unwrap();
+  set_setting( &path, "s", "line1\nline2", true ).unwrap();
   let v = get_setting( &path, "s" ).unwrap();
   assert_eq!( v.as_deref(), Some( "line1\nline2" ) );
 }
@@ -562,7 +563,7 @@ fn tc077_set_setting_preserves_nested_objects()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"env": {"TZ": "Europe/Kyiv"}, "autoUpdates": false}"# ).unwrap();
-  set_setting( &path, "autoUpdates", "true" ).unwrap();
+  set_setting( &path, "autoUpdates", "true", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "TZ" ), "env block must survive round-trip: {content}" );
   assert!( content.contains( "true" ), "autoUpdates must be updated: {content}" );
@@ -575,7 +576,7 @@ fn tc078_set_setting_preserves_plugins_object()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"enabledPlugins": {"foo@bar": true}, "key1": "val1"}"# ).unwrap();
-  set_setting( &path, "key1", "val2" ).unwrap();
+  set_setting( &path, "key1", "val2", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "enabledPlugins" ), "plugins must survive: {content}" );
   assert!( content.contains( "foo@bar" ), "plugin entry must survive: {content}" );
@@ -605,7 +606,7 @@ fn tc081_set_env_var_creates_env_block()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"autoUpdates": false}"# ).unwrap();
-  set_env_var( &path, "DISABLE_AUTOUPDATER", "1" ).unwrap();
+  set_env_var( &path, "DISABLE_AUTOUPDATER", "1", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "DISABLE_AUTOUPDATER" ), "must contain env var: {content}" );
   assert!( content.contains( "\"1\"" ), "value must be quoted string: {content}" );
@@ -619,7 +620,7 @@ fn tc082_set_env_var_updates_existing_env()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"env": {"TZ": "Europe/Kyiv"}, "autoUpdates": false}"# ).unwrap();
-  set_env_var( &path, "DISABLE_AUTOUPDATER", "1" ).unwrap();
+  set_env_var( &path, "DISABLE_AUTOUPDATER", "1", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "TZ" ), "existing env vars preserved: {content}" );
   assert!( content.contains( "DISABLE_AUTOUPDATER" ), "new env var added: {content}" );
@@ -632,7 +633,7 @@ fn tc068_set_env_var_overwrites_existing()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"env": {"DISABLE_AUTOUPDATER": "0"}}"# ).unwrap();
-  set_env_var( &path, "DISABLE_AUTOUPDATER", "1" ).unwrap();
+  set_env_var( &path, "DISABLE_AUTOUPDATER", "1", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "\"1\"" ), "value must be updated to 1: {content}" );
 }
@@ -643,7 +644,7 @@ fn tc069_set_env_var_creates_file()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  set_env_var( &path, "DISABLE_AUTOUPDATER", "1" ).unwrap();
+  set_env_var( &path, "DISABLE_AUTOUPDATER", "1", true ).unwrap();
   assert!( path.exists(), "file must be created" );
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "DISABLE_AUTOUPDATER" ), "must contain var: {content}" );
@@ -656,7 +657,7 @@ fn tc070_remove_env_var_removes_key()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"env": {"TZ": "UTC", "DISABLE_AUTOUPDATER": "1"}}"# ).unwrap();
-  remove_env_var( &path, "DISABLE_AUTOUPDATER" ).unwrap();
+  remove_env_var( &path, "DISABLE_AUTOUPDATER", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( !content.contains( "DISABLE_AUTOUPDATER" ), "var must be removed: {content}" );
   assert!( content.contains( "TZ" ), "other env vars preserved: {content}" );
@@ -669,7 +670,7 @@ fn tc071_remove_env_var_noop_when_absent()
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"env": {"TZ": "UTC"}}"# ).unwrap();
-  remove_env_var( &path, "NONEXISTENT" ).unwrap();
+  remove_env_var( &path, "NONEXISTENT", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "TZ" ), "original content preserved: {content}" );
 }
@@ -680,7 +681,7 @@ fn tc072_remove_env_var_noop_when_file_absent()
 {
   let dir  = TempDir::new().unwrap();
   let path = dir.path().join( "settings.json" );
-  assert!( remove_env_var( &path, "FOO" ).is_ok() );
+  assert!( remove_env_var( &path, "FOO", true ).is_ok() );
 }
 
 // TC-074: infer_type("null") → Raw (bare null, not quoted "null")
@@ -723,7 +724,7 @@ fn tc075_null_value_survives_roundtrip()
   let path = dir.path().join( "settings.json" );
   fs::write( &path, r#"{"existing": null, "other": "hello"}"# ).unwrap();
   // Modify a different key
-  set_setting( &path, "other", "world" ).unwrap();
+  set_setting( &path, "other", "world", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   // null must remain as bare null, not become "null"
   assert!(
@@ -754,7 +755,7 @@ fn tc073_real_world_settings_roundtrip()
 }"#;
   fs::write( &path, real_json ).unwrap();
   // Modify one key and verify the rest survives
-  set_setting( &path, "autoUpdates", "true" ).unwrap();
+  set_setting( &path, "autoUpdates", "true", true ).unwrap();
   let content = fs::read_to_string( &path ).unwrap();
   assert!( content.contains( "TZ" ), "env.TZ must survive: {content}" );
   assert!( content.contains( "enabledPlugins" ), "plugins must survive: {content}" );

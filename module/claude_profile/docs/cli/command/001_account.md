@@ -81,6 +81,9 @@ clp .accounts format::table
 2. List all accounts; resolve and filter by `name::` when provided
 3. **Mutation dispatch:** `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) → G9 claim-lock check on target `X` (unless `force::1`) then write per-machine marker; `assignee::` (no `name::`) → clear per-machine marker (no G9 check — nothing to target); `owner::0` → G8 gate then write `owner: ""` (or batch-clear all owned when `name::` absent); `owner::USER@MACHINE` → G8 gate then write owner identity (comma-list `name::` supported); `lock::0`/`lock::1` → write `claim_lock` (ungated; comma-list or batch when `name::` absent); `reserve::0`/`reserve::1` → write `reserve` (ungated; comma-list or batch when `name::` absent); REMOVED param present (`assign::`, `for::`, `unclaim::`, `active::`, `next::`) → exit 1 with migration message; legacy field-toggle param present → exit 1 with `cols::` migration hint
 4. Parse `cols::` modifiers; read `owner` from `{name}.json` per account (when `cols.owner`); detect current account via token comparison (when `cols.current`)
+   — whatever `cols::` says, when two or more saved accounts match, text and table output end with
+   `⚠ N saved accounts hold the live session: a, b — only one owns it; re-login the rest` ([feature/016](../../feature/016_current_account_awareness.md)
+   AC-12, BUG-582); JSON never carries it
 5. Render in `format::` — rows always alphabetical by name (`account::list()` sorts at the store layer); no `.usage`-style sort/filter pipeline runs (see Notes: Inert parity params)
 
 **Examples:**
@@ -238,15 +241,28 @@ Evaluated against `.usage` under the strict [command_group](../command_group/rea
 
 ### Command: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`, and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)). `preset::kimi` pre-fills `backend::`/`base_url::`/`inference_provider::` for a Moonshot Kimi redirect account, so only `name::`, `api_key::`, and `redirect_model::` need to be given explicitly (see [feature/073](../../feature/073_kimi_provider_preset.md)). `preset::deepseek` does the same for a DeepSeek redirect account (see [feature/078](../../feature/078_deepseek_provider_preset.md)).
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` — unless another saved slot already holds that session (exit 2, see step 2)
+— and merges identity, model, roles, and profile metadata into the unified `{name}.json`; a slot re-saving the session it holds can keep its stored
+`oauthAccount` (see Notes). Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before
+switching. When `backend::redirect`, a different write path applies instead: no OAuth capture — `{name}.credentials.json` is written directly from `api_key::`,
+and `base_url`/`redirect_model` are stored in `{name}.json` alongside `backend` (see [feature/071](../../feature/071_redirect_backend_accounts.md)).
+`preset::kimi` pre-fills `backend::`/`base_url::`/`inference_provider::` for a Moonshot Kimi redirect account, so only `name::`, `api_key::`, and
+`redirect_model::` need to be given explicitly (see [feature/073](../../feature/073_kimi_provider_preset.md)). `preset::deepseek` does the same for a DeepSeek
+redirect account (see [feature/078](../../feature/078_deepseek_provider_preset.md)).
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`tags::`](../param/082_tags.md) *(replaces the REMOVED `role::`)*, [`inference_provider::`](../param/073_inference_provider.md), [`trace::`](../param/023_trace.md), [`backend::`](../param/069_backend.md), [`preset::`](../param/074_preset.md), [`base_url::`](../param/070_base_url.md), [`api_key::`](../param/071_api_key.md), [`redirect_model::`](../param/072_redirect_model.md)
--- **Exit:** 0 (success — including the redirect skip: an omitted `backend::` on a stored-redirect target carrying no mutation writes nothing and reports `save skipped`; see the Redirect skip gate below) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid `backend::` value; unrecognized `preset::` value (only `kimi`/`deepseek` are recognized); `backend::redirect` missing one of `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`; `role::` used (REMOVED — exit 1 with `tags::` migration message); invalid `tags::` item; `host::`/`tags::`/`inference_provider::` given with an omitted `backend::` on a stored-redirect target — an explicit `backend::` is required to disambiguate) | 2 (runtime: credentials unreadable)
+-- **Exit:** 0 (success — including the redirect skip: an omitted `backend::` on a stored-redirect target carrying no mutation writes nothing and reports
+   `save skipped`; see the Redirect skip gate below) | 1 (usage: invalid name or no active account set; empty `inference_provider::` value; invalid
+   `backend::` value; unrecognized `preset::` value (only `kimi`/`deepseek` are recognized); `backend::redirect` missing one of
+   `base_url::`/`api_key::`/`redirect_model::`; any of those three present with `backend::anthropic` or omitted `backend::`; `role::` used (REMOVED — exit 1
+   with `tags::` migration message); invalid `tags::` item; `host::`/`tags::`/`inference_provider::` given with an omitted `backend::` on a stored-redirect
+   target — an explicit `backend::` is required to disambiguate) | 2 (runtime: credentials unreadable; another saved account already holds the live
+   session — see step 2)
 
 **Syntax:**
 
 ```bash
-clp .account.save                                      # infer name from oauthAccount.emailAddress in ~/.claude.json (falls back to _active_{hostname}_{user})
+clp .account.save                                      # infer name: the slot holding the live session, else oauthAccount.emailAddress in ~/.claude.json, else _active_{hostname}_{user}
 clp .account.save name::alice@acme.com                # explicit name
 clp .account.save name::alice@acme.com dry::1
 clp .account.save host::workstation                   # store host label in {name}.json
@@ -262,7 +278,7 @@ clp .account.save name::deepseek preset::deepseek api_key::"$DEEPSEEK_API_KEY" r
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `oauthAccount.emailAddress` in `~/.claude.json`; falls back to per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if neither source present) | Account email to save as |
+| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (slot holding the live session, else `oauthAccount.emailAddress` in `~/.claude.json`, else the active marker — [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if none) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
 | `tags::` | `string` | *(omit — tag set unchanged)* | Comma-separated tag set stored in `{name}.json` (sorted, deduplicated); replaces the REMOVED `role::` (see [param 082](../param/082_tags.md), [param 052](../param/052_role.md)) |
@@ -291,9 +307,14 @@ Explicit `backend::`/`base_url::`/`inference_provider::` values always take prec
 Explicit `backend::redirect …` re-saves and explicit `backend::anthropic` re-backends (AC-15) are deliberate acts and bypass this gate entirely.
 
 **Algorithm (5 steps for `backend::anthropic`; redirect branch below for `backend::redirect`):**
-1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
-2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
-3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json` (preserves `_renewal_at` and other keys)
+1. Resolve `name::`: the one saved slot holding the live session (its `refreshToken`, or a redirect key's `accessToken`); else
+   `oauthAccount.emailAddress` from `~/.claude.json`; else the `_active_{hostname}_{user}` marker; exit 1 if no source present
+2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write) — unless another saved slot already holds the live
+   session (same `refreshToken`, or same `accessToken` for a redirect key): then exit 2 with
+   `live session is already saved as '{holder}' — refusing to also save it as '{name}'`, writing no account file (BUG-582);
+   a re-backend from `redirect` runs this check before it resets `{name}.json`. `dry::1` previews the name only, without this check
+3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json`
+   (preserves `_renewal_at` and other keys; a slot re-saving the session it holds can keep its stored `oauthAccount` — see Notes, BUG-582)
 4. `(when dry::0)` Write host, tags, and inference provider into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `tags::` via read-merge (omitted leaves the tag set unchanged; a first tag write converts a legacy non-empty `role` to a tag and removes the field, [feature/075](../../feature/075_account_tags.md)); `inference_provider::` via read-merge (field left absent when omitted — `list()` defaults absence to `"anthropic"`); `owner` field preserved unchanged via read-merge — `account_save_routine()` passes `owner: None` to `save()` (ownership-neutral)
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
 
@@ -303,7 +324,7 @@ Explicit `backend::redirect …` re-saves and explicit `backend::anthropic` re-b
 
 ```bash
 clp .account.save
-# saved current credentials as 'alice@acme.com'   (inferred from oauthAccount.emailAddress)
+# saved current credentials as 'alice@acme.com'   (the slot holding the live session, else oauthAccount.emailAddress)
 
 clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
@@ -322,12 +343,20 @@ clp .account.save name::deepseek preset::deepseek api_key::"$DEEPSEEK_API_KEY" r
 
 clp .account.save name::kimi preset::bogus api_key::"$KIMI_API_KEY" redirect_model::kimi-k3
 # error: preset:: invalid value 'bogus' — valid values: kimi, deepseek
+
+clp .account.save name::alice@acme.com                # while bob@acme.com's slot already holds the live session
+# error: live session is already saved as 'bob@acme.com' — refusing to also save it as 'alice@acme.com'   (exit 2)
 ```
 
 **Notes:**
 - Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and merges result into `{name}.json` (best-effort: failure is silently skipped).
-- **Metadata refresh:** Re-running `.account.save` for an existing *anthropic-backend* name refreshes the unified `{name}.json` and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. It does **not** apply to a redirect account: a bare re-save on a stored-redirect target is a no-op skip (see the Redirect skip gate above), and there is no cached org identity to refresh — a redirect account never calls endpoint 005. `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
+- **Metadata refresh:** Re-running `.account.save` for an existing *anthropic-backend* name refreshes the unified `{name}.json` and re-fetches endpoint 005 —
+  this is the canonical way to refresh cached org identity without re-login. It does **not** apply to a redirect account: a bare re-save on a stored-redirect
+  target is a no-op skip (see the Redirect skip gate above), and there is no cached org identity to refresh — a redirect account never calls endpoint 005.
+  `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by
+  `.account.renewal`) are preserved. A slot re-saving the session it already holds keeps its stored `oauthAccount` unless `~/.claude.json` names
+  that account or `name` ([feature/002](../../feature/002_account_save.md) step 6a, BUG-582).
 - **Ownership-neutral save:** `.account.save` never writes to the `owner` field — `account_save_routine()` passes `owner: None` to `save()`, preserving any existing `owner` via read-merge. Background refresh callers also pass `owner: None`. To release ownership, use `clp .accounts owner::0 name::EMAIL`. See [Feature 036](../../feature/036_account_ownership.md).
 - **Redirect backend:** `backend` is fixed per save call — re-running `.account.save name::X` with a different *explicit* `backend::` value rewrites the account from scratch per that backend's own path (not a partial update). An *omitted* `backend::` behaves differently and is never an implicit re-backend: on a stored-redirect target it is skipped or rejected per the Redirect skip gate above, so the destructive rewrite requires the operator to name `backend::anthropic` deliberately. Pre-existing accounts saved before Feature 071 have no `backend` key and are treated as `anthropic`. See [Feature 071](../../feature/071_redirect_backend_accounts.md).
 - **Inference provider tagging:** `inference_provider::` is independent of `backend::` — a `backend::redirect` account may still carry any `inference_provider` label (e.g., `kimi`, `moonshot`) for Gate 10 rotation grouping; the two fields serve different purposes (routing/credential mechanism vs. rotation grouping). Defaults to `"anthropic"` when never explicitly tagged. See [Feature 072](../../feature/072_inference_provider_selection.md).
@@ -408,7 +437,21 @@ clp .account.use name::alice@home.com force::1        # bypass G5 (ownership) an
 2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
 3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
 4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
-5. `(when dry::0)` Write or clear `settings.json`'s `env.*` keys per target `backend`: `redirect` → write `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` from `base_url`/`accessToken`/`redirect_model`, plus — when `inference_provider == "kimi"` — 7 more Kimi-tier vars (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL`/`_HAIKU_MODEL`/`_FABLE_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` mirroring `redirect_model`, `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW` sized by whether `redirect_model` starts with `kimi-k3`) — or, when `inference_provider == "deepseek"` instead, 6 more DeepSeek-tier vars (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL` mirroring `redirect_model`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` fixed `"deepseek-v4-flash"`, `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW` fixed `"786432"`) — each provider's tier bundle also clears the other's if present, so switching directly between a kimi-tagged and a deepseek-tagged redirect account never leaves both bundles coexisting; `anthropic` → remove all keys (the three base plus whichever tier bundle, if any, was present — up to 10 for kimi or 9 for deepseek — removing `env` entirely if it becomes empty), preserving any other `env`/`settings.json` key unchanged. See [feature/073](../../feature/073_kimi_provider_preset.md), [feature/078](../../feature/078_deepseek_provider_preset.md), and [schema/006](../../schema/006_settings_json.md).
+5. `(when dry::0)` Write or clear `settings.json`'s `env.*` keys per target `backend`:
+   `redirect` → write `env.ANTHROPIC_BASE_URL`/`env.ANTHROPIC_AUTH_TOKEN`/`env.ANTHROPIC_MODEL` from `base_url`/`accessToken`/`redirect_model`,
+   plus — when `inference_provider == "kimi"` — 7 more Kimi-tier vars
+   (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL`/`_HAIKU_MODEL`/`_FABLE_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` mirroring `redirect_model`,
+   `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW` sized by whether `redirect_model` starts with `kimi-k3`) —
+   or, when `inference_provider == "deepseek"` instead, 6 more DeepSeek-tier vars (`ANTHROPIC_DEFAULT_OPUS_MODEL`/`_SONNET_MODEL` mirroring `redirect_model`,
+   `ANTHROPIC_DEFAULT_HAIKU_MODEL`/`CLAUDE_CODE_SUBAGENT_MODEL` fixed `"deepseek-v4-flash"`, `CLAUDE_CODE_EFFORT_LEVEL` fixed `"max"`,
+   `CLAUDE_CODE_AUTO_COMPACT_WINDOW` fixed `"786432"`) — each provider's tier bundle also clears the other's if present,
+   so switching directly between a kimi-tagged and a deepseek-tagged redirect account never leaves both bundles coexisting;
+   `anthropic` → remove the three base keys, plus whichever tier bundle is present when a redirect session is being left
+   (`env` held `ANTHROPIC_BASE_URL` before the switch; BUG-585) — up to 10 keys for kimi or 9 for deepseek —
+   removing `env` entirely if it becomes empty, preserving any other `env`/`settings.json` key unchanged,
+   including a tier-named key the user set while no redirect session was live.
+   See [feature/073](../../feature/073_kimi_provider_preset.md), [feature/078](../../feature/078_deepseek_provider_preset.md),
+   and [schema/006](../../schema/006_settings_json.md).
 6. `(when touch::1 AND target backend == anthropic)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle. Skipped entirely for `backend: redirect` targets — no Anthropic quota to fetch
 7. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
 8. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when target was already active + valid quota)` write resolved model via `apply_model_override()` — a no-op for `backend: redirect` targets (see [algorithm/002](../../algorithm/002_session_model_override.md)'s redirect bypass)
@@ -779,7 +822,8 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 
 **Notes:**
 - `_renewal_at` is stored as a top-level key in `{name}.json` alongside `oauthAccount`. It is preserved when `clp .account.save` re-saves that account (read-merge).
-- Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time, keeping their day-of-month and time of day — no need to re-set after each billing cycle. <!-- BUG-589 — the advanced value used to lose its time of day -->
+- Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time, keeping their day-of-month and time of day — no need to re-set after each billing cycle.
+  <!-- BUG-589 — the advanced value used to lose its time of day -->
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
 - See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.

@@ -169,9 +169,9 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
 /// # Pitfall
 ///
 /// `seven_day=None` (field absent) → `map_or(true)` → `seven_d_running=true`
-/// (no timer to start — no weekly tracking on this plan). Only
-/// `seven_day=Some({resets_at:None})` (field present, timer absent) triggers
-/// touch. Do NOT use `seven_day=None` for this test — absent field ≠ absent timer.
+/// (no timer to start — no weekly tracking on this plan). A present field triggers touch
+/// only when its timer is absent or already past (BUG-584), as `seven_day=Some({resets_at:None})`
+/// does here. Do NOT use `seven_day=None` for this test — absent field ≠ absent timer.
 #[ doc = "bug_reproducer(BUG-215)" ]
 #[ test ]
 fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()

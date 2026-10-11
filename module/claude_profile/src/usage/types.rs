@@ -432,10 +432,11 @@ pub struct UsageParams
   /// All other accounts use approximated historical data from the quota cache.
   pub solo      : bool,
   // ── Stale-first fetch reduction (TSK-499) ─────────────────────────────────
-  /// Fetch only the K accounts with the oldest cache `fetched_at`; 0 = no reduction.
-  /// Non-selected accounts stay in the output, rendered from cache.
+  /// Fetch only the K accounts whose last fetch attempt is oldest: the newest of the last
+  /// success, the last no-subscription verdict and the last failed attempt (BUG-591);
+  /// 0 = no reduction. Non-selected accounts stay in the output, rendered from cache.
   pub stalest   : u32,
-  /// With `stalest`, only accounts whose cache age exceeds SECS are fetch-eligible;
+  /// With `stalest`, only accounts whose last attempt is older than SECS are fetch-eligible;
   /// 0 = no eligibility threshold. Rejected at parse time without `stalest`.
   pub max_age   : u64,
   // ── Burn-rate alert (task 544) ────────────────────────────────────────────

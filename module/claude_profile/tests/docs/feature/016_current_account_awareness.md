@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for current account awareness tracking and display.
 - **Source**: `docs/feature/016_current_account_awareness.md`
-- **Covers**: AC-01 through AC-11
+- **Covers**: AC-01 through AC-12
 
 Feature behavioral requirement test cases for `docs/feature/016_current_account_awareness.md`. Each FT case maps to one or more acceptance criteria.
 
@@ -23,6 +23,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 | FT-09 | Synthetic current-session row injected when no stored account matches live token | AC-09 |
 | FT-10 | Injection suppressed when derived name collides with existing stored account | AC-10 |
 | FT-11 | Quota table contains at most one row per unique account name | AC-11 |
+| FT-12 | Two saved accounts holding the live session: both views name them in a warning; JSON and TSV never carry it | AC-12 |
 
 ### Test Case Index
 
@@ -39,8 +40,9 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 | FT-09 | Synthetic row injected for unknown live token | AC-09 | Synthetic Row |
 | FT-10 | Synthetic row suppressed on name collision | AC-10 | Synthetic Row |
 | FT-11 | At most one row per account name in quota table | AC-11 | Deduplication |
+| FT-12 | Shared-session warning names every counted match of the live token (BUG-582) | AC-12 | Shared Session |
 
-**Total:** 11 FT cases
+**Total:** 12 FT cases
 
 ---
 
@@ -163,3 +165,19 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Exit:** 0
 - **Source fn:** `it018_synthetic_row_when_no_saved_match` (at-most-one invariant enforced by fixture design — no duplicate injected when stored account already has the matching token)
 - **Source:** [016_current_account_awareness.md AC-11](../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### FT-12: Shared-session warning names every counted match of the live token (BUG-582)
+
+- **Given:** Two saved accounts, the live `accessToken` equal to one of them; then the other slot is given the same token, as a store written before
+  `.account.save` refused duplicates could hold.
+- **When:** `clp .usage refresh::0 touch::0` and `clp .accounts`, before and after the second slot takes the live token, each also with its other formats.
+- **Then:** With one match, neither command warns. With two, `.usage` shows `✓` on both rows, and its text output contains
+  `⚠ 2 saved accounts hold the live session: <a>, <b>` with both names in list order (`format::plain` prints `!` for `⚠`); `.accounts` text output
+  shows `Current: yes` on the first match only and contains the same `⚠` line, and its `format::table` output names both slots the same way.
+  `format::json` (both commands) and `.usage`'s `format::tsv` never carry it, and `.accounts`' JSON still parses.
+- **Exit:** 0
+- **Source fn:** `it273_shared_session_warning_names_both_slots` (in `tests/cli/usage_core_test.rs`), `acc52_shared_session_warning_names_both_slots`
+  (in `tests/cli/accounts_list_test_b.rs`)
+- **Source:** [016_current_account_awareness.md AC-12](../../../docs/feature/016_current_account_awareness.md)

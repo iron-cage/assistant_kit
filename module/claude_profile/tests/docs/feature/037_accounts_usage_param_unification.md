@@ -28,7 +28,7 @@
 | FT-16 | AC-16 | `.usage owner::0 name::X` clears owner field — identical result to `.accounts owner::0 name::X` (Feature 064; formerly `usage unclaim::1 name::X`) | `f37_ft16_usage_unclaim_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-17 | AC-17 | `.usage assignee::devuser@devbox name::X` writes marker — identical result to `.accounts assignee::devuser@devbox name::X` (Feature 065; formerly `active::USER@MACHINE name::X` — Feature 064) | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-18 | AC-18 | `.accounts dry::1 owner::0 name::X` prints `[dry-run] would clear owner of X`; exits 0; no files modified; G8 gate runs (Feature 064; formerly `dry::1 unclaim::1`) | `ft17_unclaim_dry_run (account_ownership_test.rs)` |
-| FT-19 | AC-19 | Owner column visible by default on `.accounts` and `.usage`; shows owner from `{name}.json`; `cols::-owner` hides it | `ft19_owner_column_default_visible` |
+| FT-19 | AC-19 | Owner column visible by default on `.accounts` and `.usage`; shows owner from `{name}.json`; `cols::-owner` hides it | `ft19_owner_column_default_visible`, `ft19_usage_owner_cells_match_accounts` (`accounts_ft_test.rs`) |
 | FT-20 | AC-20 | `.accounts owner::0 name::X force::1` bypasses G8; clears owner even when caller ≠ stored owner; exits 0 (Feature 064; formerly `unclaim::1 force::1`) | `ft20_accounts_unclaim_force_bypasses_g8` |
 | FT-21 | AC-21 | `.accounts force::1` without `owner::`, and `.accounts force::1 assignee::devuser@devbox name::X`, silently ignore `force::1` — no error (Feature 065; formerly with `assign::1`/`active::`) | `ft21_force_no_effect_without_unclaim` |
 | FT-22 | AC-22 | `.accounts assign::1` exits 1 with migration message "REMOVED — use `assignee::USER@MACHINE name::X`"; `.accounts unclaim::1` exits 1 "REMOVED — use `owner::0 name::X`"; `.accounts for::user@host` exits 1 with migration message; `.accounts active::user@host` exits 1 with REMOVED_TOGGLE pointing to `assignee::` (Feature 065) | split across `ft05_assign_removed_toggle`, `ft06_assign_and_for_removed_toggles`, `ft07_unclaim_removed_toggle`, `ft10_active_removed_toggle_migration_message` (all in `account_assign_test.rs`) — no single `ft22_removed_toggle_stubs` function exists |
@@ -50,7 +50,10 @@
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
 - FT-15 pins the revised AC-15 (audit 2026-08): `.accounts refresh::1 touch::1 trace::1` exits 0, lists accounts from the local store, and emits NO ` · fetch`/` · touch` trace lines — the params are accepted for registration parity but inert. The former live test (`lim_it_ft15_accounts_refresh_live`) was vacuous: it asserted only exit 0 + account presence, both trivially true without any fetch, so it passed while the original "same algorithm as `.usage`" criterion was never implemented.
 - FT-18 verifies G8 gate still runs in dry mode: (a) owned by caller → `[dry-run] would clear owner of X` printed, exits 0; (b) owned by other → exits 1, no dry-run line. Uses `owner::0 name::X dry::1` (Feature 064; formerly `dry::1 unclaim::1`).
-- FT-19 verifies Owner column: set up alice with `owner: "testuser@testmachine"`, bob with `owner: ""`. `.accounts` text output: alice row shows `testuser@testmachine` in Owner column, bob shows `—`. `.accounts cols::-owner` output: no Owner column header.
+- FT-19 verifies Owner column: set up alice with `owner: "testuser@testmachine"`, bob with `owner: ""`.
+  `.accounts` text output: alice row shows `testuser@testmachine` in Owner column, bob shows `—`.
+  `.usage` text output (case B): each account's Owner cell matches `.accounts`, bob's `—` included.
+  `.accounts cols::-owner` output: no Owner column header.
 - FT-20 verifies G8 bypass via force: same non-owned setup as FT-06; with `force::1` added to `owner::0 name::X`, exits 0 and `alice.json` has `"owner": ""`. (Feature 064; formerly `unclaim::1 force::1`.)
 - FT-21 verifies force is a no-op without `owner::`: `.accounts force::1` (no mutation) runs normally; `.accounts force::1 assignee::devuser@devbox name::alice` writes marker normally. No error in either case. (Feature 065; formerly `active::` — Feature 064; formerly with `assign::1`.)
 - FT-22 verifies REMOVED_TOGGLE stubs: `assign::1`, `unclaim::1`, `for::user@host`, and `active::user@host` on `.accounts` each exit 1 with migration messages pointing to `assignee::USER@MACHINE name::X`, `owner::0 name::X` respectively. (Feature 065 adds `active::` stub; Feature 064 added `assign::1`/`for::`/`unclaim::1` stubs.)
@@ -276,8 +279,10 @@
 - **Given:** Accounts: `alice` with `"owner": "testuser@testmachine"`, `bob` with `"owner": ""`.
 - **When (case A):** `clp .accounts` (no cols modifier) executed.
 - **Then (case A):** Owner column header present. `alice` row: Owner = `testuser@testmachine`. `bob` row: Owner = `—`.
-- **When (case B):** `clp .usage` (no cols modifier) executed.
-- **Then (case B):** Owner column header present. Same owner values as case A. <!-- BUG-588 — case B had no test, and `.usage` rendered bob's Owner cell blank -->
+- **When (case B):** `clp .usage` with every column but Account and Owner hidden
+  (`cols::-status,-5h_left,-5h_reset,-7d_left,-7d_reset,-expires,-renews,-next`), so each row ends in its own Owner cell.
+- **Then (case B):** Owner column header present. `alice` row ends in `testuser@testmachine` and `bob` row in `—`, the same owner values as case A.
+  <!-- BUG-588 — `.usage` renders an unowned Owner cell as `—`, the same as `.accounts` -->
 - **When (case C):** `clp .accounts cols::-owner` executed.
 - **Then (case C):** No Owner column header in output.
 - **Exit:** 0

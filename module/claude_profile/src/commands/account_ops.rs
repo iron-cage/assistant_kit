@@ -247,9 +247,10 @@ fn check_expiry_and_refresh(
 ///
 /// # Errors
 ///
-/// Returns `ErrorData` if the name cannot be resolved (explicit empty value or
-/// `_active` marker absent from the credential store), HOME is unset,
-/// or the credential copy fails.
+/// Returns `ErrorData` if the name cannot be resolved (an explicit empty value, or no single
+/// slot holding the live session, no `oauthAccount.emailAddress` and no `_active` marker),
+/// HOME is unset, another saved account already holds the live session, or the credential
+/// copy fails.
 #[ inline ]
 // Sequential handler — name resolution (explicit vs _active marker), then the credential copy;
 // each step consumes the previous step's locals.
@@ -265,7 +266,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty".to_string() ) ),
     _ =>
     {
-      // Fix(BUG-212): read oauthAccount.emailAddress from ~/.claude.json as primary inference source;
+      // Fix(BUG-212): read oauthAccount.emailAddress from ~/.claude.json before the _active marker;
       //   fall back to _active marker only when emailAddress is absent or empty.
       // Root cause: BUG-209 fix replaced stale top-level emailAddress with _active marker, but the marker
       //   is only written by clp ops (switch_account, save). External OAuth login writes ~/.claude.json
@@ -274,15 +275,27 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       //   oauthAccount.emailAddress is updated by BOTH clp switches (snapshot restore) AND external OAuth
       //   login (Claude writes ~/.claude.json on every auth). _active is clp-only.
       let cs          = require_credential_store()?;
+      // Fix(BUG-582): the one slot already holding the live session names it, ahead of
+      //   ~/.claude.json.
+      // Root cause: oauthAccount.emailAddress came first, but a running Claude process rewrites
+      //   ~/.claude.json from its own profile, so after a switch it can name the previous account.
+      // Pitfall: only a single holder names the session. With two, the store is already
+      //   corrupted; fall through and let the save refuse it (or BUG-549 skip a redirect
+      //   slot). A session refreshed outside clp matches no slot and falls back as before.
+      let live_creds  = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
+      let holders     = crate::account::slots_holding_session( &cs, &live_creds );
       let cj          = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
       // Extract emailAddress nested inside oauthAccount {…}: locate "oauthAccount": first,
       // then apply parse_string_field on the suffix so only the nested key is found.
-      // BUG-582 — a running Claude process also rewrites ~/.claude.json, so this name can belong to another session
       let oauth_email = cj
         .find( "\"oauthAccount\":" )
         .and_then( | pos | crate::account::parse_string_field( &cj[ pos.. ], "emailAddress" ) )
         .filter( | s | !s.is_empty() );
-      if let Some( email ) = oauth_email
+      if let [ holder ] = holders.as_slice()
+      {
+        holder.clone()
+      }
+      else if let Some( email ) = oauth_email
       {
         email
       }
@@ -576,6 +589,18 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   let old_backend      = crate::account::parse_string_field( &existing_meta, "backend" ).unwrap_or_else( || "anthropic".to_string() );
   if !existing_meta.is_empty() && old_backend != backend.as_str()
   {
+    // Fix(BUG-582): run save()'s holder check before this reset, so a refused save
+    //   keeps `{name}.json`.
+    // Root cause: the reset deleted the record first and save() refused only after it,
+    //   so a refused re-backend still lost the redirect record its slot carried.
+    // Pitfall: a check inside the callee can't undo a write its caller made first.
+    if creds_bytes.is_none()
+    {
+      let live = std::fs::read_to_string( paths.credentials_file() )
+        .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+      crate::account::refuse_session_held_elsewhere( &credential_store, &live, &name )
+        .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+    }
     let _ = std::fs::remove_file( &meta_path );
   }
 

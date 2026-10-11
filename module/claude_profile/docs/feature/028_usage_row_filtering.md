@@ -96,7 +96,22 @@
 - **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `prefer::`, and `cols::`.
 - **AC-17**: `clp .usage only_active::1 get::status` on an N-account store performs exactly 1 HTTP request to the OAuth usage API regardless of N. The active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call; non-active accounts are excluded from the fetch set at step 2.
-- **AC-18**: `clp .usage stalest::K` fetches exactly the K accounts whose last fetch *attempt* is oldest — ranked on `max(fetched_at, last_error_at)` ([033 AC-21](033_quota_cache.md)), not on last success alone (missing cache still ranks oldest; ties break by list order). Redirect-backend accounts (non-`anthropic` `inference_provider`, [Feature 071](071_redirect_backend_accounts.md)) are excluded from the ranking entirely — they have no Anthropic quota to fetch, so a slot spent on one produces nothing on every tick. All N rows still render — non-fetched rows from cache — and the output shape is identical to a full run for every `format::`/`get::` variant. Ranking on last success alone starved the fleet: an account that can never succeed never advances its `fetched_at`, so it stayed the stalest candidate forever and won a slot on every tick while accounts actually in use went days without a refresh. The two remedies are deliberately different in kind — a redirect seat is *excluded* (it can never benefit), a dead account is merely *re-ranked* (excluding it would strand it, so an account that resubscribed could never be discovered alive again). Fix for BUG-559.
+- **AC-18**: `clp .usage stalest::K` selects for the fetch path exactly the K accounts whose last fetch *attempt* is oldest
+  — ranked on `max(fetched_at, last_error_at, last_attempt_at)` ([033 AC-21, AC-22](033_quota_cache.md)), not on last success alone (missing cache still ranks oldest; ties break by list order).
+  Redirect-backend accounts (non-`anthropic` `inference_provider`, [Feature 071](071_redirect_backend_accounts.md)) are excluded from the ranking entirely
+  — they have no Anthropic quota to fetch, so a slot spent on one produces nothing on every tick.
+  All N rows still render — non-fetched rows from cache — and the output shape is identical to a full run for every `format::`/`get::` variant.
+  Ranking on last success alone starved the fleet: an account that can never succeed never advances its `fetched_at`,
+  so it stayed the stalest candidate forever and won a slot on every tick while accounts actually in use went days without a refresh.
+  The two remedies are deliberately different in kind
+  — a redirect seat is *excluded* (it can never benefit), a dead account is merely *re-ranked* (excluding it would strand it, so an account that resubscribed could never be discovered alive again).
+  Fix for BUG-559.
+  Only accounts the fetch loop's gates pass are ranked at all. A `backend: redirect` account (even with an empty `inference_provider`), one another machine owns,
+  and one occupied on another machine are never ranked, unless the occupied one is the live session here; with `solo::1`, no account but the live session here is ranked.
+  The fetch loop skips them all whatever the selection says, and never hands a skipped pick's slot on, so a slot given to one would go unused. Fix for BUG-583.
+  <!-- BUG-583 — selection applies the fetch loop's own skip gates, so no slot goes to an account it skips -->
+  Every failed live fetch in the fetch loop counts as an attempt, not only the Class-A verdict: a 429, 5xx, 401/403, local expiry or unreadable token stamps
+  `last_attempt_at` ([033 AC-22](033_quota_cache.md)), so an account failing that way waits its turn rather than taking a slot on every tick. Fix for BUG-591.
 - **AC-19**: `clp .usage stalest::K max_age::S` fetches only selected accounts whose cache age exceeds S seconds; when every account is fresher than S, zero HTTP requests are made and all rows render from cache.
 - **AC-20**: `clp .usage stalest::0` exits 1 with a parameter error and performs zero HTTP requests and zero cache writes. `max_age::S` without `stalest::` (any S, including `0`) exits 1 identically.
 - **AC-21**: `clp .usage stalest::K only_active::1` exits 1 — mutually exclusive pre-fetch reducers.
@@ -148,10 +163,13 @@
 |------|--------------|
 | `src/usage/api.rs` | filter pipeline application and orchestration; `no_color::` gate (`get::` path included; `format::tsv`/`format::json` exempt) |
 | `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering; `apply_no_color()` glyph→plain mapping |
-| `src/usage/stalest.rs` | `stalest::`/`max_age::` selection: `select_stalest`, `reduction_applies` |
+| `src/usage/stalest.rs` | `stalest::`/`max_age::` selection: `select_stalest`, `reduction_applies`; `selection_trace` for the `trace::1` selection line |
+| `src/usage/fetch.rs` | `passes_fetch_gates`: the fetch loop's redirect, ownership, solo and occupancy skips, which `select_stalest` applies before ranking |
 
 ### Tests
 
 | File | Relationship |
 |------|--------------|
+| `tests/usage/stalest_tests.rs` | AC-18/AC-19 selection (K oldest, tie-break, `max_age::` drain); the `bug_583_*` cases: an account the fetch loop skips is never selected |
+| `tests/cli/usage_feature_test.rs` | mre583 — AC-18 end to end: `stalest::2` over two occupied oldest accounts gives the free one the fetch path, and `trace::1` names the set; 583s — `solo::1` with no live session selects `none` |
 | `tests/cli/usage_solo_test.rs` | it271 — AC-12/AC-14: `no_color::1` reaches the `get::` path (`get::status` → `ok`) and maps the `●` header to `status`; it272 — AC-14: `format::json` exempt from `no_color::1` (JSON string values never rewritten) |

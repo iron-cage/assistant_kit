@@ -4,7 +4,7 @@
 
 - **Purpose**: Document failure modes in account identity inference and active-marker naming.
 - **Responsibility**: Covers test fixture hostname collision and account name source priority ordering.
-- **In Scope**: `_active_{host}_{user}` marker identity collisions; `account_save_routine()` name inference; BUG-308, BUG-212.
+- **In Scope**: `_active_{host}_{user}` marker identity collisions; `account_save_routine()` name inference; BUG-308, BUG-212, BUG-582.
 - **Out of Scope**: Active marker format (→ schema/005); multi-machine marker mechanics (→ state_machine/001).
 
 ### Pattern
@@ -19,13 +19,20 @@ Tests that hardcode `_active_devbox_devuser` as an "other machine" marker will f
 
 **Rule:** Never hardcode real-looking hostnames in test fixtures for `_active_*` markers. Always use synthetic names that cannot collide with any realistic machine identity.
 
-### Pitfall 2 — Account name must come from `oauthAccount.emailAddress`, not `_active` marker (BUG-212)
+### Pitfall 2 — Account name must not come from the `_active` marker or `~/.claude.json` first (BUG-212, BUG-582)
 
-Early save logic read the active marker to infer the account name when `name::` was omitted. The active marker may be stale (another account was previously active). The correct source is `oauthAccount.emailAddress` from `~/.claude.json`, which reflects the identity of the current session.
+Early save logic read the active marker to infer the account name when `name::` was omitted. The active marker may be stale (another account was previously active).
+BUG-212 put `oauthAccount.emailAddress` from `~/.claude.json` ahead of it, but that can be stale too: a running Claude process rewrites `~/.claude.json` from its
+own profile, so after a switch it can still name the previous account (BUG-582).
 
-**Fix:** `account_save_routine()` reads `oauthAccount.emailAddress` from `~/.claude.json` as the primary name source. Falls back to the `_active_*` marker only if `~/.claude.json` is absent or the field is missing.
+**Fix:** `account_save_routine()` first takes the one saved slot whose `claudeAiOauth.refreshToken` equals the live session's, or whose `accessToken` does for a
+redirect key (`slots_holding_session()`, BUG-582).
+With no single holder it reads `oauthAccount.emailAddress` from `~/.claude.json`, and falls back to the `_active_*` marker only when that field is absent or empty.
+The same lag affects identity: a save naming the holding slot keeps that slot's stored `oauthAccount` unless `~/.claude.json` names that account or
+the slot ([002](../feature/002_account_save.md) step 6a, BUG-582), instead of copying another account's into it.
 
-**Rule:** Account name inference priority: (1) `name::` param → (2) `oauthAccount.emailAddress` from `~/.claude.json` → (3) `_active_{host}_{user}` marker as last resort.
+**Rule:** Account name inference priority: (1) `name::` param → (2) the one saved slot holding the live session → (3) `oauthAccount.emailAddress` from
+`~/.claude.json` → (4) `_active_{host}_{user}` marker as last resort.
 
 ### Features
 

@@ -496,7 +496,7 @@ fn mre_bug_209_account_save_uses_active_marker_not_stale_email()
 /// Any inference that relies on a single marker written only by one class of credential-change
 /// ops fails silently when other classes bypass that marker. Always prefer a source that ALL
 /// credential-change paths maintain — `oauthAccount.emailAddress` is the universal source.
-// BUG-582 — that premise fails when a running Claude process rewrites ~/.claude.json, and this test never checks slot contents
+// BUG-582 — a running Claude process rewrites ~/.claude.json too; the slot holding the session now wins
 #[ doc = "bug_reproducer(BUG-212)" ]
 #[ test ]
 fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
@@ -540,6 +540,259 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
   let i2_file = store.join( "i2@example.com.credentials.json" );
   assert!( i5_file.exists(), "i5@example.com.credentials.json must be created" );
   assert!( !i2_file.exists(), "i2@example.com.credentials.json must NOT be created (stale marker must not win)" );
+}
+
+// ── BUG-582: a save never files the live session under a second slot ─────────────
+
+/// Store one saved account per `( name, refresh_token )` the way the BUG-582 MRE does, plus
+/// `~/.claude/settings.json`, and return the store path.
+///
+/// No `accessToken` anywhere: `save()`'s best-effort org lookup is keyed on it, so the
+/// save path stays offline.
+fn store_sessions( home : &std::path::Path, slots : &[ ( &str, &str ) ] ) -> std::path::PathBuf
+{
+  let store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( home.join( ".claude" ) ).unwrap();
+  std::fs::write( home.join( ".claude" ).join( "settings.json" ), "{}\n" ).unwrap();
+  for ( name, rt ) in slots
+  {
+    std::fs::write(
+      store.join( format!( "{name}.credentials.json" ) ),
+      format!( "{{\"claudeAiOauth\":{{\"refreshToken\":\"{rt}\",\"expiresAt\":4102444800000}}}}\n" ),
+    ).unwrap();
+    std::fs::write(
+      store.join( format!( "{name}.json" ) ),
+      format!( "{{\"backend\":\"anthropic\",\"oauthAccount\":{{\"emailAddress\":\"{name}\"}}}}\n" ),
+    ).unwrap();
+  }
+  store
+}
+
+/// bug_reproducer(BUG-582): after a switch to bob, a bare `.account.save` with `~/.claude.json`
+/// rewritten to name alice must file the live session under bob and leave alice's slot alone.
+///
+/// # Root Cause
+/// The bare save took its name from `~/.claude.json`'s `oauthAccount.emailAddress`, which a
+/// Claude process still running under alice rewrites after the switch, and `save()` copied
+/// the live session into that slot unchecked. Alice's slot got bob's session; hers was lost.
+///
+/// # Why Not Caught
+/// `mre_bug_212_account_save_stale_marker_uses_oauth_email` checks only which name wins. Its
+/// live session matched no saved slot, and no test read the slots back after a bare save.
+///
+/// # Fix Applied
+/// The bare save names the session by the one slot already holding its `refreshToken` (a
+/// redirect key's `accessToken`), ahead of `~/.claude.json`; `save()` refuses a session
+/// another slot holds, and keeps the holding slot's identity over `~/.claude.json`'s.
+///
+/// # Prevention
+/// The steps are the bug's MRE: switch to bob, put alice's `emailAddress` back, bare save. The
+/// test then asserts the save named bob, alice's slot is byte-identical, the marker is bob,
+/// and `bob@example.com.json` still names bob.
+///
+/// # Pitfall
+/// `.account.use` rewrites `~/.claude.json` itself, so the stale name has to be written after
+/// the switch, or the test never reaches the race it guards.
+#[ doc = "bug_reproducer(BUG-582)" ]
+#[ test ]
+fn mre_bug_582_bare_save_files_live_session_under_its_own_slot()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = store_sessions(
+    dir.path(),
+    &[ ( "alice@example.com", "rt-alice" ), ( "bob@example.com", "rt-bob" ) ],
+  );
+  let claude_json = dir.path().join( ".claude.json" );
+  std::fs::write( &claude_json, "{\"oauthAccount\":{\"emailAddress\":\"alice@example.com\"}}\n" ).unwrap();
+  let alice_slot = store.join( "alice@example.com.credentials.json" );
+  let alice      = std::fs::read( &alice_slot ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::bob@example.com", "touch::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  // A claude process still running under alice rewrites ~/.claude.json after the switch.
+  std::fs::write( &claude_json, "{\"oauthAccount\":{\"emailAddress\":\"alice@example.com\"}}\n" ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "saved current credentials as 'bob@example.com'" ),
+    "the bare save must name the slot holding the live session, got:\n{text}",
+  );
+  assert_eq!(
+    std::fs::read( &alice_slot ).unwrap(), alice,
+    "alice's slot must keep alice's own session",
+  );
+  let marker_path = store.join( claude_profile::account::active_marker_filename() );
+  let marker      = std::fs::read_to_string( &marker_path ).unwrap();
+  assert_eq!(
+    marker, "bob@example.com",
+    "the marker must name the live session's owner",
+  );
+  let bob_meta = std::fs::read_to_string( store.join( "bob@example.com.json" ) ).unwrap();
+  assert!(
+    bob_meta.contains( "bob@example.com" ) && !bob_meta.contains( "alice@example.com" ),
+    "bob's metadata must keep bob's identity, not alice's from ~/.claude.json, got:\n{bob_meta}",
+  );
+}
+
+/// BUG-582: an explicit `name::` naming another account's slot is refused when the live session
+/// is already saved as bob, with alice's slot and the marker unchanged.
+#[ test ]
+fn bug_582_explicit_save_refuses_session_another_slot_holds()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = store_sessions(
+    dir.path(),
+    &[ ( "alice@example.com", "rt-alice" ), ( "bob@example.com", "rt-bob" ) ],
+  );
+  let bob   = std::fs::read( store.join( "bob@example.com.credentials.json" ) ).unwrap();
+  std::fs::write( dir.path().join( ".claude" ).join( ".credentials.json" ), &bob ).unwrap();
+  let marker_path = store.join( claude_profile::account::active_marker_filename() );
+  std::fs::write( &marker_path, "bob@example.com" ).unwrap();
+  let alice_slot = store.join( "alice@example.com.credentials.json" );
+  let alice      = std::fs::read( &alice_slot ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "live session is already saved as 'bob@example.com'" ),
+    "the refusal must name the slot holding the session, got:\n{err}",
+  );
+  assert_eq!(
+    std::fs::read( &alice_slot ).unwrap(), alice,
+    "alice's slot must be unchanged",
+  );
+  assert_eq!(
+    std::fs::read_to_string( &marker_path ).unwrap(), "bob@example.com",
+    "the marker must not move",
+  );
+}
+
+/// BUG-582: when two slots already hold the live session, a bare save names neither of them
+/// on its own and refuses, rather than overwriting one with the other's copy again.
+#[ test ]
+fn bug_582_bare_save_refuses_when_two_slots_hold_live_session()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = store_sessions(
+    dir.path(),
+    &[ ( "i4@example.com", "rt-shared" ), ( "i7@example.com", "rt-shared" ) ],
+  );
+  let shared = std::fs::read( store.join( "i7@example.com.credentials.json" ) ).unwrap();
+  std::fs::write( dir.path().join( ".claude" ).join( ".credentials.json" ), &shared ).unwrap();
+  let claude_json = "{\"oauthAccount\":{\"emailAddress\":\"i4@example.com\"}}\n";
+  std::fs::write( dir.path().join( ".claude.json" ), claude_json ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "already saved as 'i7@example.com' — refusing to also save it as 'i4@example.com'" ),
+    "a bare save over a duplicated session must refuse, got:\n{err}",
+  );
+}
+
+/// BUG-582: re-backending a redirect slot to `anthropic` is refused when bob's slot already
+/// holds the live session, and the refusal leaves the redirect record and its key as they were.
+#[ test ]
+fn bug_582_refused_rebackend_save_keeps_redirect_record()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = store_sessions( dir.path(), &[ ( "bob@example.com", "rt-bob" ) ] );
+  let bob   = std::fs::read( store.join( "bob@example.com.credentials.json" ) ).unwrap();
+  std::fs::write( dir.path().join( ".claude" ).join( ".credentials.json" ), &bob ).unwrap();
+  let meta_path  = store.join( "proxy@example.com.json" );
+  let creds_path = store.join( "proxy@example.com.credentials.json" );
+  std::fs::write(
+    &meta_path,
+    "{\"backend\":\"redirect\",\"base_url\":\"http://127.0.0.1:9\",\"redirect_model\":\"m1\"}\n",
+  ).unwrap();
+  std::fs::write( &creds_path, "{\"accessToken\":\"key-proxy\"}\n" ).unwrap();
+  let meta  = std::fs::read( &meta_path ).unwrap();
+  let creds = std::fs::read( &creds_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::proxy@example.com", "backend::anthropic" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "live session is already saved as 'bob@example.com'" ),
+    "the refusal must name the slot holding the session, got:\n{err}",
+  );
+  assert_eq!(
+    std::fs::read( &meta_path ).ok(), Some( meta ),
+    "a refused save must keep the redirect record",
+  );
+  assert_eq!(
+    std::fs::read( &creds_path ).ok(), Some( creds ),
+    "a refused save must keep the slot's key",
+  );
+}
+
+/// BUG-582: a redirect slot's key carries no refresh token, so it's matched by `accessToken`.
+/// With kimi's key live and `~/.claude.json` rewritten to name alice, a bare save names kimi
+/// and skips, an explicit save as alice is refused, and alice's slot keeps her own session.
+#[ test ]
+fn bug_582_live_redirect_key_never_filed_under_another_slot()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = store_sessions( dir.path(), &[ ( "alice@example.com", "rt-alice" ) ] );
+  // A save that files the key as alice looks up her org with it; a closed loopback port keeps
+  // that request on this machine.
+  let env   = [ ( "HOME", home ), ( "CLAUDE_QUOTA_BASE_URL", "http://127.0.0.1:9" ) ];
+  let kimi  = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::http://127.0.0.1:9", "api_key::key-kimi", "redirect_model::m1",
+    ],
+    &env,
+  );
+  assert_exit( &kimi, 0 );
+  assert_exit( &run_cs_with_env( &[ ".account.use", "name::kimi", "touch::0" ], &env ), 0 );
+  // A claude process still running under alice rewrites ~/.claude.json after the switch.
+  std::fs::write(
+    dir.path().join( ".claude.json" ),
+    "{\"oauthAccount\":{\"emailAddress\":\"alice@example.com\"}}\n",
+  ).unwrap();
+  let alice_slot = store.join( "alice@example.com.credentials.json" );
+  let alice      = std::fs::read( &alice_slot ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".account.save" ], &env );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "'kimi' is a redirect account (static credentials) — nothing to snapshot; save skipped" ),
+    "the bare save must name the redirect slot holding the live key, got:\n{text}",
+  );
+  assert_eq!(
+    std::fs::read( &alice_slot ).unwrap(), alice,
+    "the bare save must leave alice's slot alone",
+  );
+
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@example.com" ], &env );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "already saved as 'kimi' — refusing to also save it as 'alice@example.com'" ),
+    "an explicit save as alice must be refused, got:\n{err}",
+  );
+  assert_eq!(
+    std::fs::read( &alice_slot ).unwrap(), alice,
+    "the refused save must leave alice's slot alone",
+  );
 }
 
 // ── mre_bug213_account_use_refuses_expired_token_on_fetch_error ───────────────

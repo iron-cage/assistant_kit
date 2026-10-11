@@ -209,6 +209,69 @@ pub fn lock_store( credential_store : &Path ) -> Result< StoreLock, std::io::Err
   Ok( StoreLock { _file : file } )
 }
 
+/// Saved accounts whose stored credential carries the token identifying `live`, in name order.
+///
+/// `live` is a credentials file's text, read by [`session_token`]. An OAuth session is identified by its
+/// `refreshToken`: refresh tokens are single-use, so every login and every refresh issues a
+/// new one. A redirect key carries none, so it's identified by its `accessToken`. A match
+/// means the slot holds that very credential. Once the live session is refreshed outside clp,
+/// no slot matches until it's saved again. Empty when `live` has neither token or the store
+/// can't be read. More than one name means two slots hold one credential, which `save()`
+/// refuses to create when it copies the live session.
+#[ inline ]
+#[ must_use ]
+pub fn slots_holding_session( credential_store : &Path, live : &str ) -> Vec< String >
+{
+  let has_refresh = session_token( live, "refreshToken" ).is_some();
+  let field       = if has_refresh { "refreshToken" } else { "accessToken" };
+  let Some( live_token ) = session_token( live, field ) else
+  {
+    return Vec::new();
+  };
+  let Ok( entries ) = std::fs::read_dir( credential_store ) else { return Vec::new() };
+  let mut holders : Vec< String > = entries
+    .flatten()
+    .filter_map( | entry |
+    {
+      let path  = entry.path();
+      let name  = credential_stem( &path )?;
+      let text  = std::fs::read_to_string( &path ).ok()?;
+      let token = session_token( &text, field )?;
+      ( token == live_token ).then_some( name )
+    } )
+    .collect();
+  holders.sort_unstable();
+  holders
+}
+
+/// Refuse to file the session in `live` under `name` when another slot already holds it.
+///
+/// This is the check [`save`] runs before copying the live session. A caller that changes
+/// the store before calling [`save`] runs it first, so a refused save leaves every account
+/// file as it was. When it doesn't refuse, it returns whether `name` itself already holds
+/// the session.
+///
+/// # Errors
+///
+/// Returns an error naming the holder when [`slots_holding_session`] lists a slot other
+/// than `name`.
+#[ inline ]
+pub fn refuse_session_held_elsewhere(
+  credential_store : &Path,
+  live             : &str,
+  name             : &str,
+) -> Result< bool, std::io::Error >
+{
+  let holders = slots_holding_session( credential_store, live );
+  match holders.iter().find( | s | *s != name )
+  {
+    Some( holder ) => Err( std::io::Error::other( format!(
+      "live session is already saved as '{holder}' — refusing to also save it as '{name}'"
+    ) ) ),
+    None => Ok( !holders.is_empty() ),
+  }
+}
+
 /// Save credentials as a named account in `credential_store`.
 ///
 /// Writes two files per account:
@@ -216,7 +279,12 @@ pub fn lock_store( credential_store : &Path ) -> Result< StoreLock, std::io::Err
 /// - `{name}.json` — unified metadata (identity, model, roles, profile)
 ///
 /// When `creds` is `Some(bytes)`, writes `bytes` directly to the credential file.
-/// When `creds` is `None`, copies from `paths.credentials_file()` (the live session file).
+/// When `creds` is `None`, copies from `paths.credentials_file()` (the live session file),
+/// unless another slot already holds that session (see [`slots_holding_session`]); then
+/// it refuses before writing any account file, so copying the live session never files it
+/// under a second slot. Bytes passed as `creds` aren't checked. A slot re-saving the session
+/// it already holds keeps its stored `oauthAccount` unless `~/.claude.json` names that
+/// account or `name`, since that file can lag the session.
 ///
 /// `host` / `role` are profile display metadata; pass `None` from background callers
 /// to preserve existing values via merge.
@@ -245,8 +313,9 @@ pub fn lock_store( credential_store : &Path ) -> Result< StoreLock, std::io::Err
 /// # Errors
 ///
 /// Returns an error if the name is invalid, a given tag is invalid (rejected
-/// before any file write), the credentials file cannot be read, or the
-/// credential store cannot be written.
+/// before any file write), the credentials file cannot be read, another slot
+/// already holds the live session (`creds: None` only, before any account file
+/// is written), or the credential store cannot be written.
 #[ inline ]
 #[ allow( clippy::too_many_arguments ) ] // 9th-13th params `backend`/`base_url`/`redirect_model`/`inference_provider`/`tags` added by Features 071/072/075 — all args are independent concerns.
 #[ allow( clippy::too_many_lines ) ] // Feature 071's backend-gated branches extend a single coherent capture→merge→write sequence — splitting would fragment closely-threaded local state.
@@ -274,6 +343,7 @@ pub fn save(
   let tags = tags.map( normalize_tag_set ).transpose()?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
+  let mut resaves_held_session = false;
   // Fix(audit-credential-file-perms): every store credential write goes through
   // atomic_write_secret — 0o600 from the first byte, unique temp name, rename commit.
   // Root cause: bare fs::write/fs::copy landed OAuth tokens with umask-default 0644,
@@ -299,8 +369,15 @@ pub fn save(
     }
     else
     {
-      // BUG-582 — the live session is filed under `name` without checking that another slot doesn't already hold it
       let live = std::fs::read_to_string( paths.credentials_file() )?;
+      // Fix(BUG-582): refuse a live session that another slot already holds.
+      // Root cause: the session was filed under the caller's name unchecked, and a bare save
+      //   takes that name from ~/.claude.json, which a running Claude process can rewrite
+      //   after a switch.
+      // Pitfall: a name read from one file says nothing about what another file holds; check
+      //   the credential itself before filing it under a name. A redirect key has no refresh
+      //   token, so it's matched by its accessToken.
+      resaves_held_session = refuse_session_held_elsewhere( credential_store, &live, name )?;
       atomic_write_secret( &dest, &live )?;
     }
   }
@@ -339,12 +416,14 @@ pub fn save(
       // accounts that are NOT the active one, so the unconditional merge overwrote a
       // non-active target's own identity with whichever account happens to be locally
       // active on this machine. `update_marker == true` (`.account.save`/
-      // `.account.relogin`) is preserved unconditionally because those calls, by design,
-      // always snapshot "whatever is currently live" under the caller's chosen name —
-      // per docs/feature/002_account_save.md AC-05/AC-12, name need not match the live
-      // identity there. The live-identity comparison reads the live session's own
-      // oauthAccount.emailAddress directly, not the separate `_active` marker file — the
-      // marker can go stale relative to the live session after an external login
+      // `.account.relogin`) is preserved because those calls, by design, snapshot
+      // "whatever is currently live" under the caller's chosen name, which needn't be the
+      // email in the live `oauthAccount`; what guards the session itself is the refusal
+      // above when another slot already holds it, and a slot re-saving its own session
+      // keeps its stored identity when ~/.claude.json disagrees (both BUG-582). The
+      // live-identity comparison reads the live
+      // session's own oauthAccount.emailAddress directly, not the separate `_active` marker
+      // file — the marker can go stale relative to the live session after an external login
       // (BUG-212), which would wrongly suppress the merge for the common
       // name-inferred-from-live-session save path.
       // Pitfall: a function that reads "the machine's live session" to enrich a named
@@ -354,16 +433,27 @@ pub fn save(
       // cross-account identity leak.
       let live_text    = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
       let live_val     = serde_json::from_str::< serde_json::Value >( &live_text ).ok();
-      let live_is_name = live_val.as_ref()
+      let live_email   = live_val.as_ref()
         .and_then( | v | v.get( "oauthAccount" ) )
         .and_then( | o | o.get( "emailAddress" ) )
-        .and_then( | e | e.as_str() )
-        .is_some_and( | email | email == name );
+        .and_then( | e | e.as_str() );
+      let live_is_name = live_email.is_some_and( | email | email == name );
+      // Fix(BUG-582): a slot re-saving the session it already holds keeps its stored identity
+      //   unless ~/.claude.json names that account or `name`.
+      // Root cause: a bare save names the slot holding the session, but this merge still
+      //   copied ~/.claude.json's oauthAccount, which can lag the session, into its file.
+      // Pitfall: prefer the slot's stored identity to a disagreeing ~/.claude.json, which can lag;
+      //   it's only as sound as what filed the session there (refresh's pre-sync doesn't check).
+      let stored_email   = obj.get( "oauthAccount" )
+        .and_then( | o | o.get( "emailAddress" ) )
+        .and_then( | e | e.as_str() );
+      let stale_identity = resaves_held_session && !live_is_name
+        && stored_email.is_some_and( | stored | Some( stored ) != live_email );
 
       if update_marker || live_is_name
       {
         // Merge oauthAccount from live ~/.claude.json (surgical — only per-account data).
-        if let Some( live_val ) = &live_val
+        if let Some( live_val ) = live_val.as_ref().filter( | _ | !stale_identity )
         {
           if let Some( oauth ) = live_val.get( "oauthAccount" )
           {
@@ -530,4 +620,22 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
     }
   }
   Ok( () )
+}
+
+/// The token identifying the session a credentials file holds: `claudeAiOauth`'s `key` for an
+/// OAuth session, the top-level `key` when the file has no `claudeAiOauth` object (a redirect key,
+/// `{"accessToken": …}`). Tokens other entries carry, such as `mcpOAuth`'s, never count. `None`
+/// when `creds` isn't JSON or the token is missing or empty.
+#[ inline ]
+#[ must_use ]
+pub fn session_token( creds : &str, key : &str ) -> Option< String >
+{
+  // Fix(BUG-582): read the session's own token by its JSON path, not the text's first match.
+  // Root cause: matching took the first `refreshToken`/`accessToken` in the file, and Claude
+  //   Code writes `mcpOAuth` ahead of `claudeAiOauth` after a login, so an MCP server's token
+  //   stood in for the session's and two accounts' slots looked like one.
+  // Pitfall: a credentials file holds more than one OAuth entry; name the entry, not the field.
+  let value  = serde_json::from_str::< serde_json::Value >( creds ).ok()?;
+  let holder = value.get( "claudeAiOauth" ).filter( | v | v.is_object() ).unwrap_or( &value );
+  holder.get( key )?.as_str().filter( | t | !t.is_empty() ).map( String::from )
 }

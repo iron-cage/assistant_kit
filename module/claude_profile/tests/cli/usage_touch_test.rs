@@ -143,7 +143,7 @@ fn it097_touch_1_empty_store_exits_0()
 /// it098 (TSK-185 AC-04): `touch::1` with a no-token account exits 0 without touching it.
 ///
 /// Accounts whose quota fetch failed (expired/missing token → error result) must not
-/// be touched. The trigger requires `result.is_ok()` AND `five_hour.resets_at.is_some()`.
+/// be touched. The trigger requires `result.is_ok()` AND a timer absent or already past (BUG-584).
 /// A no-token account has an errored result → it is skipped entirely.
 ///
 /// Before TSK-185: `touch::` unregistered → exit 1.
@@ -182,8 +182,8 @@ fn it099_apply_touch_fn_exists_structural()
   assert!(
     src.contains( "fn apply_touch" ),
     "TSK-185: `fn apply_touch` must be present in src/usage/touch.rs; \
-     add the active-window extension function that calls refresh_account_token() \
-     for accounts with result.is_ok() AND five_hour.resets_at.is_some()",
+     add the idle-window activation function that calls refresh_account_token() \
+     for accounts with result.is_ok() AND a quota timer absent or already past",
   );
 }
 
@@ -461,6 +461,11 @@ fn it108_touch_bogus_exits_1()
   assert_exit( &out, 1 );
 }
 
+// BUG-588 — `HIDE_OWNER` keeps an unowned Owner cell's `—` out of the whole-text idle checks below
+/// `cols::` modifier for the whole-text `—` idle checks below. Their accounts have no owner, so the
+/// Owner cell renders `—` and would satisfy every such check whatever the 5h Reset cell holds.
+const HIDE_OWNER : &str = "cols::-owner";
+
 /// it109 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; idle account unchanged.
 ///
 /// When `touch::0` (explicit off), the touch trigger is never fired regardless of account state.
@@ -478,7 +483,7 @@ fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
   // Pre-check: account must be IDLE (resets_at absent — EM-DASH present in 5h Reset column).
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  let pre = run_cs_with_env( &[ ".usage", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
   if !pre_text.contains( "\u{2014}" )
@@ -487,7 +492,7 @@ fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
     return;
   }
 
-  let out = run_cs_with_env( &[ ".usage", "touch::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage", "touch::0", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // 5h Reset column must still show EM-DASH (touch::0 must not fire subprocess).
@@ -550,7 +555,7 @@ fn it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
   // Pre-check: account must be IDLE (resets_at absent — EM-DASH present).
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  let pre = run_cs_with_env( &[ ".usage", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
   if !pre_text.contains( "\u{2014}" )
@@ -611,7 +616,7 @@ fn it113_lim_it_active_account_restored_after_touch()
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
   // Pre-check: at least one non-active account must be in idle state.
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  let pre = run_cs_with_env( &[ ".usage", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
@@ -665,7 +670,7 @@ fn it115_lim_it_trace_1_shows_touch_lifecycle()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
   // Pre-check: account must be IDLE (resets_at absent) for subprocess to be triggered.
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  let pre = run_cs_with_env( &[ ".usage", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
@@ -818,7 +823,7 @@ fn it119_touch_2_rejected_exits_1()
 /// - Cycle 2 (account now active after cycle 1 activated it): touch skips → `skipped` in trace.
 ///
 /// This verifies that the trigger fires for idle accounts (activating them) and correctly
-/// skips accounts that are already active (`resets_at` present after cycle 1).
+/// skips accounts that are already active (`resets_at` present and ahead of now after cycle 1).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
 ///       [`docs/feature/024_session_touch.md` AC-11]
@@ -852,7 +857,7 @@ fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
   );
 
   // Cycle 2: account now active after cycle 1 activation → touch skips.
-  let out2 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  let out2 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1", HIDE_OWNER ], &[ ( "HOME", home ) ] );
   assert_exit( &out2, 0 );
   let err2 = stderr( &out2 );
   let text2 = stdout( &out2 );

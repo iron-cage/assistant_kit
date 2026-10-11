@@ -238,7 +238,7 @@ pub fn json_escape( s : &str ) -> String
   out
 }
 
-// BUG-588 — `.usage` once pushed the raw owner, so an unowned account's cell was blank there and `—` in `.accounts`
+// BUG-588 — the one Owner cell formatter, so `.usage` and `.accounts` both render unowned as `—`
 /// Owner cell text for the `.usage` and `.accounts` text views: the identity, or `—` when the
 /// account is unowned (Feature 037 AC-19). TSV and JSON keep the raw `""`.
 #[ inline ]

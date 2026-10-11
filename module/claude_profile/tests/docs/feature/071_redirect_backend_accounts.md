@@ -26,14 +26,17 @@
 | FT-14 | AC-14 | `.credentials.status` classifies active redirect account `Token: static` | `t12_credentials_status_active_redirect_account_classifies_static` |
 | FT-15 | AC-15 | Re-save same name with different `backend::` rewrites from scratch | `t13_save_resave_different_backend_rewrites_from_scratch` |
 | FT-16 | AC-16 | `.account.use` to redirect skips quota-fetch/touch unconditionally | `t06_use_redirect_account_writes_env_vars_and_skips_touch` (AC-16 assertions) |
-| FT-17 | AC-17 | `.usage`/`.accounts` render redirect row as placeholder, no HTTP; compact `(redirect)` + `—` renews in text, full reason in TSV (BUG-538); `—` Sub cell and `—` from `get::sub`/`get::renews` (BUG-540) | `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate`, `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` |
+| FT-17 | AC-17 | `.usage`/`.accounts` render redirect row as placeholder, no HTTP; text/TSV shape (BUG-538), `—` Sub and `get::` cells (BUG-540), `trace::1` fetch-stage line (BUG-587) — see § FT-17 | 6 fns in 2 files, listed in § FT-17 below |
 | FT-18 | AC-19 | Save carrying no mutation on a stored-redirect target skips — exit 0, neither store file touched, loud notice (BUG-549) | `mre_bug549_bare_save_preserves_redirect_account` |
 | FT-19 | AC-20 | Save carrying a mutation on the same target exits 1, never the skip; store byte-identical; bare save still skips (BUG-554) | `mre_bug554_mutating_save_on_redirect_target_is_not_swallowed` |
 | FT-20 | AC-21 | `.account.relogin` on a redirect target exits 1 before `switch_account`; active marker and record intact; `dry::1` refuses too (BUG-556) | `mre_bug556_relogin_refuses_redirect_account_before_switch` |
 
 ### Notes
 
-- ✅ Implemented — CLI-surface cases (FT-01–FT-07, FT-11–FT-16, FT-18, FT-19) live in `tests/cli/account_redirect_backend_test.rs`; FT-09 in `claude_profile_core/tests/account_refresh_test.rs`; FT-10 in `tests/usage/api_tests_a.rs`; FT-17 in `tests/usage/fetch_tests.rs`; FT-20 in `tests/cli/account_relogin_test_b.rs`.
+- ✅ Implemented — CLI-surface cases (FT-01–FT-07, FT-11–FT-16, FT-18, FT-19) live in `tests/cli/account_redirect_backend_test.rs`;
+  FT-09 in `claude_profile_core/tests/account_refresh_test.rs`; FT-10 in `tests/usage/api_tests_a.rs`;
+  FT-17 in `tests/usage/fetch_tests.rs` (FT14, FT14b) and `tests/cli/account_redirect_backend_test.rs` (T21–T23, T28);
+  FT-20 in `tests/cli/account_relogin_test_b.rs`.
 - FT-18/FT-19 are the two sides of one gate and must stay paired: FT-18 pins that an inert call still skips, FT-19 that a mutation-bearing one never does. BUG-554 existed precisely because only the FT-18 side had a test.
 - Domain-level supplements in `claude_profile_core/tests/account_backend_test.rs` (`ft01`–`ft12_071`): `AccountBackend` parsing (`redirect` variant, absent/unrecognized/corrupt → `anthropic`), redirect save writes minimal credentials without touching the live `~/.claude/.credentials.json`, switch-path `env.*` write/clear/empty-`env`-prune/unrelated-subkey-preserve.
 - All FT cases use a temporary isolated credential store and `$HOME`; no real user environment.
@@ -202,6 +205,8 @@
 - **Then:** Both files rewritten per the anthropic path; no redirect fields survive.
 - **Exit:** 0
 - **Source fn:** `t13_save_resave_different_backend_rewrites_from_scratch`
+- **Note:** When another saved slot already holds the live session, the re-save exits 2 before the reset and both files stay
+  (BUG-582; `bug_582_refused_rebackend_save_keeps_redirect_record` in `account_relogin_test_b.rs`).
 - **Source:** [071_redirect_backend_accounts.md AC-15](../../../docs/feature/071_redirect_backend_accounts.md)
 
 ---
@@ -221,9 +226,17 @@
 
 - **Given:** Account list containing a redirect account among anthropic ones.
 - **When:** `fetch_quota_for_list()` runs (via `.usage`/`.accounts refresh::1`).
-- **Then:** The redirect row carries `result: Err("redirect backend — no Anthropic quota")` with no HTTP call, checked before the non-owned gate; anthropic rows unaffected. Rendered shape (BUG-538): the text table shows the compact `(redirect)` note in the last visible quota cell (never the full 40-char descriptor, which widened the column for every row) and `—` in `~Renews` (never `?`); TSV keeps the full canonical reason string and `—` renews; `Expires` is `static`, status is `⚪`/`static` (FT/T21). Known-absence parity (BUG-540): the `Sub` cell under `cols::+sub` is `—` on text and TSV, and the `get::sub`/`get::renews` extractors return the same `—` as the table cells — the per-cell predicates live once in `format.rs`'s aq-aware `sub_cell_for`/`renews_cell_for`. <!-- BUG-587 — no check that `trace::1` prints a fetch-stage line for the redirect row -->
+- **Then:** The redirect row carries `result: Err("redirect backend — no Anthropic quota")` with no HTTP call, checked before the non-owned gate; anthropic rows unaffected.
+  Rendered shape (BUG-538): the text table shows the compact `(redirect)` note in the last visible quota cell (never the full 40-char descriptor,
+  which widened the column for every row) and `—` in `~Renews` (never `?`); TSV keeps the full canonical reason string and `—` renews; `Expires` is `static`, status is `⚪`/`static` (FT/T21).
+  Known-absence parity (BUG-540): the `Sub` cell under `cols::+sub` is `—` on text and TSV, and the `get::sub`/`get::renews` extractors return the same `—` as the table cells
+  — the per-cell predicates live once in `format.rs`'s aq-aware `sub_cell_for`/`renews_cell_for`.
+  Under `trace::1` the redirect row gets exactly one `fetch  <name>  skipped (reason: redirect backend)` line and the anthropic rows keep their own fetch-stage lines (BUG-587, T28).
 - **Exit:** 0
-- **Source fn:** `ft14_071_redirect_backend_produces_placeholder_no_http`, `ft14b_071_redirect_checked_before_not_owned_gate` (`tests/usage/fetch_tests.rs`); `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`, `t23_usage_sub_and_get_fields_redirect_known_absence` (`tests/cli/account_redirect_backend_test.rs` — T22 is the `bug_reproducer(BUG-538)`, T23 the `bug_reproducer(BUG-540)`)
+- **Source fn:** `ft14_071_redirect_backend_produces_placeholder_no_http`,
+  `ft14b_071_redirect_checked_before_not_owned_gate` (`tests/usage/fetch_tests.rs`); `t21_usage_tsv_active_redirect_row_current_static`, `t22_usage_text_redirect_row_compact_note_no_question_mark`,
+  `t23_usage_sub_and_get_fields_redirect_known_absence`, `t28_usage_trace_names_redirect_account_in_fetch_stage` (`tests/cli/account_redirect_backend_test.rs` — T22 is the `bug_reproducer(BUG-538)`,
+  T23 the `bug_reproducer(BUG-540)`, T28 the `bug_reproducer(BUG-587)`)
 - **Source:** [071_redirect_backend_accounts.md AC-17](../../../docs/feature/071_redirect_backend_accounts.md)
 
 ---

@@ -203,8 +203,8 @@ pub fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
-        // Fix(BUG-588): an unowned account renders `—`, as `.accounts` does (AC-19); same in the Err arm below.
-        // Root cause: the `.usage` cell pushed `aq.owner` as-is, so an empty owner left the cell blank.
+        // Fix(BUG-588): unowned accounts render `—`, as in `.accounts` (AC-19); the Err arm too.
+        // Root cause: the `.usage` cell pushed `aq.owner` as-is, so an empty owner left it blank.
         // Pitfall: two views of one field need one formatter, or they drift apart.
         if cols.owner        { row.push( owner_cell( &aq.owner ) ); }
         if cols.next         { row.push( next_cell ); }
@@ -291,6 +291,18 @@ pub fn render_text(
     body
   };
 
+  // Fix(BUG-582): two ✓ rows mean two slots hold one live session; say so under the table.
+  // Root cause: ✓ and the `Current ·` footer trusted Feature 016's "at most one account
+  //   matches" the live token, so a duplicated slot showed up as a quiet second ✓.
+  // Pitfall: the footer still names the first ✓ row. Only this line tells the user the two
+  //   rows disagree with the store's invariant, so it can't sit behind the footer's gates.
+  let current : Vec< &str > = accounts
+    .iter()
+    .filter( | aq | aq.is_current )
+    .map( | aq | aq.name.as_str() )
+    .collect();
+  let body = format!( "{body}{}", shared_session_warning( &current ) );
+
   // Footer: shown only when ≥2 valid accounts (AC-10).
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2
@@ -331,7 +343,7 @@ pub fn render_text(
   // BUG-344 (reverted): see flag_cell's comment above — AC-02/AC-10's "Current · <name>"
   //   line identifies the ✓ (is_current) account unconditionally; docs/feature/009_token_usage.md
   //   has no result-gating on this line either.
-  // BUG-582 — the first is_current row wins, so a second slot holding the live session goes unreported
+  // BUG-582 — with two ✓ rows this names the first; the shared-session warning above flags the pair
   let footer = if let Some( cur ) = accounts.iter().find( |aq| aq.is_current )
   {
     let model_effort = match ( session_model, session_effort )
@@ -430,6 +442,21 @@ pub( crate ) fn apply_no_color( s : String ) -> String
     .replace( '✓', "*" )
     // Task 544 burn-rate alert marker (forecast.rs::burn_warnings).
     .replace( '⚠', "!" )
+}
+
+/// The warning line naming every saved account that matches the live session, empty for
+/// fewer than two.
+///
+/// Sole definition, shared by `.usage` and `.accounts`. `.accounts` marks only the first match
+/// current and `.usage` gives each a plain ✓, so a second slot would pass silently (BUG-582).
+pub( crate ) fn shared_session_warning( holders : &[ &str ] ) -> String
+{
+  if holders.len() < 2 { return String::new(); }
+  format!(
+    "⚠ {} saved accounts hold the live session: {} — only one owns it; re-login the rest\n",
+    holders.len(),
+    holders.join( ", " ),
+  )
 }
 
 // ── Field extractor ────────────────────────────────────────────────────────────

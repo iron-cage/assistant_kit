@@ -8,7 +8,7 @@ use crate::cli_runner::{
   write_account, write_account_with_token, write_credentials, write_claude_json_full,
   write_settings_json,
   write_live_credentials_with_token, write_account_claude_json_extended,
-  write_account_roles_json, write_account_profile_json,
+  write_account_roles_json, write_account_profile_json, credential_json_with_token,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -670,3 +670,75 @@ fn acc51_accounts_positional_after_key_value()
   assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
 }
 
+// ── acc52 ─────────────────────────────────────────────────────────────────────
+
+/// acc52 (016 AC-12, BUG-582): when two saved slots match the live token, `.accounts` still
+/// marks the first `Current: yes` but adds a warning naming both, since only one can own the
+/// session; `format::table` warns too. One match prints no warning, and `format::json` never
+/// carries it.
+#[ test ]
+fn acc52_shared_session_warning_names_both_slots()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  let slot = | name : &str, token : &str |
+  {
+    let path = store.join( format!( "{name}.credentials.json" ) );
+    std::fs::write( path, credential_json_with_token( token ) ).unwrap();
+  };
+  slot( "alice@example.com", "tok-alice" );
+  slot( "work@example.com",  "tok-work" );
+  write_live_credentials_with_token( dir.path(), "tok-work" );
+  let accounts = | extra : &[ &str ] |
+  {
+    let args : Vec< &str > = [ ".accounts" ].iter().chain( extra ).copied().collect();
+    let out  = run_cs_with_env( &args, &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    stdout( &out )
+  };
+  let warning = "2 saved accounts hold the live session: alice@example.com, work@example.com";
+
+  let single = accounts( &[] );
+  assert!(
+    !single.contains( "hold the live session" ),
+    "acc52: one match must not warn, got:\n{single}",
+  );
+
+  // alice's slot now holds work's session too.
+  slot( "alice@example.com", "tok-work" );
+  let text = accounts( &[] );
+  assert!(
+    text.contains( &format!( "\u{26a0} {warning}" ) ),
+    "acc52: two matches must name both slots, got:\n{text}",
+  );
+  // Rows are in name order, so alice's block is the first match and the one marked current.
+  let current_of = | name : &str | -> Option< String >
+  {
+    text.lines()
+      .skip_while( | l | *l != name )
+      .skip( 1 )
+      .take_while( | l | !l.is_empty() )
+      .find_map( | l | l.trim().strip_prefix( "Current: " ).map( String::from ) )
+  };
+  assert_eq!(
+    current_of( "alice@example.com" ).as_deref(), Some( "yes" ),
+    "acc52: the first match is marked current, got:\n{text}",
+  );
+  assert_eq!(
+    current_of( "work@example.com" ).as_deref(), Some( "no" ),
+    "acc52: the second match is not, got:\n{text}",
+  );
+  let table = accounts( &[ "format::table" ] );
+  assert!(
+    table.contains( warning ),
+    "acc52: the table view must warn too, got:\n{table}",
+  );
+  let json = accounts( &[ "format::json" ] );
+  assert!(
+    !json.contains( "hold the live session" ),
+    "acc52: JSON must stay free of the warning, got:\n{json}",
+  );
+  serde_json::from_str::< serde_json::Value >( &json ).expect( "acc52: JSON output must still parse" );
+}

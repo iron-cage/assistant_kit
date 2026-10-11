@@ -12,34 +12,37 @@ use claude_profile_core::account::trace_ts;
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
-/// Detect which saved account matches the live session token.
+/// Detect which saved accounts match the live session token.
 ///
-/// Reads `accessToken` from `live_creds_path` (graceful degradation: returns `None`
-/// on any I/O or parse error). Compares by string equality against each saved account's
-/// stored `accessToken` in `credential_store`; returns `Some(name)` on the first match,
-/// `None` if no match.
-fn detect_current_account(
+/// Reads the session's `accessToken` from `live_creds_path` (graceful degradation: no match on any
+/// I/O or parse error). Compares by string equality against each saved account's
+/// stored `accessToken` in `credential_store`; returns every match, in list order.
+/// More than one means two slots hold one session (BUG-582).
+fn detect_current_accounts(
   accounts         : &[ crate::account::Account ],
   live_creds_path  : &std::path::Path,
   credential_store : &std::path::Path,
-) -> Option< String >
+) -> Vec< String >
 {
-  let content    = std::fs::read_to_string( live_creds_path ).ok()?;
-  let live_token = crate::account::parse_string_field( &content, "accessToken" )?;
-  for acct in accounts
+  let Some( live_token ) = std::fs::read_to_string( live_creds_path )
+    .ok()
+    .and_then( | content | crate::account::session_token( &content, "accessToken" ) )
+  else
   {
-    let path    = credential_store.join( format!( "{}.credentials.json", acct.name ) );
-    let Ok( s ) = std::fs::read_to_string( &path ) else { continue };
-    if let Some( token ) = crate::account::parse_string_field( &s, "accessToken" )
+    return Vec::new();
+  };
+  accounts
+    .iter()
+    .filter( | acct |
     {
-      // BUG-582 — the first slot matching the live token wins; a second match goes unreported
-      if token == live_token
-      {
-        return Some( acct.name.clone() );
-      }
-    }
-  }
-  None
+      let path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
+      std::fs::read_to_string( &path )
+        .ok()
+        .and_then( | s | crate::account::session_token( &s, "accessToken" ) )
+        .is_some_and( | token | token == live_token )
+    } )
+    .map( | acct | acct.name.clone() )
+    .collect()
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -397,10 +400,11 @@ pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext
     Vec::new()
   };
 
-  // Detect which account matches the live session token (graceful: None when creds absent).
+  // Detect which accounts match the live session token (graceful: none when creds absent).
   let live_creds = crate::ClaudePaths::new()
     .map_or_else( || std::path::PathBuf::from( "/dev/null" ), |p| p.credentials_file() );
-  let current_name = detect_current_account( &all_accounts, &live_creds, &credential_store );
+  let current_names = detect_current_accounts( &all_accounts, &live_creds, &credential_store );
+  let current_name  = current_names.first().cloned();
 
   let content = match opts.format
   {
@@ -413,6 +417,19 @@ pub( crate ) fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext
     {
       render_accounts_table( &accounts, &owners, &cols, current_name.as_deref() )
     }
+  };
+  // Fix(BUG-582): `Current:` marks only the first match, so name every match under the listing.
+  // Root cause: detection returned the first token match, trusting Feature 016's "at most one
+  //   account matches", so a second slot holding the live session went unreported.
+  // Pitfall: JSON is exempt, like `.usage`'s json; a warning line there would break parsers.
+  let content = if opts.format == OutputFormat::Json
+  {
+    content
+  }
+  else
+  {
+    let holders : Vec< &str > = current_names.iter().map( String::as_str ).collect();
+    content + &crate::usage::shared_session_warning( &holders )
   };
   // Fix(audit-accounts-no-color): no_color:: is registered for .accounts and documented in
   //   its parameter list, but was never parsed — `format::table no_color::1` leaked the

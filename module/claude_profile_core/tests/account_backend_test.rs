@@ -40,6 +40,7 @@
 //! | `ft07_071_switch_to_redirect_writes_env_keys` | Feature 071/T03/AC-06: switch_account() to a redirect account writes env.ANTHROPIC_BASE_URL/AUTH_TOKEN/MODEL; unrelated fields survive |
 //! | `ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env` | Feature 071/T03/AC-07: switch_account() to an anthropic account removes the 3 env keys and prunes `env` when empty |
 //! | `ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey` | Feature 071/T03/AC-07: an unrelated pre-existing env.* sub-key survives a switch-away from redirect |
+//! | `mre_bug_585_anthropic_switch_keeps_user_tier_keys` | BUG-585: an Anthropic → Anthropic switch keeps tier-named env keys the user set (no redirect session to leave) |
 //! | `ft10_071_read_backend_missing_file_defaults_anthropic` | Feature 071/T14: read_backend() on missing {name}.json defaults to Anthropic |
 //! | `ft11_071_read_backend_redirect_value` | Feature 071/T14: read_backend() reads an explicit "backend":"redirect" field |
 //! | `ft12_071_read_backend_corrupt_content_defaults_anthropic` | Feature 071/T14: read_backend() on corrupt content defaults to Anthropic, no panic |
@@ -356,7 +357,7 @@ fn ft08_071_switch_to_anthropic_removes_env_keys_and_prunes_empty_env()
 
 /// T03/433/AC-07: switching to an anthropic account preserves any unrelated `env.*`
 /// sub-key that was already present — only the 3 `ANTHROPIC_*` keys are removed.
-// BUG-585 — the preserved key, TZ, is outside the tier lists, so deleting a user's tier-named key can't show here
+// BUG-585 — the preserved key, TZ, isn't a tier key, so deleting a user's tier-named key can't show here
 #[ test ]
 fn ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey()
 {
@@ -388,6 +389,67 @@ fn ft09_071_switch_to_anthropic_preserves_unrelated_env_subkey()
   assert!(
     live_json[ "env" ].get( "ANTHROPIC_BASE_URL" ).is_none(),
     "AC-07: ANTHROPIC_BASE_URL must be removed on switch to anthropic; got: {live}",
+  );
+}
+
+/// mre585: an Anthropic → Anthropic switch keeps tier-named `env` keys the user set
+/// themselves. With no `ANTHROPIC_BASE_URL` in `env` there's no redirect session to leave,
+/// so clp wrote none of these keys and must not remove them.
+///
+/// # Root Cause
+/// The Anthropic branch of `sync_backend_env_vars()` cleared both tier bundles on every
+/// switch, matching keys by name alone, so a user's own `CLAUDE_CODE_EFFORT_LEVEL` or
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` was deleted by any switch onto an Anthropic account.
+///
+/// # Why Not Caught
+/// Every Anthropic-target test started from an `env` a redirect switch had just written, and
+/// the preservation checks used `TZ` and `UNRELATED_VAR`, names outside the tier lists.
+///
+/// # Fix Applied
+/// The tier bundles are cleared only when `env` holds `ANTHROPIC_BASE_URL` before the
+/// switch, the marker the redirect branch always writes alongside them.
+///
+/// # Prevention
+/// This fixture uses tier-named keys and no redirect marker. `ft04_073` and `ft09_078` stay
+/// as the redirect → Anthropic counterpart, where the bundles must still go.
+///
+/// # Pitfall
+/// A key name shared with the user's own configuration isn't proof of ownership; remove such
+/// a key only with evidence that clp wrote it.
+#[ doc = "bug_reproducer(BUG-585)" ]
+#[ test ]
+fn mre_bug_585_anthropic_switch_keeps_user_tier_keys()
+{
+  let tmp        = TempDir::new().unwrap();
+  let store      = tmp.path().join( "store" );
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  std::fs::write(
+    store.join( "alice@test.com.credentials.json" ),
+    r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+  ).unwrap();
+  // An Anthropic session the user tuned by hand: tier-named keys, no ANTHROPIC_BASE_URL.
+  std::fs::write(
+    dot_claude.join( "settings.json" ),
+    r#"{"env":{"CLAUDE_CODE_EFFORT_LEVEL":"high","CLAUDE_CODE_AUTO_COMPACT_WINDOW":"400000"}}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "alice@test.com", &store, &paths ).unwrap();
+
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) )
+    .expect( "~/.claude/settings.json must exist after switch_account" );
+  let live_json : serde_json::Value = serde_json::from_str( &live )
+    .expect( "settings.json must be valid JSON" );
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_EFFORT_LEVEL" ].as_str(), Some( "high" ),
+    "BUG-585: a user-set tier-named key must survive an Anthropic → Anthropic switch; got: {live}",
+  );
+  assert_eq!(
+    live_json[ "env" ][ "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ].as_str(), Some( "400000" ),
+    "BUG-585: a user-set tier-named key must survive an Anthropic → Anthropic switch; got: {live}",
   );
 }
 

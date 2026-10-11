@@ -76,7 +76,8 @@ pub use super::fetch::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota
 pub use super::fetch_cache::{ read_cached_quota, read_cached_error };
 
 // ── Stalest ───────────────────────────────────────────────────────────────
-pub use super::stalest::{ select_stalest, reduction_applies };
+// BUG-583 — selection_trace is re-exported for its format test
+pub use super::stalest::{ select_stalest, selection_trace, reduction_applies };
 
 // ── Types (UsageParams) ───────────────────────────────────────────────────
 pub use super::types::UsageParams;

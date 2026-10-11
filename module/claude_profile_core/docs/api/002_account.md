@@ -15,7 +15,18 @@
 
 #### Account CRUD and identity
 
-`Account` (parsed store entry), `AccountBackend` (`Oauth`/`Redirect`), `list`, `save`, `delete`, `check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`, `lock_store` + `StoreLock` (blocking exclusive `flock` on `{store}/-store.lock`, RAII release; taken internally by `save`/`switch_account`/`delete` so their multi-file sequences never interleave across processes). A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`. Store location helpers (TSK-542): `credential_store_for_root` (single owner of the `{root}/.persistent/claude/credential` suffix — `claude_profile::PersistPaths::credential_store` delegates here) and `default_credential_store` (env-derived root: `$PRO` if it is an existing directory, else `$HOME`/`$USERPROFILE`, else `None`) let external consumers such as `claude_runner` locate the store without duplicating the path convention. <!-- BUG-582 — save copies the live session under the given name without checking it against the other slots -->
+`Account` (parsed store entry), `AccountBackend` (`Anthropic`/`Redirect`), `list`, `save`, `slots_holding_session`, `session_token`, `refuse_session_held_elsewhere`, `delete`,
+`check_delete_preconditions`, `validate_name`, `validate_redirect_name`, `validate_name_for_save`, `credential_stem`, `lock_store` + `StoreLock` (blocking exclusive `flock` on `{store}/-store.lock`,
+RAII release; taken internally by `save`/`switch_account`/`delete` so their multi-file sequences never interleave across processes).
+A store entry is `{name}.credentials.json` plus sidecar metadata in `{name}.json`.
+`save` copying the live session (no `creds` given, Anthropic backend) asks `slots_holding_session` for the slots whose `claudeAiOauth.refreshToken` equals the live one
+(a redirect key's `accessToken`, as it carries no refresh token), in name order, and refuses naming the first that isn't `name`, before writing any
+account file (BUG-582). That check is `refuse_session_held_elsewhere`, which otherwise returns whether `name` itself holds the session; a re-backend
+reset runs it first. When `name` holds it and `{name}.json` records an `oauthAccount.emailAddress`, `save` keeps that `oauthAccount` unless `~/.claude.json` names that account or `name`.
+Store location helpers (TSK-542): `credential_store_for_root` (single owner of the `{root}/.persistent/claude/credential` suffix — `claude_profile::PersistPaths::credential_store` delegates here)
+and `default_credential_store` (env-derived root: `$PRO` if it is an existing directory, else `$HOME`/`$USERPROFILE`, else `None`)
+let external consumers such as `claude_runner` locate the store without duplicating the path convention.
+<!-- BUG-582 — save used to copy the live session under the given name without checking it against the other slots -->
 
 #### Switching and session overrides
 
@@ -40,6 +51,10 @@
 #### Quota cache
 
 `QuotaCacheEntry` (fetched_at, per-period utilization/reset pairs, `model_override`, `last_touch_at`, `touch_idle`, `org_created_at`), `write_quota_cache`, `read_quota_cache`, `write_cache_field`, `write_cache_string`, `write_cache_bool`, `write_cache_string_if_changed`, `parse_iso_utc_secs`. Two-tier layout (TSK-500/502): volatile fetch snapshots (`fetched_at`, periods) live in the tracked per-host tree `cache/{host}_{user}/{name}.json`, merged freshest-`fetched_at`-wins across every host subtree (plus self-cleaning legacy `-cache/` migration); low-churn metadata (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) lives as top-level keys of the tracked store-root `{name}.json` via the `write_cache_*` helpers — the same file `read_quota_cache` consults, which is why Fix(BUG-488) routed the touch-flag writes through them.
+Failure-side writers: `write_quota_cache_error` records the definitive no-subscription verdict (`last_error`, `last_error_at`), and `write_quota_cache_attempt`
+stamps `last_attempt_at` for a failed live fetch (BUG-591; `.usage`'s fetch loop calls it on every failure); `QuotaCacheEntry` carries all three. Both merge
+into the freshest snapshot without touching `fetched_at`, the periods or the history ring, write nothing when no snapshot exists anywhere, and are cleared by
+the next `write_quota_cache`. Copies tied on `fetched_at` are folded: the read and both writers take the newest verdict pair and the newest stamp among them.
 
 #### Measurement history
 
@@ -65,7 +80,7 @@ Fallible operations return `std::io::Error`; validation failures use `InvalidInp
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/account_test.rs` | Deletion, snapshot cleanup, quota-cache storage (TSK-500 two-tier) |
+| `../../tests/account_test.rs` | Deletion, snapshot cleanup, quota-cache storage (TSK-500 two-tier), and `save`'s session guard with `slots_holding_session` and the identity a re-save keeps (BUG-582) |
 | `../../tests/account_refresh_test.rs` | `refresh_account_token` failure paths |
 | `../../tests/account_ownership_test.rs` | Identity/marker helpers incl. `resolve_user`, `active_account`, `credential_store_for_root` (TSK-542) |
 | `../../tests/account_quota_cache_test.rs` | Quota-cache write/read incl. `utilization` key + legacy `left_pct` dual-key read (BUG-540) |

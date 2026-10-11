@@ -42,6 +42,7 @@ use claude_core::settings_io::{
   infer_type, json_escape, set_setting, get_setting, read_all_settings, remove_setting,
   set_env_var, remove_env_var, StoredAs,
 };
+// BUG-586 — direct calls to claude_core's settings_io mutators, which clp's switch calls too
 
 // Helper: a path inside a temp dir that does NOT yet exist.
 // `read_or_empty` handles NotFound → empty; it does not handle empty files.
@@ -137,7 +138,7 @@ fn json_escape_handles_special_chars()
 fn set_and_get_setting_round_trip()
 {
   let ( _dir, path ) = new_settings_path();
-  set_setting( &path, "myKey", "myValue" ).expect( "set" );
+  set_setting( &path, "myKey", "myValue", true ).expect( "set" );
   let got = get_setting( &path, "myKey" ).expect( "get" );
   assert_eq!( got, Some( "myValue".to_string() ) );
 }
@@ -146,7 +147,7 @@ fn set_and_get_setting_round_trip()
 fn get_setting_absent_key_returns_none()
 {
   let ( _dir, path ) = new_settings_path();
-  set_setting( &path, "a", "1" ).expect( "set" );
+  set_setting( &path, "a", "1", true ).expect( "set" );
   let got = get_setting( &path, "missing" ).expect( "get" );
   assert_eq!( got, None );
 }
@@ -155,8 +156,8 @@ fn get_setting_absent_key_returns_none()
 fn read_all_settings_preserves_pairs()
 {
   let ( _dir, path ) = new_settings_path();
-  set_setting( &path, "alpha", "1" ).expect( "set alpha" );
-  set_setting( &path, "beta",  "2" ).expect( "set beta"  );
+  set_setting( &path, "alpha", "1", true ).expect( "set alpha" );
+  set_setting( &path, "beta",  "2", true ).expect( "set beta"  );
   let pairs = read_all_settings( &path ).expect( "read" );
   let keys : Vec< &str > = pairs.iter().map( |( k, _ )| k.as_str() ).collect();
   assert!( keys.contains( &"alpha" ), "expected alpha in pairs" );
@@ -167,9 +168,9 @@ fn read_all_settings_preserves_pairs()
 fn remove_setting_deletes_existing_key()
 {
   let ( _dir, path ) = new_settings_path();
-  set_setting( &path, "alpha", "1" ).expect( "set alpha" );
-  set_setting( &path, "beta",  "2" ).expect( "set beta"  );
-  remove_setting( &path, "alpha" ).expect( "remove alpha" );
+  set_setting( &path, "alpha", "1", true ).expect( "set alpha" );
+  set_setting( &path, "beta",  "2", true ).expect( "set beta"  );
+  remove_setting( &path, "alpha", true ).expect( "remove alpha" );
 
   let got = get_setting( &path, "alpha" ).expect( "get alpha" );
   assert_eq!( got, None, "alpha should be removed" );
@@ -181,8 +182,8 @@ fn remove_setting_deletes_existing_key()
 fn remove_setting_missing_key_is_noop()
 {
   let ( _dir, path ) = new_settings_path();
-  set_setting( &path, "alpha", "1" ).expect( "set alpha" );
-  remove_setting( &path, "does_not_exist" ).expect( "remove absent key is a no-op" );
+  set_setting( &path, "alpha", "1", true ).expect( "set alpha" );
+  remove_setting( &path, "does_not_exist", true ).expect( "remove absent key is a no-op" );
 
   let got = get_setting( &path, "alpha" ).expect( "get alpha" );
   assert_eq!( got, Some( "1".to_string() ), "existing key must be unaffected" );
@@ -193,14 +194,14 @@ fn remove_setting_missing_file_is_noop()
 {
   let dir  = tempfile::TempDir::new().expect( "temp dir" );
   let path = dir.path().join( "does_not_exist.json" );
-  remove_setting( &path, "any_key" ).expect( "remove on missing file is a no-op, not an error" );
+  remove_setting( &path, "any_key", true ).expect( "remove on missing file is a no-op, not an error" );
 }
 
 #[test]
 fn set_env_var_and_remove_env_var_round_trip()
 {
   let ( _dir, path ) = new_settings_path();
-  set_env_var( &path, "MY_VAR", "hello" ).expect( "set env var" );
+  set_env_var( &path, "MY_VAR", "hello", true ).expect( "set env var" );
   let got = get_setting( &path, "env" ).expect( "get env" );
   assert!( got.is_some(), "env key should exist after set_env_var" );
   assert!(
@@ -208,7 +209,7 @@ fn set_env_var_and_remove_env_var_round_trip()
     "env object should contain MY_VAR"
   );
 
-  remove_env_var( &path, "MY_VAR" ).expect( "remove env var" );
+  remove_env_var( &path, "MY_VAR", true ).expect( "remove env var" );
   let after = get_setting( &path, "env" ).expect( "get env after remove" );
   assert!(
     after.as_deref().is_none_or( | s | !s.contains( "MY_VAR" ) ),

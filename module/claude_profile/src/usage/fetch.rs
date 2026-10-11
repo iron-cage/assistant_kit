@@ -37,6 +37,38 @@ fn is_token_current( credential_store : &std::path::Path, name : &str, live_toke
   } )
 }
 
+/// Read the live session's own `accessToken` (BUG-582: never an MCP entry's) — `None` on any read
+/// or parse error, so that no stored account then counts as current.
+pub( crate ) fn read_live_token( live_creds_file : &std::path::Path ) -> Option< String >
+{
+  std::fs::read_to_string( live_creds_file )
+    .ok()
+    .and_then( | s | crate::account::session_token( &s, "accessToken" ) )
+}
+
+/// Whether `fetch_quota_for_list` takes `acct` past R1, G1, the solo gate and G1b, the gates
+/// that skip an account however `stalest::K` selected it. `select_stalest` ranks only accounts
+/// this passes, so no stalest slot goes to an account the loop would skip (BUG-583).
+///
+/// Same order as the loop: R1 (redirect backend), G1 (not owned, decided before any token
+/// read), the solo gate (`solo::1` and not the live session here), then G1b (occupied on
+/// another machine, unless it's the live session here).
+pub( crate ) fn passes_fetch_gates(
+  acct               : &crate::account::Account,
+  credential_store   : &std::path::Path,
+  occupied_elsewhere : &std::collections::HashSet< String >,
+  live_token         : Option< &String >,
+  solo               : bool,
+) -> bool
+{
+  if acct.backend == AccountBackend::Redirect { return false; }
+  let owner = claude_profile_core::account::read_owner( credential_store, &acct.name );
+  if !claude_profile_core::account::is_owned( &owner ) { return false; }
+  let is_current = is_token_current( credential_store, &acct.name, live_token );
+  if solo && !is_current { return false; }
+  !occupied_elsewhere.contains( &acct.name ) || is_current
+}
+
 /// Prepend `row` to `results` only when no entry with the same `name` is already present.
 ///
 /// Enforces the at-most-one-row-per-name invariant for the synthetic current-session row
@@ -70,9 +102,12 @@ pub fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : Accoun
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
-/// When `trace` is `true`, one timestamped diagnostic line is written to stderr before reading
-/// each account's credentials and one after the final result is determined (including
-/// any `billing_type` override — see AC-31).
+/// When `trace` is `true`, every saved account gets timestamped diagnostic lines on stderr. An
+/// account that skips the API (redirect backend, not owned, solo, occupied elsewhere, stale,
+/// cache-first, locally expired token) gets one line naming why. On the live path one line names
+/// the credentials file the token is read from, one names the `GET`, and one follows once the
+/// final result is determined (including any `billing_type` override — see AC-31); an unreadable
+/// token prints a single `cannot read token` line in place of the last two.
 ///
 /// When `stale_selected` is `Some`, only the named accounts take the HTTP path; every
 /// other account renders from cache via `approximate_quota` (stale-first fetch
@@ -91,9 +126,7 @@ pub fn fetch_quota_for_list(
 ) -> Vec< AccountQuota >
 {
   // Read the live session token once (graceful degradation on any error).
-  let live_token : Option< String > = std::fs::read_to_string( live_creds_file )
-    .ok()
-    .and_then( |s| crate::account::parse_string_field( &s, "accessToken" ) );
+  let live_token = read_live_token( live_creds_file );
 
   // Compute once — which account names are active on OTHER machines.
   let occupied_elsewhere = crate::account::other_machines_active( credential_store );
@@ -119,9 +152,14 @@ pub fn fetch_quota_for_list(
     // Checked before G1 (ownership): ownership gating exists to protect Anthropic quota
     // from cross-machine races, which is moot for a backend with no Anthropic quota at
     // all. acct.backend is already in scope from list(), so no extra disk read is needed.
-    // BUG-587 — this branch continues without a trace line, unlike every other skip in the loop
     if acct.backend == AccountBackend::Redirect
     {
+      // Fix(BUG-587): name the redirect row in the fetch stage, like every other skip here.
+      // Root cause: R1 continued before any trace statement, so under trace::1 a redirect
+      //   account showed up in the refresh and touch stages but never in fetch.
+      // Pitfall: each early exit in this loop traces itself; a new `continue` is silent
+      //   until it gets its own line.
+      if trace { eprintln!( "{}fetch  {}  skipped (reason: redirect backend)", trace_ts(), acct.name ); }
       let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
       let renewal_at     = read_renewal_at( credential_store, &acct.name );
       // Fix(BUG-537): resolve is_current via the same AC-02 live-token comparison as the
@@ -243,6 +281,7 @@ pub fn fetch_quota_for_list(
       continue;
     }
 
+    // BUG-583 — select_stalest ranks only what passes_fetch_gates admits, so no gate above skips a pick
     // Stale gate: with stalest::K, only the K selected accounts take the HTTP path;
     // the rest render from cache (task 499). Fires after G1/solo/G1b (those gates
     // decide per-account safety and preempt reduction) and BEFORE cache-first, so a
@@ -404,6 +443,16 @@ pub fn fetch_quota_for_list(
         }
       }
     };
+    // Fix(BUG-591): stamp every failed live attempt, once the result above is final.
+    // Root cause: only the Class-A branch wrote anything on failure, so a 429, 5xx, 401/403,
+    //   local expiry or unreadable token left select_stalest's attempt key at the last
+    //   success, and stalest::K re-picked this account on every tick.
+    // Pitfall: the stamp is scheduling state — it must never feed `fallback_reason` or
+    //   `last_error`, which would render a passing failure as a permanent one.
+    if result.is_err()
+    {
+      claude_profile_core::account::write_quota_cache_attempt( credential_store, &acct.name );
+    }
     // Read host/role from {name}.json — best-effort, empty on missing/parse error.
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     let renewal_at = read_renewal_at( credential_store, &acct.name );

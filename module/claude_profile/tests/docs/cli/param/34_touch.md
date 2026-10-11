@@ -87,7 +87,8 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 ### EC-7: `touch::0` with idle account — no subprocess spawned (Behavioral Divergence A)
 
 - **Given:** One saved account with valid token and quota data where `five_hour.resets_at` is absent (idle — no active 5h window; would be touched with `touch::1`).
-- **When:** `clp .usage touch::0`
+- **When:** `clp .usage touch::0 cols::-owner`. The account has no owner, so its Owner cell would also render `—`; hiding the column leaves the 5h Reset `—` as the one checked.
+  <!-- BUG-588 — EC-7's test hides the Owner column, whose unowned cell renders `—` too -->
 - **Then:** Exits 0. No subprocess spawned. The 5h Reset column is unchanged from its pre-invocation value — `—` for this fixture, since the account is idle with no corroborated touch record (see Note). `touch::0` disables the touch trigger regardless of account state.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with idle account)

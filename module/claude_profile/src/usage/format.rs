@@ -262,15 +262,17 @@ pub fn renewal_secs(
     let mut ts = parse_iso_secs( renewal_at )?;
     let ( mut cur_year, mut cur_month, orig_day ) = unix_to_date( ts );
     // Fix(BUG-589): keep the anchor's time of day across the monthly advance.
-    // Root cause: date_to_unix() returns 00:00 UTC, so rebuilding each month from (y, m, d) dropped the
-    //   stored time — early by up to 23h 59m, and a whole month late on the renewal day before that time.
+    // Root cause: date_to_unix() returns 00:00 UTC, so rebuilding each month from (y, m, d)
+    //   dropped the stored time — early by up to 23h 59m 59s, and a whole month late on the
+    //   renewal day before that time.
     // Pitfall: a calendar-month step has to rebuild the whole instant, not just the date.
     let time_of_day = ts % 86_400;
     while ts < now_secs
     {
       cur_month += 1;
       if cur_month > 12 { cur_month = 1; cur_year += 1; }
-      ts = date_to_unix( cur_year, cur_month, orig_day.min( days_in_month( cur_year, cur_month ) ) ) + time_of_day;
+      let day = orig_day.min( days_in_month( cur_year, cur_month ) );
+      ts = date_to_unix( cur_year, cur_month, day ) + time_of_day;
     }
     return Some( ( ts.saturating_sub( now_secs ), false ) );
   }
@@ -796,6 +798,7 @@ pub fn quota_cells_for
     prefix_tilde( &mut cells );
     // `saturating_sub` clamps an elapsed countdown to 0 in `quota_data_cells`, making "in 0s"
     // indistinguishable from an imminent future event. Re-check the raw timestamps here.
+    // BUG-584 — touch's guard 7 counts a present reset as running exactly when this calls it not past
     let is_past = |iso : Option< &str >| -> bool
     {
       iso.and_then( claude_quota::iso_to_unix_secs ).is_some_and( |t| t < now_secs )

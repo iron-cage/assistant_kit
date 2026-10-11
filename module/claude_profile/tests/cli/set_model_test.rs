@@ -130,7 +130,7 @@ fn ft03_set_model_haiku_writes_full_id()
 }
 
 /// FT-04 (AC-04): `set_model::default` removes the `model` key from `settings.json`;
-/// unrelated keys (e.g. `theme`) are preserved. Exit 0.
+/// unrelated keys (e.g. `theme`, and a tier-named `env` key the user set) are preserved. Exit 0.
 #[ test ]
 fn ft04_set_model_default_removes_key_preserves_others()
 {
@@ -139,12 +139,13 @@ fn ft04_set_model_default_removes_key_preserves_others()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Pre-seed settings.json with a model AND an unrelated key.
+  // Pre-seed settings.json with a model AND unrelated keys. CLAUDE_CODE_EFFORT_LEVEL has a tier
+  // key's name, but with no ANTHROPIC_BASE_URL beside it no redirect session wrote it.
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write(
     claude_dir.join( "settings.json" ),
-    r#"{"model":"claude-opus-4-8","theme":"dark"}"#,
+    r#"{"model":"claude-opus-4-8","theme":"dark","env":{"CLAUDE_CODE_EFFORT_LEVEL":"high"}}"#,
   ).unwrap();
 
   let out = run_cs_with_env(
@@ -163,6 +164,13 @@ fn ft04_set_model_default_removes_key_preserves_others()
   assert!(
     content.contains( "\"theme\"" ),
     "settings.json must preserve `theme` key after set_model::default, got: {content}",
+  );
+  // BUG-585 — an Anthropic switch with no redirect session to leave must keep the user's tier key
+  let settings : serde_json::Value = serde_json::from_str( &content )
+    .expect( "settings.json must be valid JSON" );
+  assert_eq!(
+    settings[ "env" ][ "CLAUDE_CODE_EFFORT_LEVEL" ].as_str(), Some( "high" ),
+    "settings.json must keep the user's env.CLAUDE_CODE_EFFORT_LEVEL, got: {content}",
   );
 }
 

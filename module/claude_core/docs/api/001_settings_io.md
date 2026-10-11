@@ -33,21 +33,26 @@ Returns the stringified value for a single key, or `None` if absent, regardless 
 
 Returns the value for a single key only if its underlying JSON type is a plain string. Numbers, bools, `null`, and nested objects/arrays are treated as `None` ("no preference") rather than coerced to a string — use `get_setting` when the type-erased stringified form is wanted instead.
 
-#### `set_setting(path: &Path, key: &str, raw_value: &str) -> Result<StoredAs, io::Error>`
+#### `set_setting(path: &Path, key: &str, raw_value: &str, trace: bool) -> Result<StoredAs, io::Error>`
 
 Writes (or updates) a single key, creating the file if absent. Returns the `StoredAs` variant chosen for the value. Atomic write.
 
-#### `remove_setting(path: &Path, key: &str) -> Result<(), io::Error>`
+#### `remove_setting(path: &Path, key: &str, trace: bool) -> Result<(), io::Error>`
 
 Removes a top-level key. No-op if the key or file is absent. Atomic write.
 
-#### `set_env_var(path: &Path, key: &str, value: &str) -> Result<(), io::Error>`
+#### `set_env_var(path: &Path, key: &str, value: &str, trace: bool) -> Result<(), io::Error>`
 
 Sets a key inside the `"env"` sub-object, creating the `"env"` key if absent. Environment variable values are always stored as JSON strings. Atomic write.
 
-#### `remove_env_var(path: &Path, key: &str) -> Result<(), io::Error>`
+#### `remove_env_var(path: &Path, key: &str, trace: bool) -> Result<(), io::Error>`
 
 Removes a key from the `"env"` sub-object. No-op if the key or `"env"` block is absent. Atomic write.
+
+With `trace` set, each of these four mutators first prints one parameter-trace line to stderr naming the function and its parameters;
+`set_setting` and `set_env_var` pass the value through `file_io::redact_for_trace`. With `trace` unset they print nothing.
+The caller decides: `claude_version` and `claude_version_core` pass `true` (pattern 002's parameter trace),
+and `claude_profile_core`'s account switch passes `false`, since clp traces a switch through its own timestamped lines (BUG-586).
 
 #### `json_parse_flat_object(src: &str) -> Result<Vec<(String, String, StoredAs)>, io::Error>`
 
@@ -66,6 +71,7 @@ All fallible operations return `std::io::Error`. Read operations (`read_all_sett
 - `StoredAs`'s four variants (`Bool`, `Number`, `Str`, `Raw`) are stable; `"0"`/`"1"` classify as `Number`, never `Bool`.
 - All read functions accept any well-formed flat JSON object; nested objects/arrays always round-trip verbatim (byte-for-byte within whitespace normalization), never partially interpreted.
 - All write functions (`set_setting`, `remove_setting`, `set_env_var`, `remove_env_var`) are atomic — a crash mid-write never leaves a partially-written settings file.
+- The write functions print to stderr only when the caller passes `trace`; with it unset, nothing in this module writes to stdout or stderr.
 
 ### Sources
 

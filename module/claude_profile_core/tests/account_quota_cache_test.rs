@@ -24,6 +24,11 @@
 //! | `bug_557_definitive_failure_persists_without_disturbing_last_success` | BUG-557: write_quota_cache_error records the verdict; `fetched_at`, periods and history all survive it |
 //! | `bug_557_success_clears_a_prior_failure` | BUG-557: a later successful fetch drops `last_error`/`last_error_at` by construction |
 //! | `bug_557_failure_without_any_prior_cache_writes_nothing` | BUG-557: merge-only — a never-succeeded account gets no file, so it keeps ranking infinitely stale |
+//! | `bug_591_attempt_stamp_preserves_last_success_and_verdict` | BUG-591: write_quota_cache_attempt stamps `last_attempt_at`; `fetched_at`, periods, history and a recorded verdict all survive it |
+//! | `bug_591_success_clears_the_attempt_stamp` | BUG-591: a later successful fetch drops `last_attempt_at` by construction |
+//! | `bug_591_attempt_without_any_prior_cache_writes_nothing` | BUG-591: merge-only, as BUG-557 — no prior success, no file |
+//! | `bug_591_tied_copies_keep_own_stamp_and_foreign_verdict` | BUG-591: a stamp merged into a copy of another host's snapshot is read back, and doesn't hide the verdict that host records on its copy later |
+//! | `bug_591_tied_copies_keep_foreign_verdict_and_newest_stamp` | BUG-591: another host's verdict and stamp on its copy of this host's snapshot are read here; the next local stamp keeps the verdict and wins |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1176,8 +1181,8 @@ fn bug_557_definitive_failure_persists_without_disturbing_last_success()
 /// account permanently 🔴.
 ///
 /// **Pitfall**: `last_error_at` must clear alongside `last_error` — `select_stalest` ranks
-/// on `max(fetched_at, last_error_at)`, so an orphaned timestamp would keep skewing the
-/// refresh schedule after the error itself was gone.
+/// on `max(fetched_at, last_error_at, last_attempt_at)`, so an orphaned timestamp would keep
+/// skewing the refresh schedule after the error itself was gone.
 #[ test ]
 fn bug_557_success_clears_a_prior_failure()
 {
@@ -1235,5 +1240,262 @@ fn bug_557_failure_without_any_prior_cache_writes_nothing()
   assert!(
     account::read_quota_cache( store, name ).is_none(),
     "BUG-557: a failure with no prior success must not fabricate a cache entry",
+  );
+}
+
+// ── BUG-591: failed-attempt stamp ────────────────────────────────────────────
+
+/// bug_reproducer(BUG-591): the attempt stamp records that a fetch was tried and failed,
+/// and disturbs nothing else: not the last success, not the history ring, not a verdict.
+///
+/// **Root Cause**: a failure other than the Class-A verdict wrote nothing at all, so the
+/// stale-first selector kept ranking the account by its last success and picked it again
+/// on every tick.
+///
+/// **Why Not Caught**: the BUG-557 tests here cover the one failure writer that existed;
+/// the other failures had no writer to test.
+///
+/// **Fix Applied**: `write_quota_cache_attempt` merges `last_attempt_at` into the freshest
+/// snapshot through the same path as `write_quota_cache_error`.
+///
+/// **Prevention**: the stamp lands on top of a recorded verdict on purpose: a Class-A
+/// failure gets both writes, and the second must not drop the first.
+///
+/// **Pitfall**: `fetched_at` keeps meaning "last success". Advancing it here would make a
+/// failing account's cache-rendered row claim fresh data.
+#[ test ]
+fn bug_591_attempt_stamp_preserves_last_success_and_verdict()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "failing@acme.com";
+
+  account::write_quota_cache(
+    store, name,
+    Some( ( 20.0, Some( "2026-08-27T12:00:00Z" ) ) ),
+    Some( ( 55.0, Some( "2026-08-30T12:00:00Z" ) ) ),
+    None,
+  );
+  account::write_history_entry( store, name, 1_756_000_000, Some( ( 20.0, "" ) ), None, None );
+  account::write_quota_cache_error( store, name, "no subscription" );
+  let before = account::read_quota_cache( store, name ).expect( "success write must be readable" );
+  assert_eq!( before.last_attempt_at, None, "precondition: no attempt stamp before the write" );
+
+  account::write_quota_cache_attempt( store, name );
+
+  let after = account::read_quota_cache( store, name ).expect( "cache must survive the stamp" );
+  assert!(
+    after.last_attempt_at.as_deref().and_then( account::parse_iso_utc_secs ).is_some(),
+    "BUG-591: the attempt stamp must be a readable UTC timestamp, got {:?}", after.last_attempt_at,
+  );
+  assert_eq!(
+    after.fetched_at, before.fetched_at,
+    "BUG-591: fetched_at means 'last success' — an attempt must never advance it",
+  );
+  assert_eq!( after.five_hour, before.five_hour, "BUG-591: the last-good 5h reading must survive" );
+  assert_eq!( after.seven_day, before.seven_day, "BUG-591: the last-good 7d reading must survive" );
+  assert_eq!(
+    ( after.last_error, after.last_error_at ), ( before.last_error, before.last_error_at ),
+    "BUG-591: a recorded no-subscription verdict must survive the stamp",
+  );
+  assert_eq!(
+    account::read_history( store, name ).len(), 1,
+    "BUG-591: the measurement history ring must survive the stamp",
+  );
+}
+
+/// bug_reproducer(BUG-591): a later success clears the attempt stamp, like the BUG-557
+/// verdict, so a recovered account ranks by its new success alone.
+///
+/// **Root Cause**: see `bug_591_attempt_stamp_preserves_last_success_and_verdict`.
+///
+/// **Why Not Caught**: new field; nothing wrote it before.
+///
+/// **Fix Applied**: none beyond the shape `write_quota_cache` already has: it rebuilds the
+/// object from scratch on every success, so the stamp is dropped rather than merged forward.
+///
+/// **Prevention**: assert the absence explicitly, so a merge-preserving rewrite of
+/// `write_quota_cache` can't quietly keep a stale stamp alive.
+///
+/// **Pitfall**: a stamp left behind would be harmless to ranking only while it is older
+/// than the new success. Clearing it keeps the key's meaning simple: a failure since then.
+#[ test ]
+fn bug_591_success_clears_the_attempt_stamp()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+  let name  = "revived@acme.com";
+
+  account::write_quota_cache( store, name, Some( ( 10.0, None ) ), None, None );
+  account::write_quota_cache_attempt( store, name );
+  assert!(
+    account::read_quota_cache( store, name ).unwrap().last_attempt_at.is_some(),
+    "precondition: the attempt must be stamped before the recovery write",
+  );
+
+  account::write_quota_cache( store, name, Some( ( 12.0, None ) ), None, None );
+
+  let entry = account::read_quota_cache( store, name ).expect( "cache present" );
+  assert_eq!(
+    entry.last_attempt_at, None,
+    "BUG-591: a successful fetch must clear the attempt stamp",
+  );
+}
+
+/// bug_reproducer(BUG-591): an account that has never fetched successfully gets no cache
+/// file from a failed attempt alone.
+///
+/// **Root Cause**: n/a; this pins a deliberate boundary of the fix.
+///
+/// **Why Not Caught**: n/a.
+///
+/// **Fix Applied**: `write_quota_cache_attempt` is merge-only, like `write_quota_cache_error`.
+///
+/// **Prevention**: a never-reached account ranks `u64::MAX` in the stale-first selector, so
+/// it is fetched first; a file written here would give it a finite age and demote it.
+///
+/// **Pitfall**: "no file after a failure" is the intended outcome, not a missed write.
+#[ test ]
+fn bug_591_attempt_without_any_prior_cache_writes_nothing()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "never-seen@acme.com";
+
+  account::write_quota_cache_attempt( store.path(), name );
+
+  assert!(
+    account::read_quota_cache( store.path(), name ).is_none(),
+    "BUG-591: a failed attempt with no prior success must not fabricate a cache entry",
+  );
+  assert!(
+    !store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) ).exists(),
+    "BUG-591: merge-only — no own-host file may appear",
+  );
+}
+
+/// Write a volatile cache object as-is into a named host subtree.
+fn seed_host_value( store : &std::path::Path, host_dir : &str, name : &str, value : &serde_json::Value )
+{
+  let dir = store.join( "cache" ).join( host_dir );
+  std::fs::create_dir_all( &dir ).unwrap();
+  std::fs::write( dir.join( format!( "{name}.json" ) ), value.to_string() ).unwrap();
+}
+
+/// bug_reproducer(BUG-591): a stamp merged into a copy of another host's snapshot is read
+/// back, and doesn't hide the no-subscription verdict that host records on its copy later.
+///
+/// **Root Cause**: both copies carry the snapshot's `fetched_at`, and the read took the
+/// verdict and the stamp from the first tied copy alone. The first fix listed this host's
+/// own copy first, so the stamp was read back but a dead account rendered healthy here.
+///
+/// **Why Not Caught**: the first tie test seeded copies without a verdict, so the copy read
+/// back could only differ by the stamp.
+///
+/// **Fix Applied**: `freshest_volatile` folds the newest verdict pair and the newest stamp
+/// across the copies tied on `fetched_at`, for the read and for both failure writers.
+///
+/// **Prevention**: the stamp and the verdict sit in different files, so without the fold one
+/// of the two asserts fails whichever copy the directory lists first.
+///
+/// **Pitfall**: a tie-break can't fix this; any single winning copy drops what only the
+/// other one holds.
+#[ test ]
+fn bug_591_tied_copies_keep_own_stamp_and_foreign_verdict()
+{
+  let store      = tempfile::tempdir().unwrap();
+  let name       = "shared@acme.com";
+  let fetched_at = "2026-01-02T00:00:00Z";
+  seed_host_value( store.path(), "nodeA_devuser", name, &serde_json::json!(
+  {
+    "fetched_at" : fetched_at,
+    "five_hour"  : { "utilization" : 20.0 },
+  } ) );
+
+  // A failed fetch here copies nodeA's snapshot into this host's file and stamps the copy.
+  account::write_quota_cache_attempt( store.path(), name );
+  // nodeA then gets the no-subscription verdict and records it on its own copy.
+  seed_host_value( store.path(), "nodeA_devuser", name, &serde_json::json!(
+  {
+    "fetched_at"    : fetched_at,
+    "five_hour"     : { "utilization" : 20.0 },
+    "last_error"    : "no subscription",
+    "last_error_at" : "2026-01-03T00:00:00Z",
+  } ) );
+
+  let entry = account::read_quota_cache( store.path(), name ).expect( "cache present" );
+  assert_eq!( entry.fetched_at, fetched_at, "precondition: both copies keep the snapshot's fetched_at" );
+  assert_eq!(
+    ( entry.last_error.as_deref(), entry.last_error_at.as_deref() ),
+    ( Some( "no subscription" ), Some( "2026-01-03T00:00:00Z" ) ),
+    "BUG-591: the stamped copy here must not hide the verdict another host recorded on its copy",
+  );
+  assert!(
+    entry.last_attempt_at.as_deref().and_then( account::parse_iso_utc_secs ).is_some(),
+    "BUG-591: the stamp on this host's copy must still be read back, got {:?}", entry.last_attempt_at,
+  );
+}
+
+/// bug_reproducer(BUG-591): a verdict and a stamp another host merges into its copy of this
+/// host's snapshot are read back here, and this host's next stamp keeps the verdict and wins.
+///
+/// **Root Cause**: as in `bug_591_tied_copies_keep_own_stamp_and_foreign_verdict`, the read
+/// took both keys from one tied copy, and the own-first listing made that this host's
+/// original, which holds neither.
+///
+/// **Why Not Caught**: no test put a verdict on any copy but the one that was read.
+///
+/// **Fix Applied**: `freshest_volatile` folds the verdict pair and the stamp across the tied
+/// copies, and `merge_into_volatile` writes from that fold, so the next local stamp keeps the
+/// verdict in this host's own file.
+///
+/// **Prevention**: without the fold the first read loses the verdict when this host's copy is
+/// listed first, and the last read keeps the older stamp when it's listed second.
+///
+/// **Pitfall**: the newest stamp has to win wherever it lives; preferring this host's own copy
+/// is exactly wrong when another host's copy is the one that changed.
+#[ test ]
+fn bug_591_tied_copies_keep_foreign_verdict_and_newest_stamp()
+{
+  let store      = tempfile::tempdir().unwrap();
+  let name       = "original@acme.com";
+  let fetched_at = "2026-01-02T00:00:00Z";
+  let stamped_at = "2026-01-03T00:00:00Z";
+  // This host's original snapshot, and nodeZ's copy of it with a verdict and a stamp.
+  seed_host_value( store.path(), &host_slug(), name, &serde_json::json!(
+  {
+    "fetched_at" : fetched_at,
+    "five_hour"  : { "utilization" : 30.0 },
+  } ) );
+  seed_host_value( store.path(), "nodeZ_devuser", name, &serde_json::json!(
+  {
+    "fetched_at"      : fetched_at,
+    "five_hour"       : { "utilization" : 30.0 },
+    "last_error"      : "no subscription",
+    "last_error_at"   : stamped_at,
+    "last_attempt_at" : stamped_at,
+  } ) );
+
+  let entry = account::read_quota_cache( store.path(), name ).expect( "cache present" );
+  assert_eq!(
+    ( entry.last_error.as_deref(), entry.last_attempt_at.as_deref() ),
+    ( Some( "no subscription" ), Some( stamped_at ) ),
+    "BUG-591: another host's verdict and stamp on its copy of this snapshot must be read here",
+  );
+
+  // A failed fetch here stamps again; the verdict must come along into this host's own file.
+  account::write_quota_cache_attempt( store.path(), name );
+
+  let own_path = store.path().join( "cache" ).join( host_slug() ).join( format!( "{name}.json" ) );
+  let own_text = std::fs::read_to_string( own_path ).unwrap();
+  let own_file : serde_json::Value = serde_json::from_str( &own_text ).unwrap();
+  assert_eq!(
+    own_file.get( "last_error" ).and_then( serde_json::Value::as_str ), Some( "no subscription" ),
+    "BUG-591: a stamp written here must carry the tied copy's verdict along, not drop it",
+  );
+  let entry  = account::read_quota_cache( store.path(), name ).expect( "cache present" );
+  let newest = entry.last_attempt_at.as_deref().and_then( account::parse_iso_utc_secs );
+  assert!(
+    newest > account::parse_iso_utc_secs( stamped_at ),
+    "BUG-591: this host's newer stamp must win the tie, got {:?}", entry.last_attempt_at,
   );
 }

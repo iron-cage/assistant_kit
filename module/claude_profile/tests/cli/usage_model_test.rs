@@ -296,28 +296,28 @@ fn it_ft026_14_imodel_effort_no_effect_on_json_schema()
 
 // ── BUG-181: trigger inversion fix + structural gates ─────────────────────────
 
-/// it132 (BUG-181 fix AC-02 structural): `apply_touch` trigger uses `is_none()`, not `is_some()`.
+/// it132 (BUG-181 fix AC-02 structural): the touch trigger is the idle test, not the inverted one.
 ///
-/// The touch trigger must fire for accounts whose `five_hour.resets_at` is **absent**
-/// (idle account — no active 5h window). BUG-181: previous code (`is_some()`) fired for
+/// The touch trigger must fire for accounts with no running timer: a quota timer whose
+/// `resets_at` is absent or already past (BUG-584). BUG-181: previous code (`is_some()`) fired for
 /// active accounts, wasting subprocess cost while skipping idle accounts that need activation.
 ///
-/// The guard must read: `let is_idle = ...is_none(); if !is_idle { return; }`.
+/// Guard 7 of `touch_skip_reason` holds the running test (FT-13); it isn't a presence check.
 ///
 /// RED:   source contains `let is_active` (old inverted guard using `is_some()`).
-/// GREEN: source contains `let is_idle` + `is_none()` guard.
+/// GREEN: source no longer contains that inverted guard.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
 ///       [`docs/feature/024_session_touch.md` AC-02]
 #[ test ]
-fn it132_apply_touch_trigger_is_is_none_structural()
+fn it132_apply_touch_trigger_is_not_inverted_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
     !src.contains( "let is_active = data.five_hour" ),
-    "BUG-181: `apply_touch` trigger must use `is_idle` + `is_none()`, not `is_active` + `is_some()`.\n\
-     Fix the guard: `let is_idle = data.five_hour.as_ref().and_then(|p| p.resets_at.as_deref()).is_none();\n\
-     if !is_idle {{ return; }}`",
+    "BUG-181: `apply_touch` must not skip an account just because its 5h `resets_at` is present.\n\
+     Touch fires when a quota timer is absent or already past (BUG-584);\n\
+     guard 7 of `touch_skip_reason` decides it",
   );
 }
 
@@ -829,8 +829,8 @@ fn it151_past_renewal_at_auto_advances_in_usage()
   assert_exit( &out, 0 );
   let json   = stdout( &out );
   let secs : u64 = json.split( "\"renewal_secs\":" ).nth( 1 )
-    .and_then( |rest| rest.split( |c : char| !c.is_ascii_digit() ).next() )
-    .and_then( |digits| digits.parse().ok() )
+    .and_then( | rest | rest.split( | c : char | !c.is_ascii_digit() ).next() )
+    .and_then( | digits | digits.parse().ok() )
     .unwrap_or_else( || panic!( "format::json must carry a numeric renewal_secs, got:\n{json}" ) );
   let tod = ( before + secs ) % 86_400;
   let lag = ( 40_140 + 86_400 - tod ) % 86_400; // 11:09:00 UTC is 40 140 s past midnight

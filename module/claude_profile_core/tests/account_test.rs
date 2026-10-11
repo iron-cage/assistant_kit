@@ -41,6 +41,11 @@
 //! |------|----------|
 //! | `as_save_writes_active_marker` | save() with update_marker=true → `_active` written |
 //! | `test_mre_bug211_save_false_leaves_marker_unchanged` | save() with update_marker=false → `_active` not written |
+//! | `mre_bug_582_save_refuses_session_another_slot_holds` | live session held by bob's slot, save as alice → Err naming bob, slots and marker unchanged |
+//! | `slots_holding_session_names_every_holder_in_name_order` | two slots share a refresh token → both named, sorted; fresh, empty or unheld access token, or no store → none |
+//! | `bug_582_guard_allows_own_slot_and_unheld_session` | re-save of the holding slot and save of a fresh login both succeed |
+//! | `bug_582_live_redirect_key_matched_by_access_token` | kimi's redirect key live → helper names kimi, save as alice errs, her slot unchanged |
+//! | `bug_582_resave_keeps_slot_identity_when_claude_json_names_another` | bob re-saved while `~/.claude.json` names alice → bob's identity kept; a fresh login saved over bob's slot takes the live one |
 //! | `ad_delete_also_removes_snapshots` | All 3 files exist → all 3 absent after delete |
 //! | `ad_delete_succeeds_when_snapshots_absent` | Only credentials → delete succeeds, no error |
 //! | `mre_bug_219_switch_account_stale_org_name` | switch_account() overrides org fields from {name}.json |
@@ -110,7 +115,249 @@ fn ad_delete_succeeds_when_snapshots_absent()
 
 // ── AS: Account Save ──────────────────────────────────────────────────────────
 
-// BUG-582 — no test saves a live session that another slot already holds
+/// Write `{name}.credentials.json` holding a session with `refresh_token`, as an earlier save
+/// would have, and return its content.
+///
+/// No `accessToken`: a successful `save()` with `update_marker` looks up the org with it,
+/// and a fixture token must never reach the network.
+fn write_session_slot( store : &std::path::Path, name : &str, refresh_token : &str ) -> String
+{
+  std::fs::create_dir_all( store ).unwrap();
+  let content = format!(
+    r#"{{"claudeAiOauth":{{"refreshToken":"{refresh_token}","expiresAt":4102444800000}}}}"#
+  );
+  std::fs::write( store.join( format!( "{name}.credentials.json" ) ), &content ).unwrap();
+  content
+}
+
+/// Make `content` the live session in `~/.claude/.credentials.json` under `home`.
+fn write_live_session( home : &std::path::Path, content : &str )
+{
+  let dot_claude = home.join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), content ).unwrap();
+}
+
+/// bug_reproducer(BUG-582): `save()` must refuse a live session that another slot already
+/// holds, and leave the slots and the active marker byte-identical.
+///
+/// # Root Cause
+/// `save()` copied `~/.claude/.credentials.json` into `{name}.credentials.json` without
+/// checking whose session it was. A bare `.account.save` takes `name` from `~/.claude.json`,
+/// which a running Claude process can rewrite after a switch, so alice's slot got bob's
+/// session and alice's own was gone from the store.
+///
+/// # Why Not Caught
+/// No save test checked whether another slot already held the live session, so fixtures that
+/// saved one live session under two names (`claude_profile`'s account list tests) passed
+/// unnoticed.
+///
+/// # Fix Applied
+/// `save()` asks `slots_holding_session()` for every slot whose `refreshToken` (a redirect
+/// key's `accessToken`) equals the live one, and refuses before writing any account file when
+/// one of them isn't `name`.
+///
+/// # Prevention
+/// Stores alice and bob, makes bob's session live, and asserts a save as alice errs naming
+/// bob, with both slots and the marker unchanged and no metadata written.
+///
+/// # Pitfall
+/// Refresh tokens are single-use, so a match proves the slot holds this very session but no
+/// match proves nothing: after a refresh outside clp the live token matches no slot at all.
+#[ doc = "bug_reproducer(BUG-582)" ]
+#[ test ]
+fn mre_bug_582_save_refuses_session_another_slot_holds()
+{
+  let tmp    = TempDir::new().unwrap();
+  let store  = tmp.path().join( "store" );
+  let alice  = write_session_slot( &store, "alice@example.com", "rt-alice" );
+  let bob    = write_session_slot( &store, "bob@example.com", "rt-bob" );
+  let marker = store.join( account::active_marker_filename() );
+  std::fs::write( &marker, "bob@example.com" ).unwrap();
+  // bob's session is live, as right after `.account.use name::bob@example.com`.
+  write_live_session( tmp.path(), &bob );
+  let paths = ClaudePaths::with_home( tmp.path() );
+
+  let err = account::save(
+    "alice@example.com", &store, &paths, true, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
+  ).expect_err( "save() must refuse bob's live session under alice's name" );
+
+  assert!(
+    err.to_string().contains( "already saved as 'bob@example.com'" ),
+    "the refusal must name the slot holding the session, got: {err}",
+  );
+  let slot = | name : &str |
+  {
+    std::fs::read_to_string( store.join( format!( "{name}.credentials.json" ) ) ).unwrap()
+  };
+  assert_eq!(
+    slot( "alice@example.com" ), alice,
+    "alice's slot must keep alice's own session",
+  );
+  assert_eq!(
+    slot( "bob@example.com" ), bob,
+    "bob's slot must be untouched",
+  );
+  assert_eq!(
+    std::fs::read_to_string( &marker ).unwrap(), "bob@example.com",
+    "the marker must not move",
+  );
+  assert!(
+    !store.join( "alice@example.com.json" ).exists(),
+    "a refused save must write no metadata",
+  );
+}
+
+/// `slots_holding_session()` names every slot holding the live refresh token, in name order,
+/// and nothing for a session no slot holds.
+#[ test ]
+fn slots_holding_session_names_every_holder_in_name_order()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  write_session_slot( &store, "zed@example.com", "rt-shared" );
+  write_session_slot( &store, "amy@example.com", "rt-shared" );
+  write_session_slot( &store, "kim@example.com", "rt-other" );
+  let live    = | rt : &str | format!( r#"{{"claudeAiOauth":{{"refreshToken":"{rt}"}}}}"# );
+  let holders = | rt : &str | account::slots_holding_session( &store, &live( rt ) );
+
+  assert_eq!(
+    holders( "rt-shared" ),
+    strings( &[ "amy@example.com", "zed@example.com" ] ),
+    "both slots holding the session must be named, sorted",
+  );
+  assert_eq!(
+    holders( "rt-other" ),
+    strings( &[ "kim@example.com" ] ),
+    "a session one slot holds names that slot",
+  );
+  assert!(
+    holders( "rt-new" ).is_empty(),
+    "a fresh login has no holder",
+  );
+  assert!(
+    holders( "" ).is_empty(),
+    "an empty token matches nothing",
+  );
+  assert!(
+    account::slots_holding_session( &store, r#"{"accessToken":"tok"}"# ).is_empty(),
+    "an access token no slot carries matches nothing",
+  );
+  assert!(
+    account::slots_holding_session( &tmp.path().join( "absent" ), &live( "rt-shared" ) ).is_empty(),
+    "a missing store has no holders",
+  );
+}
+
+/// BUG-582's guard leaves the two ordinary saves alone: re-saving the slot that holds the
+/// live session, and saving a fresh login no slot holds yet.
+#[ test ]
+fn bug_582_guard_allows_own_slot_and_unheld_session()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  let bob   = write_session_slot( &store, "bob@example.com", "rt-bob" );
+  let paths = ClaudePaths::with_home( tmp.path() );
+  let save  = | name : &str | account::save(
+    name, &store, &paths, true, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
+  );
+
+  write_live_session( tmp.path(), &bob );
+  save( "bob@example.com" ).expect( "re-saving the slot that holds the live session must succeed" );
+
+  let carol = r#"{"claudeAiOauth":{"refreshToken":"rt-carol","expiresAt":4102444800000}}"#;
+  write_live_session( tmp.path(), carol );
+  save( "carol@example.com" ).expect( "a session no slot holds must save" );
+  assert_eq!(
+    std::fs::read_to_string( store.join( "carol@example.com.credentials.json" ) ).unwrap(),
+    carol,
+    "carol's slot must hold the fresh login",
+  );
+}
+
+/// BUG-582: a redirect key carries no refresh token, so `slots_holding_session()` matches it
+/// by `accessToken`, and `save()` refuses to copy it into another slot.
+#[ test ]
+fn bug_582_live_redirect_key_matched_by_access_token()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  let alice = write_session_slot( &store, "alice@example.com", "rt-alice" );
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::save(
+    "kimi", &store, &paths, false, Some( b"key-kimi" ), None, None, None,
+    account::AccountBackend::Redirect, Some( "http://127.0.0.1:9" ), Some( "m1" ), None, None,
+  ).expect( "a redirect save must succeed" );
+  // `.account.use name::kimi` installs the slot's file as the live one, byte for byte.
+  let kimi = std::fs::read_to_string( store.join( "kimi.credentials.json" ) ).unwrap();
+  write_live_session( tmp.path(), &kimi );
+
+  assert_eq!(
+    account::slots_holding_session( &store, &kimi ),
+    strings( &[ "kimi" ] ),
+    "the live redirect key must name the slot holding it",
+  );
+  let err = account::save(
+    "alice@example.com", &store, &paths, false, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
+  ).expect_err( "save() must refuse kimi's live key under alice's name" );
+  assert!(
+    err.to_string().contains( "already saved as 'kimi'" ),
+    "the refusal must name the slot holding the key, got: {err}",
+  );
+  assert_eq!(
+    std::fs::read_to_string( store.join( "alice@example.com.credentials.json" ) ).unwrap(),
+    alice,
+    "alice's slot must keep alice's own session",
+  );
+}
+
+/// BUG-582: re-saving the slot that holds the live session keeps the slot's identity when
+/// `~/.claude.json` names another account; a fresh login saved over it takes `~/.claude.json`'s.
+#[ test ]
+fn bug_582_resave_keeps_slot_identity_when_claude_json_names_another()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  let paths = ClaudePaths::with_home( tmp.path() );
+  let save  = | name : &str | account::save(
+    name, &store, &paths, true, None, None, None, None,
+    account::AccountBackend::Anthropic, None, None, None, None,
+  );
+  let claude_json_names = | email : &str |
+  {
+    let text = format!( r#"{{"oauthAccount":{{"emailAddress":"{email}"}}}}"# );
+    std::fs::write( tmp.path().join( ".claude.json" ), text ).unwrap();
+  };
+  let stored_email = | name : &str |
+  {
+    let meta = std::fs::read_to_string( store.join( format!( "{name}.json" ) ) ).unwrap();
+    account::parse_string_field( &meta, "emailAddress" )
+  };
+
+  let bob = write_session_slot( &store, "bob@example.com", "rt-bob" );
+  write_live_session( tmp.path(), &bob );
+  claude_json_names( "bob@example.com" );
+  save( "bob@example.com" ).expect( "saving bob's live session as bob must succeed" );
+  // A Claude process still running under alice rewrites ~/.claude.json.
+  claude_json_names( "alice@example.com" );
+  save( "bob@example.com" ).expect( "re-saving the slot that holds the live session must succeed" );
+  assert_eq!(
+    stored_email( "bob@example.com" ).as_deref(), Some( "bob@example.com" ),
+    "bob's slot must keep bob's identity, not alice's from a lagging ~/.claude.json",
+  );
+
+  let carol = r#"{"claudeAiOauth":{"refreshToken":"rt-carol","expiresAt":4102444800000}}"#;
+  write_live_session( tmp.path(), carol );
+  claude_json_names( "carol@example.com" );
+  save( "bob@example.com" ).expect( "a fresh login must save under the given name" );
+  assert_eq!(
+    stored_email( "bob@example.com" ).as_deref(), Some( "carol@example.com" ),
+    "a fresh login no slot holds must take ~/.claude.json's identity over the stored one",
+  );
+}
 
 /// BUG-211 MRE: `save()` with `update_marker=false` must NOT write the `_active` marker file.
 ///
@@ -639,4 +886,28 @@ fn m8_lock_store_release_frees_reacquire_and_names_lockfile()
 
   let second = account::lock_store( &store ).unwrap();
   drop( second );
+}
+
+/// BUG-582: a credentials file can carry an MCP server's tokens ahead of the session's;
+/// `session_token()` reads the session's own, so slots sharing only the MCP entry don't match.
+#[ test ]
+fn bug_582_mcp_entries_never_identify_the_session()
+{
+  let tmp   = TempDir::new().unwrap();
+  let creds = | rt : &str |
+  {
+    let mcp  = r#"{"mcpOAuth":{"srv":{"accessToken":"mcp-at","refreshToken":"mcp-rt"}},"#;
+    let main = format!( r#""claudeAiOauth":{{"accessToken":"at-{rt}","refreshToken":"{rt}"}}}}"# );
+    format!( "{mcp}{main}" )
+  };
+  std::fs::write( tmp.path().join( "alice@example.com.credentials.json" ), creds( "rt-alice" ) ).unwrap();
+  std::fs::write( tmp.path().join( "bob@example.com.credentials.json" ), creds( "rt-bob" ) ).unwrap();
+  let live = creds( "rt-bob" );
+  assert_eq!( account::slots_holding_session( tmp.path(), &live ), vec![ "bob@example.com" ] );
+  assert_eq!( account::session_token( &live, "refreshToken" ).as_deref(), Some( "rt-bob" ) );
+  assert_eq!( account::session_token( &live, "accessToken" ).as_deref(), Some( "at-rt-bob" ) );
+  let redirect = r#"{"accessToken":"sk-key"}"#;
+  assert_eq!( account::session_token( redirect, "accessToken" ).as_deref(), Some( "sk-key" ) );
+  let logged_out = r#"{"mcpOAuth":{"srv":{"refreshToken":"mcp-rt"}}}"#;
+  assert_eq!( account::session_token( logged_out, "refreshToken" ), None );
 }

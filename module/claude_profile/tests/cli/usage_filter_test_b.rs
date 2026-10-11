@@ -585,8 +585,10 @@ fn mre_bug245_only_active_gates_http_fetch_behavioral()
   write_account_with_token_uncached( dir.path(), "bbb@x.com", "tok-bbb", true );
   write_account_with_token_uncached( dir.path(), "ccc@x.com", "tok-ccc", false );
 
+  // BUG-584 — the seam's resets have passed, so the active row would now be touched;
+  //   this MRE is about which accounts get fetched, so it runs with touch off
   let out = run_cs_with_env(
-    &[ ".usage", "only_active::1" ],
+    &[ ".usage", "only_active::1", "touch::0" ],
     &[ ( "HOME", home ), ( claude_quota::BASE_URL_ENV, server.origin() ) ],
   );
   assert_exit( &out, 0 );

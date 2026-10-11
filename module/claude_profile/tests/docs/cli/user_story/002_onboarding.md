@@ -11,7 +11,7 @@ case maps to one Acceptance Criterion from
 | ID | Test Name | Acceptance Criterion |
 |----|-----------|---------------------|
 | UA-1 | `.account.save` captures credentials to the credential store | AC-1 |
-| UA-2 | Name auto-inferred from `oauthAccount.emailAddress`; exits 1 if neither source present | AC-2 |
+| UA-2 | Name auto-inferred (slot holding the live session, then `oauthAccount.emailAddress`, then marker); exits 1 if none gives a name | AC-2 |
 | UA-3 | `host::` and `tags::` captured in `{name}.json`; `dry::1` previews without writing | AC-3 |
 | UA-4 | `.account.delete` removes all account files from store | AC-4 |
 | UA-5 | `.account.relogin` spawns `claude` with TTY; propagates fresh credentials | AC-5 |
@@ -40,13 +40,13 @@ case maps to one Acceptance Criterion from
 
 ---
 
-### UA-2: Name auto-inferred from `oauthAccount.emailAddress`; exits 1 if neither source present
+### UA-2: Name auto-inferred (slot holding the live session, then `oauthAccount.emailAddress`, then marker); exits 1 if none gives a name
 
-- **Given (a):** `~/.claude/.credentials.json` exists. `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`. No `name::` passed.
-- **Given (b):** `~/.claude/.credentials.json` exists. `~/.claude.json` absent. No active marker. No `name::` passed.
+- **Given (a):** `~/.claude/.credentials.json` exists and no saved slot holds it. `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`. No `name::` passed.
+- **Given (b):** `~/.claude/.credentials.json` exists and no saved slot holds it. `~/.claude.json` absent. No active marker. No `name::` passed.
 - **When (a):** `clp .account.save`
 - **When (b):** `clp .account.save`
-- **Then (a):** Exit 0. Credentials saved as `alice@acme.com` (inferred from `oauthAccount.emailAddress`).
+- **Then (a):** Exit 0. Credentials saved as `alice@acme.com` (inferred from `oauthAccount.emailAddress`; a slot holding the live session would name it first, BUG-582).
 - **Then (b):** Exit 1. Error message referencing inability to infer account name.
 - **Exit:** 0 (a), 1 (b)
 - **Source:** [002_onboarding.md — AC-2](../../../../docs/cli/user_story/002_onboarding.md)

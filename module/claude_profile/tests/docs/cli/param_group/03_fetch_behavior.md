@@ -150,9 +150,12 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 ### FB-13: `touch::1` runs after `refresh::1` — refreshed accounts skipped by touch
 
-- **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is present (session activated by refresh). `refresh::1 touch::1 trace::1`.
+- **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is in the future (session activated by refresh). `refresh::1 touch::1 trace::1`.
 - **When:** `clp .usage refresh::1 touch::1 trace::1`
-- **Then:** stderr timestamped diagnostic lines show refresh lifecycle completing first. Touch then evaluates post-refresh quota: since `resets_at` is now present (session started by refresh), touch correctly SKIPS the account (already active). No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
+- **Then:** stderr timestamped diagnostic lines show refresh lifecycle completing first.
+  Touch then evaluates post-refresh quota: since the refresh started a session whose `resets_at` is in the future, touch correctly SKIPS the account (already active).
+  No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
+  <!-- BUG-584 — touch skips this account because its new reset is ahead of now, not because one is present -->
 - **Exit:** 0
 - **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
 

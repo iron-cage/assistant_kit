@@ -31,6 +31,7 @@
 //! | T25 | `t25_save_preset_deepseek_explicit_base_url_overrides_default` | Feature 078/AC-07: explicit `base_url::` wins over `preset::deepseek`'s default | P |
 //! | T26 | `t26_save_preset_deepseek_with_explicit_backend_anthropic_does_not_force_redirect_fields` | Feature 078/AC-08: explicit `backend::anthropic` wins — preset does not force base_url/inference_provider | P |
 //! | T27 | `t27_use_preset_deepseek_account_writes_deepseek_tier_env_vars` | Feature 078/AC-10: `.account.use` on a `preset::deepseek` account writes all 6 DeepSeek-tier env vars | P |
+//! | T28 | `t28_usage_trace_names_redirect_account_in_fetch_stage` | BUG-587: `.usage trace::1` prints a fetch skip line for the redirect row; the anthropic row keeps its own fetch line | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -232,7 +233,7 @@ fn t06_use_redirect_account_writes_env_vars_and_skips_touch()
   );
 }
 
-// BUG-585 — keeps only UNRELATED_VAR; a user key with a tier name is deleted on any Anthropic switch
+// BUG-585 — this switch leaves a redirect session, so tier keys go; Anthropic → Anthropic keeps them
 #[ test ]
 fn t07_use_anthropic_after_redirect_clears_env_vars()
 {
@@ -688,7 +689,6 @@ fn t20_save_redirect_self_heals_stray_model_in_meta()
 /// End-to-end over the real binary: save → use → usage. No HTTP: the redirect row is
 /// produced by the R1 bypass, `should_refresh` rejects the placeholder, and touch skips
 /// with the redirect reason.
-// BUG-587 — no test here runs `.usage trace::1`, so the redirect row's missing fetch line went unseen
 #[ test ]
 fn t21_usage_tsv_active_redirect_row_current_static()
 {
@@ -1245,5 +1245,63 @@ fn t27_use_preset_deepseek_account_writes_deepseek_tier_env_vars()
   assert!(
     env.get( "ANTHROPIC_DEFAULT_FABLE_MODEL" ).is_none(),
     "T27: DeepSeek has no Fable-tier substitution — env.ANTHROPIC_DEFAULT_FABLE_MODEL must not be written, got:\n{settings_text}",
+  );
+}
+
+/// T28 / BUG-587: `.usage trace::1` names the redirect account in the fetch stage too.
+///
+/// # Root Cause
+/// `fetch_quota_for_list()`'s R1 bypass pushed the redirect row and `continue`d before any
+/// trace statement. Every other branch that skips the API prints its own line naming the
+/// account (`fetch  <name>  …`, or a bare `<name>  …` for cache-first and a locally expired
+/// token), so the redirect row showed up in the refresh and touch stages but never in fetch.
+///
+/// # Why Not Caught
+/// No test ran `.usage trace::1` with a redirect account: T21 checks the TSV row only, and
+/// the per-account trace test (f18-FT-06) uses Anthropic accounts only.
+///
+/// # Fix Applied
+/// R1 prints `fetch  <name>  skipped (reason: redirect backend)` before its `continue`, the
+/// same reason wording touch and `.account.use` already use.
+///
+/// # Prevention
+/// A redirect account next to an Anthropic one: the redirect skip line must appear exactly
+/// once, and the Anthropic account's own fetch-stage line must still be there.
+///
+/// # Pitfall
+/// In a loop where each early exit traces itself, a new `continue` is silent by default;
+/// add the trace line in the same edit as the exit.
+#[ doc = "bug_reproducer(BUG-587)" ]
+#[ test ]
+fn t28_usage_trace_names_redirect_account_in_fetch_stage()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let save = run_cs_with_env(
+    &[
+      ".account.save", "name::kimi", "backend::redirect",
+      "base_url::https://api.moonshot.ai/anthropic", "api_key::sk-test",
+      "redirect_model::kimi-k3",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save, 0 );
+  // No accessToken in this fixture, so the Anthropic account ends on `cannot read token`: no HTTP.
+  write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let usage = run_cs_with_env( &[ ".usage", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &usage, 0 );
+  let err = stderr( &usage );
+
+  let redirect_skip = "fetch  kimi  skipped (reason: redirect backend)";
+  let skips         = err.lines().filter( | l | l.ends_with( redirect_skip ) ).count();
+  assert_eq!(
+    skips, 1,
+    "T28: the redirect row must get exactly one fetch skip line, got stderr:\n{err}",
+  );
+  assert!(
+    err.lines().any( | l | l.contains( " UTC · alice@example.com  reading " ) ),
+    "T28: the Anthropic account must keep its own fetch-stage line, got stderr:\n{err}",
   );
 }

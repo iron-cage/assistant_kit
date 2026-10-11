@@ -144,7 +144,9 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 0. Stdout contains `"b@test.com"` and does NOT contain `"a@test.com"` — the stale top-level `emailAddress` field is never read. The per-machine active marker still reads `b@test.com` after save.
 - **Exit:** 0
 - **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `account_relogin_test_b.rs`)
-- **Note:** Tests the BUG-209 fix: top-level `emailAddress` is stale and never read. The primary-vs-fallback precedence between `oauthAccount.emailAddress` and the `_active` marker (added later by BUG-212, and part of the general two-level inference read in `account_ops.rs`) is exercised where the two sources actually disagree by FT-10.
+- **Note:** Tests the BUG-209 fix: top-level `emailAddress` is stale and never read.
+  The primary-vs-fallback precedence between `oauthAccount.emailAddress` and the `_active` marker (added later by BUG-212;
+  BUG-582 then put the slot holding the live session ahead of both in `account_ops.rs`) is exercised where the two sources actually disagree by FT-10.
 - **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
 ---
@@ -156,7 +158,8 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 0. Output reads `saved current credentials as 'i5@example.com'`. `{credential_store}/i5@example.com.credentials.json` created. `{credential_store}/i2@example.com.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `account_relogin_test_b.rs`)
-- **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
+- **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale.
+  Primary over fallback precedence is the two-level inference introduced by TSK-215; BUG-582 later put the slot holding the live session ahead of both.
 - **Source:** [feature/002_account_save.md AC-08, AC-16](../../../docs/feature/002_account_save.md)
 
 ---

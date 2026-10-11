@@ -28,10 +28,10 @@
 //! | `get_string_setting_absent_key_returns_none` | missing key → `None` |
 //! | `get_string_setting_missing_file_returns_not_found` | missing file → `Err(NotFound)` |
 //! | `get_string_setting_malformed_value_returns_invalid_data` | `"k": undefined` → `Err(InvalidData)` |
-//! | `set_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T07): first statement is `eprintln!` naming the function, `path`, `key`, `raw_value` |
-//! | `remove_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T08): first statement is `eprintln!` naming the function, `path`, `key` |
-//! | `set_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T09): first statement is `eprintln!` naming the function, `path`, `key`, `value` |
-//! | `remove_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T10): first statement is `eprintln!` naming the function, `path`, `key` |
+//! | `set_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T07): first statement is a `trace`-gated `eprintln!` naming the function, `path`, `key`, `raw_value` |
+//! | `remove_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T08): first statement is a `trace`-gated `eprintln!` naming the function, `path`, `key` |
+//! | `set_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T09): first statement is a `trace`-gated `eprintln!` naming the function, `path`, `key`, `value` |
+//! | `remove_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T10): first statement is a `trace`-gated `eprintln!` naming the function, `path`, `key` |
 //! | `json_parse_flat_object_parses_mixed_types` | `{"a":"s","b":42,"c":true,"d":{"n":1}}` → 4 entries tagged `Str`/`Number`/`Bool`/`Raw` |
 //! | `json_parse_flat_object_empty_object_returns_empty_vec` | `{}` → `Ok(vec![])` |
 //! | `json_parse_flat_object_rejects_non_object` | `"not an object"` (no braces) → `Err(InvalidData)` |
@@ -176,6 +176,7 @@ fn extract_fn_body<'a>( src : &'a str, name : &str ) -> &'a str
   &src[ brace_start + 1..end ]
 }
 
+// BUG-586 — these four guards pin each mutator's trace-gated print as its body's first statement
 #[test]
 fn set_setting_traces_function_and_parameters()
 {
@@ -184,8 +185,8 @@ fn set_setting_traces_function_and_parameters()
   let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
 
   assert!(
-    first_stmt.starts_with( "eprintln!" ),
-    "set_setting must emit eprintln! as its first statement, got: {first_stmt:?}"
+    first_stmt.starts_with( "if trace" ) && first_stmt.contains( "eprintln!" ),
+    "set_setting must open with its trace-gated eprintln!, got: {first_stmt:?}"
   );
   assert!(
     first_stmt.contains( "set_setting" ) && first_stmt.contains( "path" )
@@ -225,8 +226,8 @@ fn remove_setting_traces_function_and_parameters()
   let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
 
   assert!(
-    first_stmt.starts_with( "eprintln!" ),
-    "remove_setting must emit eprintln! as its first statement, got: {first_stmt:?}"
+    first_stmt.starts_with( "if trace" ) && first_stmt.contains( "eprintln!" ),
+    "remove_setting must open with its trace-gated eprintln!, got: {first_stmt:?}"
   );
   assert!(
     first_stmt.contains( "remove_setting" ) && first_stmt.contains( "path" ) && first_stmt.contains( "key" ),
@@ -246,8 +247,8 @@ fn set_env_var_traces_function_and_parameters()
   let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
 
   assert!(
-    first_stmt.starts_with( "eprintln!" ),
-    "set_env_var must emit eprintln! as its first statement, got: {first_stmt:?}"
+    first_stmt.starts_with( "if trace" ) && first_stmt.contains( "eprintln!" ),
+    "set_env_var must open with its trace-gated eprintln!, got: {first_stmt:?}"
   );
   assert!(
     first_stmt.contains( "set_env_var" ) && first_stmt.contains( "path" )
@@ -279,8 +280,8 @@ fn remove_env_var_traces_function_and_parameters()
   let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
 
   assert!(
-    first_stmt.starts_with( "eprintln!" ),
-    "remove_env_var must emit eprintln! as its first statement, got: {first_stmt:?}"
+    first_stmt.starts_with( "if trace" ) && first_stmt.contains( "eprintln!" ),
+    "remove_env_var must open with its trace-gated eprintln!, got: {first_stmt:?}"
   );
   assert!(
     first_stmt.contains( "remove_env_var" ) && first_stmt.contains( "path" ) && first_stmt.contains( "key" ),

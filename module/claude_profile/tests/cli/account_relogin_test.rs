@@ -13,6 +13,8 @@
 //! | ar08 | `ar08_relogin_prefix_resolves` | prefix `work dry::1` → `work@acme.com` | P |
 //! | ar09 | `ar09_relogin_invalid_chars_exits_1` | `name::bad/name` → exit 1 | N |
 //! | aw22 | `aw22_touch_disabled_switch_succeeds` | `touch::0` → switch exits 0, no quota fetch | P |
+//! | mre_bug586 | `mre_bug_586_untraced_switch_leaves_stderr_empty` | no `trace::` → stderr empty | P |
+//! | — | `bug_586_traced_switch_prefixes_every_stderr_line` | `trace::1` → every stderr line timestamped | P |
 //! | aw23 | `aw23_touch_skipped_no_access_token` | `touch::1` + no `accessToken` → exit 0 | P |
 //! | aw24 | `aw24_imodel_bad_value_exits_1` | `imodel::bad` → exit 1 | N |
 //! | aw25 | `aw25_effort_bad_value_exits_1` | `effort::bad` → exit 1 | N |
@@ -349,6 +351,7 @@ fn as21_lim_it_resave_overwrites_roles_json()
 
 // ── AW: Feature 027 — post-switch touch control ────────────────────────────────
 
+// BUG-586 — aw22 never reads stderr; the two BUG-586 tests below check it at trace::0 and trace::1
 /// aw22: `touch::0` disables post-switch subprocess; switch still succeeds (IT-18).
 ///
 /// Verifies that explicitly disabling touch does not interfere with the switch itself.
@@ -370,6 +373,113 @@ fn aw22_touch_disabled_switch_succeeds()
   assert!(
     stdout( &out ).contains( "switched" ),
     "touch::0 must not block switch, got:\n{}", stdout( &out ),
+  );
+}
+
+/// bug_reproducer(BUG-586): a switch onto an Anthropic account with no `trace::` writes nothing
+/// to stderr.
+///
+/// # Root Cause
+/// `claude_core::settings_io`'s four mutators each opened with an unconditional `eprintln!` of
+/// their parameters, and an Anthropic switch clears its env vars through `remove_env_var`, so
+/// a `trace::0` switch printed one line per key.
+///
+/// # Why Not Caught
+/// No switch test asserted an empty stderr (aw22 never reads it), the `trace::0` tests it049
+/// and it052 run a `.usage` that never reaches `settings_io`, and `claude_core`'s own tests
+/// required the print.
+///
+/// # Fix Applied
+/// The mutators take `trace : bool` and print only when it's set; `switch.rs` passes `false`.
+///
+/// # Prevention
+/// The whole stderr is asserted empty, with `CLR_PROC_DIR` on an empty dir so the
+/// running-session advisory can't add a line of its own.
+///
+/// # Pitfall
+/// A check for "no ` · `" passes an unprefixed library line; assert the exact stderr.
+#[ doc = "bug_reproducer(BUG-586)" ]
+#[ test ]
+fn mre_bug_586_untraced_switch_leaves_stderr_empty()
+{
+  let dir      = TempDir::new().unwrap();
+  let home     = dir.path().to_str().unwrap();
+  let proc_dir = TempDir::new().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "target@example.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "touch::0" ],
+    &[ ( "HOME", home ), ( "CLR_PROC_DIR", proc_dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "the switch must succeed, got:\n{}", stdout( &out ),
+  );
+  assert_eq!(
+    stderr( &out ), "",
+    "BUG-586: a trace::0 switch must write nothing to stderr",
+  );
+}
+
+/// `YYYY-MM-DD · HH:MM:SS UTC · `, the prefix every clp trace line starts with.
+fn has_trace_prefix( line : &str ) -> bool
+{
+  let mut parts = line.splitn( 3, " · " );
+  let ( Some( date ), Some( time ), Some( _ ) ) = ( parts.next(), parts.next(), parts.next() )
+  else { return false };
+  date.len() == 10
+    && date.chars().all( | c | c.is_ascii_digit() || c == '-' )
+    && time.len() == 12
+    && time.ends_with( " UTC" )
+    && time.get( ..8 ).is_some_and( | hms | hms.chars().all( | c | c.is_ascii_digit() || c == ':' ) )
+}
+
+/// bug_reproducer(BUG-586): under `trace::1`, every stderr line of a switch carries the
+/// `YYYY-MM-DD · HH:MM:SS UTC · ` prefix.
+///
+/// # Root Cause
+/// See `mre_bug_586_untraced_switch_leaves_stderr_empty`. The mutators' lines carry no
+/// timestamp, so they also broke the prefix contract when clp's own trace was on.
+///
+/// # Why Not Caught
+/// The traced switch tests look for clp's own lines by substring and never check that
+/// every line has the prefix.
+///
+/// # Fix Applied
+/// `switch.rs` passes `false`, so a switch's `settings_io` calls print nothing at either level.
+///
+/// # Prevention
+/// `touch::1` with no `accessToken` makes clp trace its expiry check, so the prefix check
+/// runs over at least one line.
+///
+/// # Pitfall
+/// "Every line has the prefix" holds for an empty stderr too; require a traced line first.
+#[ doc = "bug_reproducer(BUG-586)" ]
+#[ test ]
+fn bug_586_traced_switch_prefixes_every_stderr_line()
+{
+  let dir      = TempDir::new().unwrap();
+  let home     = dir.path().to_str().unwrap();
+  let proc_dir = TempDir::new().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "target@example.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "trace::1" ],
+    &[ ( "HOME", home ), ( "CLR_PROC_DIR", proc_dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "expiry check: valid" ),
+    "trace::1 must trace the expiry check, got:\n{err}",
+  );
+  let unprefixed : Vec< &str > = err.lines().filter( | line | !has_trace_prefix( line ) ).collect();
+  assert!(
+    unprefixed.is_empty(),
+    "BUG-586: every trace::1 stderr line must carry the timestamp prefix, these don't: {unprefixed:?}",
   );
 }
 

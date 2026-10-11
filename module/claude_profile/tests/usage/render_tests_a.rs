@@ -671,7 +671,7 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
   // text renderer: ~Renews must show a real date, NOT "—". `seven_day` is populated (unlike
   // `seven_day_sonnet`, irrelevant here) so 7d Left/7d Reset don't contribute an unrelated
   // legitimate em-dash, and `owner` is set because an unowned account's Owner cell is one too
-  // (Feature 037 AC-19) — the only em-dash this row could show is a buggy ~Renews.
+  // (Feature 037 AC-19, BUG-588) — the only em-dash this row could show is a buggy ~Renews.
   let text = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false, &TagFilter::default() );
   assert!(
@@ -692,6 +692,84 @@ fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
   assert_ne!(
     renews_val, "\u{2014}",
     "BUG-332: TSV ~Renews must NOT be em-dash when result=Ok and billing_type=none; got: {renews_val:?}",
+  );
+}
+
+/// BUG-588 — an unowned account's Owner cell renders `—` on the `Ok` arm of `render_text()`.
+/// Every column but Account and Owner is hidden, so the row ends in its own Owner cell.
+///
+/// # Root Cause
+/// Both arms of `render_text()` pushed `aq.owner` as-is, so an unowned account's `""` left
+/// the Owner cell blank. This row has live quota data, so it takes the `Ok` arm.
+///
+/// # Why Not Caught
+/// Render tests did build unowned rows with live quota data and the Owner column on, but none
+/// asserted that cell was `—`, and `mre_bug332`'s whole-text `!contains( "—" )` even required
+/// it to stay blank. The it248 and FT-19B fixtures carry no quota data, so their rows take the
+/// `Err` arm.
+///
+/// # Fix Applied
+/// Both arms push `owner_cell( &aq.owner )` (`src/output.rs`), which maps `""` to `—`.
+///
+/// # Prevention
+/// Pins the `Ok`-arm Owner cell on its own, so a regression in that push fails here even
+/// while the `Err`-arm tests pass.
+///
+/// # Pitfall
+/// Which arm a row takes decides which push runs; check the cell in each arm, not just one.
+///
+/// Spec: [`docs/feature/037_accounts_usage_param_unification.md` AC-19]
+#[ doc = "bug_reproducer(BUG-588)" ]
+#[ test ]
+fn mre_bug588_ok_row_unowned_owner_cell_em_dash()
+{
+  let reset = || Some( "2099-01-01T00:00:00Z".to_string() );
+  let aq = AccountQuota
+  {
+    fallback_reason       : None,
+    touched_at_secs       : None,
+    name                  : "live@test.com".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : reset() } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : reset() } ),
+      seven_day_sonnet : None,
+    } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : false,
+    cache_age_secs        : None,
+    org_created_at        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+    claim_lock : false, reserve : false,
+    inference_provider : String::new(),
+    tags : Vec::new(),
+  };
+  let accounts = vec![ aq ];
+  let cols     = ColsVisibility
+  {
+    status   : false, expires : false, sub    : false, renews   : false, h5_left      : false,
+    h5_reset : false, d7_left : false, d7_son : false, d7_reset : false, d7_son_reset : false,
+    host     : false, role    : false, owner  : true,  next     : false, tags         : false,
+  };
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols,
+    None, None, None, None, false, &TagFilter::default(),
+  );
+  let row = text.lines()
+    .find( | l | l.contains( "live@test.com" ) )
+    .unwrap_or_else( || panic!( "BUG-588: no row for live@test.com; got:\n{text}" ) )
+    .trim_end();
+  assert!(
+    row.ends_with( "\u{2014}" ),
+    "BUG-588: an unowned Ok-arm row's Owner cell must be —; got row: {row:?}\n{text}",
   );
 }
 

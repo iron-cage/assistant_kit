@@ -31,13 +31,14 @@ use tempfile::TempDir;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::{ resolve, Layer };
 use claude_core::settings_io::{ set_setting, set_env_var };
+// BUG-586 — fixtures write through claude_core's settings_io mutators, which clp's switch calls too
 
 // Helper: write a settings.json with a single key→value into {dir}/.claude/settings.json.
 fn write_settings( dir : &Path, key : &str, value : &str )
 {
   let claude_dir = dir.join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
-  set_setting( &claude_dir.join( "settings.json" ), key, value ).unwrap();
+  set_setting( &claude_dir.join( "settings.json" ), key, value, true ).unwrap();
 }
 
 // ─── AT-01: env var overrides user config ─────────────────────────────────────
@@ -94,7 +95,7 @@ fn at03_002_project_config_key()
   // Write to project .claude/settings.json (cwd itself).
   let proj_claude = project_dir.path().join( ".claude" );
   std::fs::create_dir_all( &proj_claude ).unwrap();
-  set_setting( &proj_claude.join( "settings.json" ), "model", "claude-opus-4-8" ).unwrap();
+  set_setting( &proj_claude.join( "settings.json" ), "model", "claude-opus-4-8", true ).unwrap();
 
   // User settings is empty (no model key).
 
@@ -153,7 +154,7 @@ fn at06_002_project_overrides_user()
   // Project config: theme=dark
   let proj_claude = project_dir.path().join( ".claude" );
   std::fs::create_dir_all( &proj_claude ).unwrap();
-  set_setting( &proj_claude.join( "settings.json" ), "theme", "dark" ).unwrap();
+  set_setting( &proj_claude.join( "settings.json" ), "theme", "dark", true ).unwrap();
 
   let rv = resolve( "theme", home_dir.path(), project_dir.path(), catalog() );
 
@@ -175,8 +176,8 @@ fn at07_002_lock_version_nested_env_resolves()
   let claude_dir = home_dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   let settings_file = claude_dir.join( "settings.json" );
-  set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1" ).unwrap();
-  set_env_var( &settings_file, "DISABLE_UPDATES", "1" ).unwrap();
+  set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1", true ).unwrap();
+  set_env_var( &settings_file, "DISABLE_UPDATES", "1", true ).unwrap();
 
   let rv1 = resolve( "env.DISABLE_AUTOUPDATER", home_dir.path(), no_project.path(), catalog() );
   assert_eq!( rv1.source, Layer::User, "env.DISABLE_AUTOUPDATER must resolve via User layer, not Absent" );

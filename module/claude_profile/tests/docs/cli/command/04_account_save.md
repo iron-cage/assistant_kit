@@ -16,7 +16,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-8 | `dry::1` then `dry::0` creates file as previewed | Dry Run Fidelity |
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
 | IT-10 | Missing `name::` and no active marker exits 1 | Inference Failure |
-| IT-14 | Missing `name::` — infers from `oauthAccount.emailAddress`; falls back to active marker | Name Inference |
+| IT-14 | Missing `name::` with no slot holding the live session — infers from `oauthAccount.emailAddress`; falls back to active marker | Name Inference |
 | IT-11 | Save creates `{name}.json` with `oauthAccount` subtree and model (BUG-222 fix) | Metadata Snapshot |
 | IT-12 | Save succeeds when `~/.claude.json` absent — `{name}.json` created without `oauthAccount` field | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `~/.claude.json` has no `oauthAccount` key — `{name}.json` created without `oauthAccount` | Metadata Snapshot / Best-Effort |
@@ -182,9 +182,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-14: Missing `name::` — name inferred from `oauthAccount.emailAddress`; falls back to active marker
+### IT-14: Missing `name::` with no slot holding the live session — name inferred from `oauthAccount.emailAddress`; falls back to active marker
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`. Per-machine active marker `{credential_store}/_active_{hostname}_{user}` also contains `"alice@acme.com"`.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`.
+  Per-machine active marker `{credential_store}/_active_{hostname}_{user}` also contains `"alice@acme.com"`.
+  No saved slot holds the live session; one that did would name the save first (AC-08, BUG-582).
 - **When:** `clp .account.save`
 - **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from `oauthAccount.emailAddress`; behaves identically to explicit `name::alice@acme.com`.
 - **Exit:** 0

@@ -543,7 +543,8 @@ fn guard_once_latest( dry : bool, verbosity : u8, format : OutputFormat ) -> Res
       .unwrap_or_default();
     if auto_val != "true"
     {
-      set_setting( &settings_file, "autoUpdates", "true" )
+      // BUG-586 — this call keeps pattern 002's parameter trace on
+      set_setting( &settings_file, "autoUpdates", "true", true )
         .map_err( | e | ErrorData::new(
           ErrorCode::InternalError,
           format!( "failed to set autoUpdates: {e}" ),

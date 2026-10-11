@@ -22,19 +22,20 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 | EC-14 | `.account.limits name::work` — optional, queries named account (FR-18) | Optional on Limits |
 | EC-15 | `.account.limits` without `name::` — omitting is valid (active-account path) | Optional on Limits |
 | EC-16 | `.account.limits name::ghost` — valid chars but unknown → exit 2 (FR-18) | NotFound on Limits |
-| EC-17 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` present — inferred (primary path) | Name Inference |
+| EC-17 | Omitted `name::` on `.account.save` with no slot holding the live session and `oauthAccount.emailAddress` present — inferred (email path) | Name Inference |
 | EC-18 | `name::` with `/` in email local part (`a/b@c.com`) rejected with exit 1 | Forbidden Characters (email) |
 | EC-19 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` absent, `_active` marker present — inferred (fallback path) | Name Inference |
 | EC-20 | Omitted `name::` on `.account.save` — `oauthAccount.emailAddress` disagrees with `_active` marker — `oauthAccount` wins (BUG-212) | Name Inference |
 | EC-21 | `.account.renewal name::alice at::...` where `alice@acme.com` is saved — prefix resolves to full email | Prefix Resolution (renewal) |
 | EC-22 | `.account.renewal name::alice,bob at::...` where `alice@acme.com` and `bob@acme.com` are saved — comma-list prefix tokens each resolve | Prefix Resolution (renewal comma-list) |
+| EC-23 | Omitted `name::` on `.account.save` — the one slot holding the live session wins over a stale `oauthAccount.emailAddress` (BUG-582) | Name Inference |
 
 ### Test Coverage Summary
 
 - Valid Name: 1 test
 - Empty Value: 1 test
 - Required Parameter: 1 test
-- Name Inference: 3 tests
+- Name Inference: 4 tests
 - Forbidden Characters: 5 tests
 - Valid Characters: 2 tests
 - Boundary Value: 1 test
@@ -42,10 +43,10 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - Optional on Limits (FR-18): 3 tests
 - Prefix Resolution (renewal): 2 tests
 
-**Total:** 22 edge cases
+**Total:** 23 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
-**Name Inference Divergence:** EC-17 (`oauthAccount.emailAddress` primary path) ↔ EC-19 (`_active` marker fallback path)
+**Name Inference Divergence:** EC-17 (`oauthAccount.emailAddress` path) ↔ EC-19 (`_active` marker fallback path)
 **Prefix Resolution Divergence:** EC-21 (single prefix on `.account.renewal`) ↔ EC-22 (comma-list prefix tokens on `.account.renewal`)
 
 ---
@@ -210,11 +211,15 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 ---
 
-### EC-17: Name Inference on `.account.save` — `oauthAccount.emailAddress` (primary) from `~/.claude.json`
+### EC-17: Name Inference on `.account.save` — `oauthAccount.emailAddress` from `~/.claude.json`
 
-- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` exists and contains `"oauthAccount":{"emailAddress":"alice@acme.com"}` (primary inference source). No `name::` argument is passed.
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`.
+  `~/.claude.json` exists and contains `"oauthAccount":{"emailAddress":"alice@acme.com"}`, read when no single saved slot holds the live session. No `name::` argument is passed.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name. `name::` behaves as optional on `.account.save` when `oauthAccount.emailAddress` is present. When `oauthAccount.emailAddress` is absent, inference falls back to the per-machine `_active` marker (see FT-04 in [feature/002_account_save.md](../../feature/002_account_save.md)).
+- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name.
+  `name::` behaves as optional on `.account.save` when `oauthAccount.emailAddress` is present.
+  When `oauthAccount.emailAddress` is absent, inference falls back to the per-machine `_active` marker (see FT-04 in [feature/002_account_save.md](../../feature/002_account_save.md)).
+  One saved slot holding the live session would name it first (EC-23).
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md)
 
@@ -237,7 +242,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the marker value as the account name. The fallback path is taken when `oauthAccount.emailAddress` is unavailable.
 - **Exit:** 0
 - **Commands:** `.account.save`
-- **Note:** Tests the `_active` marker fallback path. Primary path (`oauthAccount.emailAddress` present) is covered by EC-17. Both paths together form the name inference divergence pair.
+- **Note:** Tests the `_active` marker fallback path. The `oauthAccount.emailAddress` path is covered by EC-17 and the slot-holder path ahead of both by EC-23.
+  EC-17 and EC-19 together form the name inference divergence pair.
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-04](../../feature/002_account_save.md)
 
 ---
@@ -271,3 +277,18 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Commands:** `.account.save`
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is updated by both clp ops (snapshot restore) and external OAuth login. `_active` is written only by clp ops — external login leaves it stale.
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-10](../../feature/002_account_save.md), [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md)
+
+---
+
+### EC-23: Name Inference Conflict — the slot holding the live session wins over a stale `oauthAccount.emailAddress` (BUG-582)
+
+- **Given:** `alice@example.com` and `bob@example.com` are saved, each slot holding its own `refreshToken`.
+  `clp .account.use name::bob@example.com` made bob's session live, and `~/.claude.json` was then rewritten to `{"oauthAccount":{"emailAddress":"alice@example.com"}}`
+  (a Claude process still running under alice). No `name::` argument is passed.
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exit 0; stdout: `saved current credentials as 'bob@example.com'`. Alice's slot is byte-identical and the active marker names bob.
+  The one slot whose `refreshToken` equals the live session's names it, ahead of `~/.claude.json` (a live redirect key is matched by `accessToken`).
+- **Exit:** 0
+- **Commands:** `.account.save`
+- **Note:** BUG-582 regression guard, run by `mre_bug_582_bare_save_files_live_session_under_its_own_slot`. With no single holder, inference falls through to EC-17's and EC-19's sources.
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md AC-08, AC-20](../../../../docs/feature/002_account_save.md)

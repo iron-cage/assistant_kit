@@ -53,6 +53,10 @@ pub struct QuotaCacheEntry
   /// Distinct from [`Self::fetched_at`], which never advances on a failure — the age
   /// a render surface prints means "since last success", and a failure is not one.
   pub last_error_at     : Option< String >,
+  /// UTC ISO-8601 timestamp of the last failed live fetch, whatever the failure (BUG-591).
+  /// Scheduling state for the stale-first selector, never a verdict: written by
+  /// [`write_quota_cache_attempt`], cleared by [`write_quota_cache`] like the error pair.
+  pub last_attempt_at   : Option< String >,
 }
 
 /// Root of the tracked per-host cache tree inside the credential store (TSK-502).
@@ -114,6 +118,56 @@ pub( super ) fn read_volatile_candidates(
     .collect();
   candidates.sort_by_key( | c | core::cmp::Reverse( c.0 ) );
   candidates.into_iter().map( | ( _, o ) | o ).collect()
+}
+
+/// The freshest volatile snapshot of `name`; `None` when there's no candidate anywhere.
+///
+/// A host that never fetched the account merges its failure writes into a copy of another
+/// host's snapshot, so copies can tie on `fetched_at` while each carries its own verdict or
+/// stamp. The first tied copy supplies the snapshot, and the newest `last_error`/`last_error_at`
+/// pair and the newest `last_attempt_at` among the tied copies are folded into it (BUG-591).
+fn freshest_volatile(
+  credential_store : &std::path::Path,
+  name             : &str,
+) -> Option< serde_json::Map< String, serde_json::Value > >
+{
+  // Fix(BUG-591): fold the verdict and the attempt stamp across copies tied on `fetched_at`.
+  // Root cause: both came from the first tied copy alone, so whatever only a later copy held
+  //   was lost: a stamp copied here hid the verdict its source host recorded afterwards.
+  // Pitfall: no tie-break order fixes this — the stamp and the verdict sit in different files.
+  const GROUPS : [ ( &str, &[ &str ] ); 2 ] =
+  [
+    ( "last_error_at",   &[ "last_error", "last_error_at" ] ),
+    ( "last_attempt_at", &[ "last_attempt_at" ] ),
+  ];
+  let mut candidates = read_volatile_candidates( credential_store, name ).into_iter();
+  let mut freshest = candidates.next()?;
+  let fetched_at = stamp_secs( &freshest, "fetched_at" );
+  for copy in candidates.take_while( | c | stamp_secs( c, "fetched_at" ) == fetched_at )
+  {
+    // Each group moves whole, keyed by its own timestamp: the verdict pair together, the stamp alone.
+    for ( stamp, keys ) in GROUPS
+    {
+      if stamp_secs( &copy, stamp ) > stamp_secs( &freshest, stamp )
+      {
+        for key in keys
+        {
+          match copy.get( *key ).cloned()
+          {
+            Some( value ) => freshest.insert( ( *key ).to_string(), value ),
+            None          => freshest.remove( *key ),
+          };
+        }
+      }
+    }
+  }
+  Some( freshest )
+}
+
+/// Seconds since the epoch of the timestamp at `key`; `None` when absent or unparseable.
+fn stamp_secs( snapshot : &serde_json::Map< String, serde_json::Value >, key : &str ) -> Option< u64 >
+{
+  snapshot.get( key ).and_then( | v | v.as_str() ).and_then( parse_iso_utc_secs )
 }
 
 /// Parse a JSON file into a `Value`; `None` when absent, unreadable, or malformed.
@@ -256,6 +310,7 @@ pub fn write_quota_cache(
 /// Reserved for *definitive* failures (no active subscription). A transient 5xx or a
 /// timeout must never land here: it would pin a permanent verdict on a passing
 /// condition, and the existing cache-fallback path already renders those correctly.
+/// Every failure, definitive or not, separately gets [`write_quota_cache_attempt`]'s stamp.
 #[ inline ]
 pub fn write_quota_cache_error(
   credential_store : &std::path::Path,
@@ -263,13 +318,55 @@ pub fn write_quota_cache_error(
   reason           : &str,
 )
 {
+  let now = chrono_now_utc();
+  merge_into_volatile(
+    credential_store, name, &[ ( "last_error", reason ), ( "last_error_at", now.as_str() ) ],
+  );
+}
+
+// Fix(BUG-591): every failed live fetch in `.usage`'s fetch loop now stamps `last_attempt_at` here.
+// Root cause: only the Class-A verdict wrote anything on failure, so a 429, 5xx or 401/403
+//   left the stale-first ranking key at the last success and the account won every tick.
+// Pitfall: scheduling state, not a verdict — folding it into `last_error` would render a
+//   passing 429 as a permanent error on every cache-rendered row (feature/033 AC-21).
+/// Record that a live fetch was attempted and failed, whatever the failure, against this
+/// host's tracked cache file (BUG-591).
+///
+/// The stale-first selector ranks accounts on their last *attempt*, and a failure that
+/// isn't the definitive no-subscription verdict used to leave no trace at all, so the
+/// account kept its old success as its age and won the next refresh slot again. This
+/// writes only `last_attempt_at`: `fetched_at`, the periods, the history ring and any
+/// recorded verdict survive as they are, and nothing a render surface reads changes.
+///
+/// Merge-only, like [`write_quota_cache_error`]: with no volatile candidate anywhere,
+/// nothing is written, so a never-reached account keeps ranking infinitely stale.
+/// [`write_quota_cache`] rebuilds the file on the next success, which clears the stamp.
+#[ inline ]
+pub fn write_quota_cache_attempt( credential_store : &std::path::Path, name : &str )
+{
+  let now = chrono_now_utc();
+  merge_into_volatile( credential_store, name, &[ ( "last_attempt_at", now.as_str() ) ] );
+}
+
+/// Merge string `fields` into the freshest volatile snapshot of `name` and write the
+/// result to this host's own cache file — the shared body of the two failure writers.
+/// Writes nothing when no volatile candidate exists anywhere.
+fn merge_into_volatile(
+  credential_store : &std::path::Path,
+  name             : &str,
+  fields           : &[ ( &str, &str ) ],
+)
+{
   // Freshest candidate anywhere, mirroring write_quota_cache's own history seeding:
   // the failure was observed here, but it is recorded against the newest snapshot the
   // fleet has, so a host that never fetched this account still writes a coherent file.
-  let Some( mut cache ) = read_volatile_candidates( credential_store, name ).into_iter().next()
+  // Its tied copies' verdict and stamp come along, so this write never drops one (BUG-591).
+  let Some( mut cache ) = freshest_volatile( credential_store, name )
   else { return };
-  cache.insert( "last_error".into(), serde_json::Value::String( reason.to_string() ) );
-  cache.insert( "last_error_at".into(), serde_json::Value::String( chrono_now_utc() ) );
+  for ( key, value ) in fields
+  {
+    cache.insert( ( *key ).to_string(), serde_json::Value::String( ( *value ).to_string() ) );
+  }
   let local_path = local_cache_path( credential_store, name );
   if let Some( dir ) = local_path.parent()
   {
@@ -281,12 +378,12 @@ pub fn write_quota_cache_error(
 
 /// Read cached quota, merging per-host volatile files with tracked metadata.
 ///
-/// Volatile fields (`fetched_at`, `status`, periods) come from the freshest
-/// candidate across every host subtree `cache/*/{name}.json` and the legacy
-/// gitignored `-cache/{name}.json` (freshest-`fetched_at`-wins, TSK-502) — this
-/// is what makes another host's fetch visible here; low-churn metadata
-/// (`model_override`, `last_touch_at`, `touch_idle`, `org_created_at`) from
-/// top-level keys of the tracked `{name}.json`. A legacy tracked `cache{}`
+/// Volatile fields (`fetched_at`, periods, the failure and attempt stamps) come from
+/// the freshest candidate across every host subtree `cache/*/{name}.json` and the
+/// legacy gitignored `-cache/{name}.json` (freshest-`fetched_at`-wins, TSK-502; on a tie
+/// the newest verdict and stamp among the copies, BUG-591) — this is what makes another
+/// host's fetch visible here; low-churn metadata (`model_override`, `last_touch_at`, `touch_idle`,
+/// `org_created_at`) from top-level keys of the tracked `{name}.json`. A legacy tracked `cache{}`
 /// block (pre-TSK-500 store) is honored as fallback for both groups. Returns
 /// `None` when no volatile cache exists in any location — the pre-split
 /// "no cache" contract.
@@ -295,7 +392,7 @@ pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> O
 {
   let tracked = read_json_value( &credential_store.join( format!( "{name}.json" ) ) );
   let legacy = tracked.as_ref().and_then( | t | t.get( "cache" ) ).and_then( | c | c.as_object() );
-  let freshest = read_volatile_candidates( credential_store, name ).into_iter().next();
+  let freshest = freshest_volatile( credential_store, name );
   let volatile = match freshest.as_ref()
   {
     Some( o ) => o,
@@ -325,6 +422,8 @@ pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> O
     //   under the same freshest-wins rule rather than outliving it in tracked metadata.
     last_error       : volatile.get( "last_error" ).and_then( | v | v.as_str() ).map( str::to_string ),
     last_error_at    : volatile.get( "last_error_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
+    // BUG-591: volatile for the same reason — the attempt belongs to this snapshot.
+    last_attempt_at  : volatile.get( "last_attempt_at" ).and_then( | v | v.as_str() ).map( str::to_string ),
   } )
 }
 

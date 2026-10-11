@@ -1,8 +1,8 @@
-//! Integration tests: IT-01–IT-20 — `.usage` core display, JSON, error paths.
+//! Integration tests: IT-01–IT-20 and IT-273 — `.usage` core display, JSON, error paths.
 //!
 //! Covers heading/column names, active-account markers, JSON output structure,
 //! empty store, HOME-unset, alphabetical order, expired-token display, footer,
-//! and current-vs-active divergence.
+//! current-vs-active divergence, and the warning when two slots hold the live session.
 //!
 //! Live tests (names contain `lim_it`) require a real Anthropic OAuth access token.
 //! Offline tests run without credentials and cover error paths.
@@ -627,6 +627,75 @@ fn it020_refresh_enabled_offline_no_retry_triggered()
   assert!(
     text.contains( "test-acct" ),
     "account name must appear in output, got:\n{text}",
+  );
+}
+
+// ── it273 ──────────────────────────────────────────────────────────────────────
+
+/// it273 (IT-88, 016 AC-12, BUG-582): two saved slots matching the live token both get `✓`, and
+/// a warning line names them, since only one of them can own the session; `format::plain` warns
+/// too. One match prints no warning, and `format::json` and `format::tsv` never carry it.
+///
+/// Offline: every token is locally expired and `refresh::0 touch::0` is passed, so no row
+/// reaches HTTP or a subprocess.
+#[ test ]
+fn it273_shared_session_warning_names_both_slots()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  let slot = | name : &str, token : &str |
+  {
+    std::fs::write(
+      store.join( format!( "{name}.credentials.json" ) ),
+      format!( r#"{{"accessToken":"{token}","expiresAt":1000}}"# ),
+    ).unwrap();
+  };
+  slot( "i4@example.com", "tok-i4" );
+  slot( "i7@example.com", "tok-i7" );
+  write_live_credentials_with_token( dir.path(), "tok-i7" );
+  let usage = | extra : &[ &str ] |
+  {
+    let args : Vec< &str > = [ ".usage", "refresh::0", "touch::0" ].iter().chain( extra ).copied().collect();
+    let out  = run_cs_with_env( &args, &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    stdout( &out )
+  };
+  let warning = "2 saved accounts hold the live session: i4@example.com, i7@example.com";
+
+  let single = usage( &[] );
+  assert!(
+    !single.contains( "hold the live session" ),
+    "it273: one match must not warn, got:\n{single}",
+  );
+
+  // i4's slot now holds i7's session too.
+  slot( "i4@example.com", "tok-i7" );
+  let text = usage( &[] );
+  let checked = text.lines().filter( | l | l.contains( '\u{2713}' ) ).count();
+  assert_eq!(
+    checked, 2,
+    "it273: both slots matching the live token must show ✓, got:\n{text}",
+  );
+  assert!(
+    text.contains( &format!( "\u{26a0} {warning}" ) ),
+    "it273: two matches must name both slots, got:\n{text}",
+  );
+  let plain = usage( &[ "format::plain" ] );
+  assert!(
+    plain.contains( &format!( "! {warning}" ) ),
+    "it273: format::plain renders the text view, so it must warn too (`!` for the glyph), got:\n{plain}",
+  );
+  let json = usage( &[ "format::json" ] );
+  assert!(
+    !json.contains( "hold the live session" ),
+    "it273: JSON must stay free of the warning, got:\n{json}",
+  );
+  let tsv = usage( &[ "format::tsv" ] );
+  assert!(
+    !tsv.contains( "hold the live session" ),
+    "it273: TSV must stay free of the warning, got:\n{tsv}",
   );
 }
 

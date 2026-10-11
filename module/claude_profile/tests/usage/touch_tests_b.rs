@@ -113,12 +113,14 @@ fn it_apply_touch_trigger_fires_resets_at_none()
   );
 }
 
-/// AC-02 behavioral: `apply_touch` skips when `resets_at` is `Some` (already active 5h window).
+// BUG-584 — a far-future reset is active; `mre_bug584_…` below pins one that has passed
+/// AC-02 behavioral: `apply_touch` skips a row whose only window, its 5h one, is still running.
 ///
-/// When `five_hour.resets_at` is present, `apply_touch` returns early without calling
+/// That 5h `resets_at` is ahead of now and the weekly fields are absent, so every timer runs:
+/// `touch_skip_reason` returns `already active` and `apply_touch` returns early without calling
 /// `refresh_account_token`. The live credentials file is never written.
 ///
-/// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-13 case A]
 #[ test ]
 fn it_apply_touch_trigger_skips_resets_at_some()
 {
@@ -137,11 +139,73 @@ fn it_apply_touch_trigger_skips_resets_at_some()
   ).unwrap();
   let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
   let paths  = claude_profile::ClaudePaths::with_home( &fake_home );
+  // The file check below also holds when touch fires, so pin the skip reason itself
+  assert_eq!(
+    touch_skip_reason( &aq, &store, false ), Some( "skipped (reason: already active)" ),
+    "AC-02: a 5h reset still ahead of now is a running window, so the row is already active",
+  );
   apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Trigger skipped → early return → live credentials file NOT written.
   assert!(
     !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
-    "apply_touch must not enter refresh path when resets_at is Some (already active)",
+    "apply_touch must not enter refresh path when resets_at is ahead of now (already active)",
+  );
+}
+
+/// BUG-584 — a cache-rendered row whose 5h window reset 30 min ago isn't "already active",
+/// and the renderer marks the same reset `(stale)`.
+///
+/// # Root Cause
+/// Guard 7 counted a window as running when its `resets_at` merely existed. A cached row keeps
+/// the `resets_at` it was fetched with, so a window that had already ended still read as running.
+///
+/// # Why Not Caught
+/// Guard 7's running tests used a far-future reset or none. `mk_aq_with_son_idle`'s 5h reset and the
+/// BUG-289 test's 7d one had passed, but an idle 7d-Son window masked both, and `mre_bug245` reached
+/// guard 7 with elapsed seam resets without checking its verdict. No fixture set `cached: true`.
+///
+/// # Fix Applied
+/// Guard 7 counts a window as running only while its `resets_at` is still ahead of now, with the
+/// same parser and comparison as format.rs's `is_past` (`src/usage/touch.rs`).
+///
+/// # Prevention
+/// Pins both verdicts on one row: the guard lets the touch fire, and the renderer marks the same
+/// 5h reset `(stale)`, so the two can't drift apart unnoticed again.
+///
+/// # Pitfall
+/// A present `resets_at` says a window was reported, not that it's still open. Judge it against
+/// the clock wherever a cached response can reach.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-13]
+#[ doc = "bug_reproducer(BUG-584)" ]
+#[ test ]
+fn mre_bug584_lapsed_cached_5h_window_is_not_already_active()
+{
+  use claude_profile::usage::test_bridge::{ quota_cells_for, reset_iso_at, PctStyle };
+
+  let now    = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() );
+  let lapsed = reset_iso_at( now - 1800, 0 );
+  let mut aq = mk_aq_with_resets_at( Some( &lapsed ) );
+  aq.cached  = true;
+  let store  = tempfile::TempDir::new().unwrap();
+
+  let reason = touch_skip_reason( &aq, store.path(), false );
+  assert_ne!(
+    reason, Some( "skipped (reason: already active)" ),
+    "BUG-584: a 5h window that reset 30 min ago ({lapsed}) is not already active",
+  );
+  assert_eq!(
+    reason, None,
+    "BUG-584: no other guard applies to this row, so the touch must fire; got {reason:?}",
+  );
+
+  let data  = aq.result.as_ref().expect( "BUG-584: the fixture's result must be Ok" );
+  let cells = quota_cells_for( &aq, data, now, PctStyle::Emoji );
+  assert_eq!(
+    cells[ 1 ], "(stale)",
+    "BUG-584: the renderer must mark the same lapsed 5h reset (stale); got {cells:?}",
   );
 }
 
@@ -191,7 +255,13 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 #[ test ]
 fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 {
-  use claude_profile::usage::test_bridge::mk_aq_with_son_idle;
+  use claude_profile::usage::test_bridge::{ mk_aq_with_son_idle, reset_iso_at };
+
+  // A 7d reset still ahead of now: guard 7 counts one that has passed as idle (BUG-584).
+  let now      = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() );
+  let d7_reset = reset_iso_at( now, 3 * 86_400 );
 
   // Call A: prove the trigger fires (touch_skip_reason returns None) for son_running=false.
   // If any guard fired instead, touch_skip_reason would return Some(_).
@@ -206,7 +276,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       data.seven_day = Some( claude_quota::PeriodUsage
       {
         utilization : 0.0,
-        resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        resets_at   : Some( d7_reset.clone() ),
       } );
     }
 
@@ -230,7 +300,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       data.seven_day = Some( claude_quota::PeriodUsage
       {
         utilization : 0.0,
-        resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        resets_at   : Some( d7_reset.clone() ),
       } );
     }
 
@@ -889,6 +959,8 @@ fn test_mre_bug552_refuted_touch_yields_no_corroboration()
       // subscription failure is orthogonal to whether a touch was refuted.
       last_error       : None,
       last_error_at    : None,
+      // BUG-591: likewise the failed-attempt stamp, which only orders stale-first refreshes.
+      last_attempt_at  : None,
     };
 
   // A: the fetch raced the touch (+1s) and saw no window — uninformative, not refuting.

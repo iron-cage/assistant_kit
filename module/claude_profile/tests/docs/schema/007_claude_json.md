@@ -12,7 +12,7 @@ field is used as the default account name.
 | ID | Short Name | Category | Status |
 |----|------------|----------|--------|
 | SC-1 | Absent `~/.claude.json` — save succeeds, all metadata fields show N/A | Error Path | ✅ |
-| SC-2 | `emailAddress` used as default account name when `name::` omitted | Field Semantics | ✅ |
+| SC-2 | `emailAddress` used as the account name when `name::` is omitted and no slot holds the live session | Field Semantics | ✅ |
 | SC-3 | `clp` writes to `~/.claude.json` limited to `.account.use`'s identity patch | Write Isolation | ✅ |
 | SC-4 | Absent `oauthAccount` subfields show N/A without error | Graceful Missing | ✅ |
 
@@ -28,9 +28,10 @@ field is used as the default account name.
 
 ---
 
-### SC-2: `oauthAccount.emailAddress` used as default account name when `name::` omitted
+### SC-2: `oauthAccount.emailAddress` used as the account name when `name::` is omitted and no slot holds the live session
 
-- **Given:** `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"` and `.account.save` is invoked without `name::` parameter
+- **Given:** `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`,
+  no saved slot holds the live session (one that did would name the save first, BUG-582), and `.account.save` is invoked without `name::` parameter
 - **When:** `account_save_routine()` resolves the account name
 - **Then:** The account is saved as `alice@acme.com` — the email address from `~/.claude.json` is used as the default name
 - **Source fn:** `onboarding_ua2_name_inference_and_missing_source` in `tests/cli/user_story_test.rs`

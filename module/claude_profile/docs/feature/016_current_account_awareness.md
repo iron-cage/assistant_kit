@@ -21,7 +21,10 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 **Current account detection algorithm (shared):**
 1. Read `accessToken` from `~/.claude/.credentials.json` → live token.
 2. For each saved account, read `accessToken` from `{credential_store}/{name}.credentials.json`.
-3. The account whose stored token equals the live token is the current account (`is_current = true`). At most one account matches. <!-- BUG-582 — false once two slots hold one session; nothing enforces it -->
+3. The account whose stored token equals the live token is the current account (`is_current = true`). Normally at most one matches: `.account.save`
+   refuses to file a live session another slot already holds ([002](002_account_save.md) AC-21, BUG-582). Two can still match: a store written before
+   that guard, a token refresh syncing the live session into the slot the active marker names (002's Known limitation), two redirect slots saved
+   with the same `api_key::` (a key passed in isn't checked), or a hand-copied file. Both views then warn, naming the matches each one counts (AC-12).
 4. When `~/.claude/.credentials.json` is absent or unreadable: `is_current = false` for all accounts (graceful degradation).
 
 **Changes to `.accounts`:**
@@ -30,6 +33,7 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 - Text format: `Current:  yes` / `Current:  no` (same indentation as `Active:`).
 - When credentials file unreadable: `Current:` line is suppressed entirely for all accounts (no misleading `no`).
 - JSON: new `is_current` boolean field per account object.
+- Two or more matches: `Current:  yes` and JSON `is_current` go to the first in list order; the text and table views add the shared-session warning (AC-12).
 
 **Changes to `.usage`:**
 - `AccountQuota` internal struct: rename `active` → `is_current`; add `is_active: bool` (from per-machine active marker).
@@ -41,6 +45,9 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 - When current ≠ active: `✓` on current row, `*` on active row; divergence is immediately visible.
 - When credentials file unreadable: no `✓` on any row; `*` still appears for the active account.
 - JSON: field `active` renamed to `is_current`; new `is_active` boolean field added per object.
+- Two or more matches: every matching row gets `✓` (`is_current = true`), and the text view (which `format::plain` and `live::1` also render) adds the
+  shared-session warning under the table (AC-12). Only shown rows count: a row another machine owns is never current, and the opt-in row filters
+  (`only_valid::`, `min_5h::`, `count::` and the like) can drop a match.
 
 **Divergence display example (`.accounts`):**
 
@@ -80,6 +87,10 @@ work@acme.com
 - **AC-09**: When no saved account matches the live token, `.usage` prepends a synthetic current-session row with `✓` and no `*` — provided the derived name (from `~/.claude.json oauthAccount.emailAddress`) does not already appear in the stored-account list. When the derived name collides with an existing stored account name, injection is suppressed; the stored row carries the quota data for that account. Unconditional injection when a collision exists is a defect (BUG-218).
 - **AC-10**: `.accounts` `is_current` and `.usage` `is_current` both use the same detection algorithm (token equality, no hashing, no prefix matching).
 - **AC-11**: The quota table produced by `fetch_all_quota()` contains at most one row per unique account name. The synthetic-row injection path enforces this via a lookup-then-insert (`results.iter().any(|r| r.name == synthetic_name)`) before calling `results.insert(0, ...)`. This invariant prevents the downstream `apply_refresh` and `apply_touch` phases from processing the same account twice, which would cause spurious double-refresh or double-subprocess spawning against the same credential file.
+- **AC-12**: When two or more saved accounts' stored `accessToken` equals the live token, `.usage`'s text output and `.accounts`' text and table output
+  add `⚠ N saved accounts hold the live session: a, b — only one owns it; re-login the rest`, naming the matches in list order; `.usage format::plain`
+  prints the same line with `!` for `⚠`. `.accounts` checks every saved account, `.usage` only the rows it shows, never one another machine owns. One
+  match prints no warning, and `format::json` (or `.usage`'s `format::tsv`) never carries it. (BUG-582.)
 
 ### Bugs
 
@@ -87,6 +98,7 @@ work@acme.com
 |------|--------------|
 | BUG-217 | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
 | BUG-218 | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
+| BUG-582 | BUG-582 🟢 Fixed: a bare save could copy the live session into a second slot, and both views took the first match silently; save now refuses that (002 AC-21) and both views warn (AC-12) |
 
 ### Commands
 
@@ -126,3 +138,5 @@ work@acme.com
 |------|--------------|
 | `tests/cli/accounts_list_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
 | `tests/cli/usage_core_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |
+| `tests/cli/usage_core_test.rs` | `it273_shared_session_warning_names_both_slots` — two ✓ rows and the warning in `.usage` text and plain; none in JSON or TSV (AC-12) |
+| `tests/cli/accounts_list_test_b.rs` | `acc52_shared_session_warning_names_both_slots` — the same warning in `.accounts` text and table; none in JSON (AC-12) |

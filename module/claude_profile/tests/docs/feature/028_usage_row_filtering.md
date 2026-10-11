@@ -268,11 +268,25 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 ### FT-18: `stalest::K` selects the K oldest-cache accounts; all N rows render
 
 - **Given:** N-account store with per-account quota cache `fetched_at` timestamps of varying age; one account cacheless; two accounts with equal timestamps.
-- **When:** `select_stalest( accounts, store, K, 0, now )` runs, and the fetch layer receives the resulting subset.
+  Separate stores add accounts the fetch loop skips among the oldest: two occupied on other machines beside one free account, a `backend: redirect` account
+  with an empty `inference_provider`, an account another machine owns and, for `solo::1`, one older than the live session, plus one it doesn't skip: occupied elsewhere, but the live session here.
+  Another store holds an account whose last success is old but whose last fetch failed a minute ago, beside an older success and a stale stamp under a newer one.
+- **When:** `select_stalest( accounts, store, live, solo, K, max_age, now )` runs (`live`: live credentials path; `solo`: `solo::1`; `max_age`: 0 or 7200) and the fetch layer gets the subset.
+  End to end, `clp .usage trace::1 touch::0 refresh::0 stalest::2 max_age::7200` runs over the occupied-pair fleet, and `… solo::1 stalest::1` over a fleet with no live session.
+  Two `stalest::1 max_age::7200` ticks also run through the selector and the fetch loop against the loopback seam, which answers 429 for one account's token.
 - **Then:** Exactly the K oldest-cache accounts are selected — a missing cache ranks oldest, equal ages tie-break by original list order, K > fleet selects all. Non-selected accounts still render rows (from cache via `approximate_quota()`); no row is removed.
-- **Exit:** n/a (library-level; deterministic tempdir store)
+  An account the fetch loop skips is never selected (redirect backend, not owned, occupied elsewhere, any but the live session under `solo::1`), but the live session here stays selectable.
+  End to end, the trace line `stalest  selected (k=2, max_age=7200s): a3@example.com` names only the free account, and that account takes the fetch path. The solo run traces `none`.
+  <!-- BUG-583 — the occupied, not-owned, redirect and solo cases check that no pick is an account the fetch loop skips -->
+  An account ranks by its last attempt, failed or not: a fetch that failed a minute ago keeps it out of the slot and under `max_age`, and an old stamp loses
+  to a newer success. End to end, the first tick fetches the stalest account and gets its 429, and the second tick fetches the other stale account (BUG-591).
+- **Exit:** 0 for the end-to-end run; n/a for the library-level cases (deterministic tempdir store)
 - **Live:** no
-- **Source fn:** `selection_picks_k_oldest`, `selection_missing_cache_ranks_oldest`, `selection_tie_breaks_by_list_order`, `selection_k_exceeding_fleet_selects_all`, `fetch_subset_preserves_full_fleet_rows` (in `usage/stalest_tests.rs`)
+- **Source fn:** `selection_picks_k_oldest`, `selection_missing_cache_ranks_oldest`, `selection_tie_breaks_by_list_order`, `selection_k_exceeding_fleet_selects_all`,
+  `fetch_subset_preserves_full_fleet_rows`, `bug_583_occupied_oldest_pair_leaves_slots_for_free_account`, `bug_583_redirect_backend_without_provider_never_selected`,
+  `bug_583_not_owned_account_never_selected`, `bug_583_live_session_occupied_elsewhere_stays_selectable`, `bug_583_solo_ranks_only_the_live_session`, `selection_trace_sorts_names_and_marks_empty`,
+  `bug_591_failed_attempt_ranks_as_attempted` (in `usage/stalest_tests.rs`); `mre_bug_583_stalest_slot_goes_to_fetchable_account`,
+  `bug_583_solo_stalest_selects_none_without_a_live_session` (in `cli/usage_feature_test.rs`); `mre_bug_591_failed_fetch_moves_stalest_on` (in `usage/fetch_tests.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-18](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
@@ -280,7 +294,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 ### FT-19: `max_age::S` eligibility threshold; fully-fresh fleet fetches nothing
 
 - **Given:** Four accounts with cache ages 3.0 h / 2.5 h / 2.2 h / 10 m against a 7200 s threshold; winners re-marked fresh between calls (as a successful fetch would).
-- **When:** `select_stalest( accounts, store, 1, 7200, now )` runs repeatedly.
+- **When:** `select_stalest( accounts, store, live, false, 1, 7200, now )` runs repeatedly, with no live session and `solo::1` off.
 - **Then:** Successive calls drain oldest-first (3.0 h, then 2.5 h, then 2.2 h); the under-threshold account is never selected; once every cache is fresher than S the selection is empty — zero fetch-eligible accounts. Non-selected accounts take the cache path and their cache files stay untouched.
 - **Exit:** n/a (library-level; deterministic tempdir store)
 - **Live:** no

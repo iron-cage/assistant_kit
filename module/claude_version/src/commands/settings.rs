@@ -154,7 +154,8 @@ pub fn settings_set_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     )?;
   }
 
-  set_setting( &settings_file, &key, &value ).map_err( | e |
+  // BUG-586 — this call keeps pattern 002's parameter trace on
+  set_setting( &settings_file, &key, &value, true ).map_err( | e |
     ErrorData::new( ErrorCode::InternalError, format!( "failed to write settings: {e}" ) )
   )?;
 

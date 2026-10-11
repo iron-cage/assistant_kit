@@ -1,6 +1,6 @@
 //! Unit tests for the adapter and output modules.
 //!
-//! Covers matrix IDs A-01..A-37 (adapter), O-01..O-19 (output), D-01..D-12 (`format_duration`).
+//! Covers matrix IDs A-01..A-37 (adapter), O-01..O-21 (output), D-01..D-12 (`format_duration`).
 //! All tests call library functions directly — no binary invocation.
 //!
 //! ## Test Matrix
@@ -47,7 +47,7 @@
 //! | A-36 | `adapter_field_presence_bool_true_normalises` | `account::true` → `account::1` | P |
 //! | A-37 | `adapter_field_presence_bool_false_normalises` | `account::false` → `account::0` | P |
 //!
-//! ### O — Output format / `json_escape`
+//! ### O — Output format / `json_escape` / `owner_cell`
 //!
 //! | ID   | Test Function | Condition | P/N |
 //! |------|---------------|-----------|-----|
@@ -66,6 +66,8 @@
 //! | O-17 | `json_escape_empty` | empty string → empty string | P |
 //! | O-18 | `json_escape_mixed` | string with multiple special chars → all escaped | P |
 //! | O-19 | `json_escape_unicode` | non-ASCII unicode passthrough unchanged | P |
+//! | O-20 | `owner_cell_unowned_is_em_dash` | empty owner → `—` | P |
+//! | O-21 | `owner_cell_owned_passes_through` | owner identity unchanged | P |
 //!
 //! ### D — `format_duration_secs`
 //!
@@ -596,6 +598,7 @@ mod output
     assert_eq!( json_escape( "cafe\u{0301}" ), "cafe\u{0301}" );
   }
 
+  // BUG-588 — owner_cell() is the one Owner formatter for both `.accounts` and `.usage`
   // O-20: owner_cell unowned (empty owner) → em dash
   #[ test ]
   fn owner_cell_unowned_is_em_dash()

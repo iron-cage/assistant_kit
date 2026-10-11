@@ -20,10 +20,13 @@
 | FT-08 | AC-08 | `preset::kimi backend::anthropic` → ordinary OAuth path, no redirect fields | `t18_save_preset_kimi_with_explicit_backend_anthropic_does_not_force_redirect_fields` |
 | FT-09 | AC-09 | `preset::bogus` → exit 1 naming the only recognized value | `t16_save_preset_unrecognized_value_exits_1` |
 | FT-10 | AC-10 | End-to-end: preset save + `.account.use` writes all 10 vars via CLI | `t17_use_preset_kimi_account_writes_kimi_tier_env_vars` |
+| FT-11 | AC-04 | Switch anthropic→anthropic keeps a user-set Kimi-tier key (no redirect session to leave) | `mre_bug_585_anthropic_switch_keeps_user_tier_keys` |
 
 ### Notes
 
-- ✅ Implemented — domain-level cases (FT-01–FT-05) live in `claude_profile_core/tests/account_backend_test.rs` (`ft01`–`ft05_073` fn prefix); CLI-surface cases (FT-06–FT-10) in `tests/cli/account_redirect_backend_test.rs` (`t14`–`t18`).
+- ✅ Implemented — domain-level cases (FT-01–FT-05, FT-11) live in `claude_profile_core/tests/account_backend_test.rs`
+  (`ft01`–`ft05_073` fn prefix, plus `mre_bug_585_anthropic_switch_keeps_user_tier_keys`);
+  CLI-surface cases (FT-06–FT-10) in `tests/cli/account_redirect_backend_test.rs` (`t14`–`t18`).
 - All FT cases use temporary isolated `$HOME`/credential stores; no real user environment.
 - FT-01–FT-05 exercise `switch_account()`'s Kimi-tier branch directly (`KIMI_MODEL_TIER_ENV_VARS`, `kimi_auto_compact_window()`, `write_kimi_tier_env_vars()`/`clear_kimi_tier_env_vars()` in `claude_profile_core/src/account/switch.rs`); FT-06–FT-09 exercise `account_save_routine()`'s preset parsing/gating; FT-10 ties both through the CLI.
 - FT-02's asymmetry rationale (default to the narrow window unless the model name confirms K3 capacity) is design-documented in the feature doc — both fns assert the exact string values `"1048576"`/`"262144"`.
@@ -69,7 +72,7 @@
 
 - **Given:** Active kimi redirect account (10 vars present).
 - **When:** `switch_account()` targets a `backend: anthropic` account.
-- **Then:** All 10 vars removed — no stale tier vars remain. <!-- BUG-585 — no FT switches Anthropic → Anthropic with a user-set Kimi-tier key, which the switch deletes -->
+- **Then:** All 10 vars removed — no stale tier vars remain. <!-- BUG-585 — the counterpart, an anthropic→anthropic switch that keeps a user-set tier key, is FT-11 -->
 - **Exit:** n/a (domain fn)
 - **Source fn:** `ft04_073_switch_from_kimi_to_anthropic_clears_all_tier_env_vars`
 - **Source:** [073_kimi_provider_preset.md AC-04](../../../docs/feature/073_kimi_provider_preset.md)
@@ -139,3 +142,15 @@
 - **Exit:** 0
 - **Source fn:** `t17_use_preset_kimi_account_writes_kimi_tier_env_vars`
 - **Source:** [073_kimi_provider_preset.md AC-10](../../../docs/feature/073_kimi_provider_preset.md)
+
+---
+
+### FT-11: Switch anthropic→anthropic keeps a user-set Kimi-tier key
+
+- **Given:** Live `env` holds Kimi-tier key names the user set (`CLAUDE_CODE_EFFORT_LEVEL`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`)
+  and no `ANTHROPIC_BASE_URL`, so no redirect session is live.
+- **When:** `switch_account()` targets a `backend: anthropic` account.
+- **Then:** Both keys keep their values; only leaving a redirect session clears the tier vars (FT-04). (BUG-585)
+- **Exit:** n/a (domain fn)
+- **Source fn:** `mre_bug_585_anthropic_switch_keeps_user_tier_keys` (the `bug_reproducer(BUG-585)`)
+- **Source:** [073_kimi_provider_preset.md AC-04](../../../docs/feature/073_kimi_provider_preset.md)

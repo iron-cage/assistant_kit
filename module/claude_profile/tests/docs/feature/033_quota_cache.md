@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-15, AC-19, AC-20
+- **Covers**: AC-01 through AC-15, AC-19, AC-20, AC-22
 
 ### Test Cases
 
@@ -30,6 +30,7 @@
 | FT-18 | AC-20 | One cached fixture rendered through all four surfaces agrees on every quota cell — text and TSV both carry the `~` staleness prefix, `get::` matches the table cell, JSON discloses staleness via its own `cached` field and emits no `~` | `test_bug553_all_surfaces_agree_on_cached_row` |
 | FT-19 | AC-20 | A corroborated-touch row projects the same `~in Xh Ym` countdown on TSV and `get::` as on the text table; JSON emits the countdown with `session_5h_reset_is_estimate: true` | `test_bug553_tsv_and_json_project_touched_row` |
 | FT-20 | AC-20 | A `*.5` percentage rounds identically on every surface — one shared closure, `.round()` half-away, no per-surface copy | `test_bug553_one_rounding_across_surfaces` |
+| FT-21 | AC-22 | A failed live fetch stamps `last_attempt_at`, merge-only; a success clears it; copies tied on `fetched_at` fold the newest stamp and verdict | `bug_591_attempt_stamp_preserves_last_success_and_verdict` and 4 more |
 
 ### Notes
 
@@ -41,6 +42,7 @@
 - FT-12 is a unit test in `tests/usage/fetch_tests.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
 - FT-14 is implemented as a single integration test in `tests/usage/render_tests_a.rs` exercising `render_text`/`render_tsv`/`render_json` together against one `AccountQuota` with `fallback_reason: Some(...)`. **Correction (found during implementation):** `render_tsv.rs` has no pre-existing cache-age-suffix mechanism (unlike `render.rs`) — the original AC-03/AC-14 wording implying TSV combines the reason with an age label was inaccurate; TSV's shortened reason renders as its own standalone parenthetical, e.g. `alice (rate limited (429))`, vs. text's combined `alice (2h ago, rate limited (429))`. MRE for BUG-335.
 - FT-15 is partially implemented. `mre_bug327_cache_first_surfaces_org_created_at` (in `tests/usage/fetch_tests.rs`, lines 794-882) covers the cache-first branch only: it writes a quota cache via the real `write_quota_cache()`/`write_cache_string()` production path, drives `fetch_quota_for_list()` with no live credentials file (forcing cache-first before any HTTP path), and asserts `AccountQuota.org_created_at` surfaces the cached value and that `renews_label()` renders a `"~in "`-prefixed estimate instead of `"?"`. Two coverage gaps remain unimplemented: (1) the G1-not-owned and `approximate_quota()` branches are not exercised by this or any other test — only cache-first is; (2) the absent-cache/pre-migration fallback (`org_created_at` key absent → `None` → `~Renews` renders `"?"` unchanged) and a `claude_profile_core/tests/account_test.rs` unit test round-tripping `write_quota_cache()`/`read_quota_cache()` for the new field are both still missing, tracked as an implementation gap for BUG-327's fix task.
+- FT-21 is implemented as five unit tests in `claude_profile_core/tests/account_quota_cache_test.rs`; its fetch-loop half is 028 FT-18's `mre_bug_591_failed_fetch_moves_stalest_on`.
 
 ---
 
@@ -279,3 +281,25 @@
 - **Source fn:** `test_bug553_one_rounding_across_surfaces`
 - **Note:** MRE for BUG-553 S4. Four percentage closures existed for one logical value and only two applied BUG-331's round-once doctrine — `quota_text_cells`'s `pct_cell` (the `7d(Son)` path) and `extract_get_field`'s `pct_bare` both let the format string round half-to-even. A duplicated formatting closure is a latent divergence even when every copy looks correct today: the next doctrine change lands in whichever copies someone finds.
 - **Source:** [033_quota_cache.md AC-20](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-21: A failed fetch stamps its attempt time, merge-only
+
+- **Given:** An account with a successful cache write (5h and 7d periods), one history entry and a recorded no-subscription verdict; a second account with a
+  successful write only; a third with no cache anywhere; a fourth whose only snapshot sits in another host's subtree; and a fifth whose original snapshot is
+  this host's, with another host's copy of it carrying a verdict and a stamp.
+- **When:** `write_quota_cache_attempt()` runs once for each of the first four; the second account then gets another successful `write_quota_cache()`, and
+  the fourth's source host records the no-subscription verdict on its own copy. The fifth is read, stamped once here, and read again.
+- **Then:** The first account reads back a parseable `last_attempt_at` with `fetched_at`, both periods, the history ring and the verdict pair unchanged. The
+  second reads back `last_attempt_at = None` after its new success. The third still has no cache entry and no own-host file. The fourth reads back both
+  this host's stamp and the other host's verdict, though the two copies share one `fetched_at`. The fifth reads back the other host's verdict and stamp;
+  after the local stamp, this host's own file carries the verdict too, and the newer local stamp is the one read back.
+- **Exit:** n/a (library-level; deterministic tempdir store)
+- **Source fn:** `bug_591_attempt_stamp_preserves_last_success_and_verdict`, `bug_591_success_clears_the_attempt_stamp`,
+  `bug_591_attempt_without_any_prior_cache_writes_nothing`, `bug_591_tied_copies_keep_own_stamp_and_foreign_verdict`,
+  `bug_591_tied_copies_keep_foreign_verdict_and_newest_stamp`
+- **Note:** MRE for BUG-591. Before the fix only the Class-A verdict wrote anything on failure, so `stalest::K` kept ranking a failing account by its last
+  success. The two tie cases put the stamp and the verdict in different copies, so without the fold one of their asserts fails whatever the directory
+  listing order. Under the first fix's own-file-first listing, the fourth account rendered without its verdict.
+- **Source:** [033_quota_cache.md AC-22](../../../docs/feature/033_quota_cache.md)

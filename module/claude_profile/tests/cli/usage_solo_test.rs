@@ -302,9 +302,10 @@ fn it255_footer_single_strategy_structural()
 /// blank, while `.accounts` mapped the same value to `—`.
 ///
 /// # Why Not Caught
-/// Case A asserted only that `—` appeared somewhere in stdout. These fixtures have no
-/// `accessToken`, so every row takes the `Err` arm, whose `→ Next` cell is always `—`: the
-/// check passed whatever bob's Owner cell held.
+/// Case A asserted only that `—` appeared somewhere in stdout. Every row in these fixtures
+/// takes the `Err` arm (no `accessToken` to fetch with, or owned by another machine with
+/// nothing cached), and that arm's `→ Next` cell is always `—`: the check passed whatever
+/// bob's Owner cell held.
 ///
 /// # Fix Applied
 /// Both arms of `render_text()` push `output::owner_cell( &aq.owner )`, the formatter
@@ -360,9 +361,15 @@ fn it248_owner_column_visible_by_default()
       .trim_end()
       .to_string();
     let bob = row_of( "bob@acme.com" );
-    assert!( bob.ends_with( "\u{2014}" ), "IT-74A: bob's own Owner cell must be — (unowned); got row: {bob:?}\n{text}" );
+    assert!(
+      bob.ends_with( "\u{2014}" ),
+      "IT-74A: bob's own Owner cell must be — (unowned); got row: {bob:?}\n{text}",
+    );
     let alice = row_of( "alice@acme.com" );
-    assert!( alice.ends_with( "testuser@testmachine" ), "IT-74A: alice's Owner cell must be her identity; got row: {alice:?}\n{text}" );
+    assert!(
+      alice.ends_with( "testuser@testmachine" ),
+      "IT-74A: alice's Owner cell must be her identity; got row: {alice:?}\n{text}",
+    );
   }
 
   // Case B: cols::-owner — Owner column header absent.

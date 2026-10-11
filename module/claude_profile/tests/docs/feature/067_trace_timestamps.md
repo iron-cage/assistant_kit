@@ -73,7 +73,14 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 - **Given:** An account is skipped during `apply_touch()` due to solo mode.
 - **When:** `clp .usage touch::1 solo::1 trace::1` (non-current account present).
 - **Then:** stderr contains `" · touch  "` followed by the account name and skip reason. No `"[trace] touch  "` prefix appears.
-- **Source fn:** `test_apply_touch_touch_idle_false_silent_when_trace_disabled` (in `tests/usage/touch_tests.rs:538`) — corrected from an inexact `contains(" · touch  ")` paraphrase; the actual assertion is a structural source-inspection check (`src.contains("if trace { let _ = writeln!( std::io::stderr(), \"{}touch  {}  {}\", trace_ts(), aq.name, reason ); }")`) confirming the sentinel-producing `writeln!` call, not a literal captured-stderr string match. No test asserts the solo-mode-specific scenario in this Given/When directly — the closest scenario-level match, `ec8_solo_gate_skips_non_current_with_trace` (`tests/usage/touch_tests_b.rs:290`), checks `touch_skip_reason()`'s return value only, not the formatted stderr line.
+- **Source fn:** `test_apply_touch_touch_idle_false_silent_when_trace_disabled` (in `tests/usage/touch_tests.rs:538`)
+  — corrected from an inexact `contains(" · touch  ")` paraphrase; the actual assertion is a structural source-inspection check
+  (`src.contains("if trace { let _ = writeln!( std::io::stderr(), \"{}touch  {}  {}\", trace_ts(), aq.name, reason ); }")`)
+  confirming the sentinel-producing `writeln!` call, not a literal captured-stderr string match.
+  No test asserts the solo-mode-specific scenario in this Given/When directly — the closest scenario-level match,
+  `ec8_solo_gate_skips_non_current_with_trace` (`tests/usage/touch_tests_b.rs:359`),
+  checks `touch_skip_reason()`'s return value only, not the formatted stderr line.
+  <!-- BUG-584 — its reproducer and pinned skip test sit above ec8, which moved it from :290 -->
 
 ---
 

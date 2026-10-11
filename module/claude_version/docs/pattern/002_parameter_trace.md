@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the unconditional stderr parameter-trace convention applied to every public mutating function in `claude_version_core` and the shared `claude_core::settings_io` module.
+- **Purpose**: Document the stderr parameter-trace convention applied to every public mutating function in `claude_version_core` and the shared `claude_core::settings_io` module.
 - **Responsibility**: Describe the problem, trace line format, rationale, and non-goals of the parameter-trace design.
-- **In Scope**: The 13 traced functions, trace line format, stderr-only placement, unconditional (ungated) emission.
+- **In Scope**: The 13 traced functions, trace line format, stderr-only placement, unconditional emission in 9 of them and caller-gated emission in the 4 `settings_io` mutators.
 - **Out of Scope**: Leveled/structured logging (see Non-Goals), the sibling `claude_version` CLI crate's own pre-existing `eprintln!` diagnostics (an unrelated, already-existing idiom this pattern does not touch).
 
 ### Problem
@@ -13,18 +13,27 @@ Before this pattern, none of `claude_version_core`'s public mutating functions e
 
 ### Solution
 
-Every one of the 13 public mutating functions emits exactly one unconditional `eprintln!` call as its first statement, before any other logic runs. The trace line names the function and every one of its parameters:
+Every one of the 13 public mutating functions emits exactly one `eprintln!` call as its first statement, before any other logic runs.
+The 9 `claude_version_core` functions emit it unconditionally; the 4 `settings_io` mutators wrap it in `if trace`, and their callers pass `trace` (BUG-586).
+The trace line names the function and every one of its parameters:
 
 ```rust
-pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< StoredAs, io::Error >
+pub fn purge_stale_versions( versions_dir : &str, keep : &str )
 {
-  eprintln!( "set_setting(path={path:?}, key={key:?}, raw_value={raw_value:?})" );
+  eprintln!( "purge_stale_versions(versions_dir={versions_dir:?}, keep={keep:?})" );
+  // ... existing logic unchanged
+}
+
+pub fn remove_env_var( path : &Path, key : &str, trace : bool ) -> Result< (), io::Error >
+{
+  if trace { eprintln!( "remove_env_var(path={}, key={key:?})", path.display() ); }
   // ... existing logic unchanged
 }
 ```
 
 - Always stderr, never stdout — preserves stdout's pipeline-composability for commands that print machine-parseable output (e.g. `.runtime_files | xargs`)
-- Unconditional — no verbosity flag suppresses it; fires on every call regardless of outcome
+- Unconditional in the 9 `claude_version_core` functions — no verbosity flag suppresses it; fires on every call regardless of outcome.
+  The 4 `settings_io` mutators print only when their caller passes `trace`: `claude_version` passes `true`, `claude_profile_core`'s account switch `false`
 - Placed as the literal first statement — fires before the function can fail, short-circuit, or branch, so the trace is present even when the function errors partway through
 
 ### Function Coverage
@@ -46,6 +55,8 @@ pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< Stor
 | 13 | `remove_custom_marker` | `claude_version_core/src/version.rs` | `name` |
 
 4 of the 13 functions live in `claude_core::settings_io` — a shared L0 primitive also used by `claude_profile` and `claude_runner_core` for their own settings/prefs files. `claude_version_core::settings_io` is a thin re-export shim over the same functions (`pub use claude_core::settings_io::*;`), so tracing the `claude_core` copy covers every caller, including `claude_version_core`'s own.
+Each caller passes its own `trace`: `claude_version` and `claude_version_core` pass `true`, keeping this pattern's trace,
+and `claude_profile_core`'s account switch passes `false`, since clp's `trace::0` promises no output (BUG-586).
 
 ### Applicability
 
@@ -65,13 +76,17 @@ It does not apply to private helper functions (e.g. `atomic_write`) — every pr
 - Deterministically testable: 6 of the 13 sites (`purge_stale_versions`, `unlock_settings_for_install`, and the 4 `settings_io` functions) get a static source-guard test (`include_str!`/`extract_fn_body`, asserting the trace is the function's first statement, no runtime capture); the other 7 (`hot_swap_binary`, `unlock_versions_dir`, `lock_version`, `perform_install`, `store_preferred_version`, `save_custom_marker`, `remove_custom_marker` — real `$HOME`/`PATH`/network, no injectable seam) get CLI-subprocess-isolated tests capturing real stderr output
 
 **Costs:**
-- Every traced call now prints to stderr unconditionally — any script or tooling that treats non-empty stderr as a failure signal must account for this
-- No verbosity gating — cannot be silenced per-invocation; if trace volume ever becomes unmanageable, the fallback path is introducing a real logging crate (`log`/`tracing`) with level filtering
+- Every traced call prints to stderr (a `settings_io` mutator only when its caller passes `trace`) — any script or tooling that treats non-empty stderr
+  as a failure signal must account for this
+- No verbosity gating in the 9 `claude_version_core` functions — cannot be silenced per-invocation; if trace volume ever becomes unmanageable,
+  the fallback path is introducing a real logging crate (`log`/`tracing`) with level filtering.
+  The 4 `settings_io` mutators are the exception: they serve more than one binary, so the caller passes `trace` (BUG-586)
 
 ### Non-Goals
 
 - Leveled or structured output (log levels, JSON structured logs) — no concrete need identified beyond "leaves an unconditional trace"; would also contradict the unconditional requirement
-- Verbosity/opt-out gating — same rationale
+- Verbosity/opt-out gating in the 9 `claude_version_core` functions — same rationale.
+  The 4 `settings_io` mutators take their caller's `trace`, since `claude_profile` calls them too and its `trace::0` promises no output (BUG-586)
 - Introducing a logging crate (`log`/`tracing`) — deferred; this pattern uses zero new dependencies (see `task/decisions.md` Q-01 for the fallback path if ever needed)
 
 ### Features

@@ -9,7 +9,7 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 | AC | Short Name | Category | Status |
 |----|------------|----------|--------|
 | AC-1 | Idle 7d window (`resets_at=None`) — touch fires | Predicate | ✅ |
-| AC-2 | All windows active (`resets_at=Some`) — touch skips | Predicate | ✅ |
+| AC-2 | All windows active (each `resets_at` ahead of now) — touch skips | Predicate | ✅ |
 | AC-3 | Error account skipped before `touch_idle` guard | Predicate | ✅ |
 | AC-4 | G4 gate — non-owned account skipped | Gate | ✅ |
 | AC-5 | G4 gate — occupied-elsewhere account skipped | Gate | ✅ |
@@ -34,15 +34,18 @@ post-touch cache write, refresh-before-touch ordering, and Sonnet model requirem
 
 ---
 
-### AC-2: All windows active (`resets_at=Some`) — touch skips
+### AC-2: All windows active (each `resets_at` ahead of now) — touch skips
 
-- **Given:** An account where ALL three quota windows (5h, 7d, 7d-Sonnet) have
-  `resets_at = Some(timestamp)` (all windows in `active` state).
-- **When:** `apply_touch()` evaluates the idle-window predicate.
-- **Then:** Touch does NOT fire. `reason: already active` skip-reason emitted. No window needs
-  to be opened — the touch invocation serves no purpose.
+- **Given:** An account whose 5h window has `resets_at = Some("2099-01-01T00:00:00Z")`, still ahead of now,
+  and whose 7d and 7d-Sonnet fields are absent, which counts as running. No window is idle or already past.
+  <!-- BUG-584 — a resets_at that has already passed is idle, not active -->
+- **When:** `touch_skip_reason()` judges the account, then `apply_touch()` processes it.
+- **Then:** Touch does NOT fire: `touch_skip_reason` returns `already active`, so `apply_touch` stops before the refresh path.
+  No window needs to be opened — the touch invocation serves no purpose.
+- **Note:** the counterpart is a cache-rendered row whose 5h `resets_at` passed 30 min ago. It's idle, so the touch fires
+  (`mre_bug584_lapsed_cached_5h_window_is_not_already_active`, `tests/usage/touch_tests_b.rs`).
 - **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` in
-  `tests/usage/touch_tests.rs`
+  `tests/usage/touch_tests_b.rs`
 - **Source:** [subprocess/004_session_touch_invocation.md](../../../docs/subprocess/004_session_touch_invocation.md)
 
 ---

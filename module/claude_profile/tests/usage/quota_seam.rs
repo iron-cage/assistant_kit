@@ -4,6 +4,8 @@
 //! responses while recording every request's line and Bearer token. Lets tests
 //! observe *which* HTTP calls the usage pipeline actually makes — turning
 //! previously-structural order-of-operations proofs into behavioral ones.
+//! [`QuotaSeamServer::start_rate_limiting`] answers `429` for chosen tokens, so a test
+//! can also drive an account whose quota fetch fails.
 //!
 //! Two consumption modes:
 //! - in-process (`tests/usage/*`): wrap the pipeline call in [`with_seam_env`],
@@ -59,10 +61,16 @@ fn read_request( stream : &mut TcpStream ) -> Vec< u8 >
   buf
 }
 
-/// Canned response body for a request path (rate-limit headers for `/v1/messages`).
-fn canned_response( path : &str ) -> String
+// BUG-591 — a rate-limited token gets 429 on the usage path, so a seam test can drive a failing fetch
+/// Canned response for a request path: rate-limit headers for `/v1/messages`, and `429` on
+/// `/api/oauth/usage` when the request's token is one the server rate-limits.
+fn canned_response( path : &str, rate_limited : bool ) -> String
 {
-  let ( status, extra_headers, body ) = if path.starts_with( "/api/oauth/usage" )
+  let ( status, extra_headers, body ) = if path.starts_with( "/api/oauth/usage" ) && rate_limited
+  {
+    ( "429 Too Many Requests", "", r#"{"error":{"type":"rate_limit_error","message":"Rate limited"}}"# )
+  }
+  else if path.starts_with( "/api/oauth/usage" )
   {
     ( "200 OK", "", USAGE_BODY )
   }
@@ -118,10 +126,24 @@ impl QuotaSeamServer
   #[ must_use ]
   pub fn start() -> Self
   {
+    Self::start_rate_limiting( &[] )
+  }
+
+  /// [`Self::start`], except that a usage request whose Bearer token is in `rate_limited`
+  /// gets `429 Too Many Requests` instead of quota.
+  ///
+  /// # Panics
+  ///
+  /// Panics on socket setup failure, as [`Self::start`] does.
+  #[ inline ]
+  #[ must_use ]
+  pub fn start_rate_limiting( rate_limited : &[ &str ] ) -> Self
+  {
     let listener = TcpListener::bind( "127.0.0.1:0" ).expect( "bind loopback listener" );
     let port     = listener.local_addr().expect( "local_addr" ).port();
     let requests : Arc< Mutex< Vec< SeamRequest > > > = Arc::new( Mutex::new( Vec::new() ) );
     let recorded = requests.clone();
+    let limited : Vec< String > = rate_limited.iter().map( | t | ( *t ).to_string() ).collect();
     let handle = std::thread::spawn( move ||
     {
       loop
@@ -138,8 +160,9 @@ impl QuotaSeamServer
             .map( str::to_string )
         } );
         let path = line.split( ' ' ).nth( 1 ).unwrap_or( "" ).to_string();
+        let rate_limited = bearer.as_deref().is_some_and( | b | limited.iter().any( | t | t == b ) );
         recorded.lock().expect( "requests lock" ).push( SeamRequest { line, bearer } );
-        let _ = stream.write_all( canned_response( &path ).as_bytes() );
+        let _ = stream.write_all( canned_response( &path, rate_limited ).as_bytes() );
       }
     } );
     Self

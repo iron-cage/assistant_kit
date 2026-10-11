@@ -187,6 +187,8 @@ fn list_marks_active_account_via_active_marker()
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
   account::save( "alice@acme.com", &credential_store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).expect( "save alice@acme.com" );
+  // BUG-582 — save refuses a live session another slot holds, so this account saves its own login
+  std::fs::write( paths.credentials_file(), CREDENTIALS_B ).expect( "write live creds B" );
   account::save( "alice@home.com", &credential_store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).expect( "save alice@home.com" );
 
   // Write _active marker manually to "alice@acme.com".
@@ -207,6 +209,7 @@ fn list_returns_accounts_sorted_by_name()
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
   account::save( "zebra@acme.com", &credential_store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).expect( "save zebra" );
+  std::fs::write( paths.credentials_file(), CREDENTIALS_B ).expect( "write live creds B" );
   account::save( "alpha@acme.com", &credential_store, &paths, true, None, None, None, None, account::AccountBackend::Anthropic, None, None, None, None ).expect( "save alpha" );
 
   let accounts = account::list( &credential_store ).expect( "list" );

@@ -32,7 +32,7 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 
 | File | Relationship |
 |------|--------------|
-| [002_account_save.md](002_account_save.md) | Name resolution: `account_save_routine()` uses `oauthAccount.emailAddress` as primary, `_active_{hostname}_{user}` marker as fallback when `name::` is omitted (AC-08, AC-16, BUG-209, BUG-212) |
+| [002_account_save.md](002_account_save.md) | Bare-save name resolution: the slot holding the live session, then `oauthAccount.emailAddress`, then the `_active_{hostname}_{user}` marker (AC-08, AC-16, BUG-209, BUG-212, BUG-582) |
 | [004_account_use.md](004_account_use.md) | Base switch behavior; design step 4 updated |
 | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `resolve_hostname()` fallback chain shared with host auto-capture |
@@ -51,7 +51,8 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 | File | Relationship |
 |------|--------------|
 | `module/claude_profile_core/src/account/` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()` — use it; `all_marker_files(store)` — enumerates every `_active_*` file as `(path, trimmed_content)` pairs, own marker included; `other_machines_active(store)` and `delete()` both build on it — `other_machines_active` filters out the own-path, returns `HashSet<String>` of account names; `delete()` removes every marker whose content matches the deleted account name, own or foreign (AC-06, BUG-347 fix) |
-| `src/commands/cmd_args.rs`, `src/commands/account_ops.rs` | `resolve_account_name()` — exact-local-part match priority (defined in `cmd_args.rs`); `account_save_routine()` — reads `oauthAccount.emailAddress` from `~/.claude.json` as primary name inference source when `name::` is omitted; falls back to `_active_{hostname}_{user}` marker (BUG-212 fix, TSK-215) |
+| `src/commands/cmd_args.rs` | `resolve_account_name()` — exact-local-part match priority |
+| `src/commands/account_ops.rs` | `account_save_routine()` — names a bare save after the slot holding the live session (BUG-582), else `oauthAccount.emailAddress`, else the `_active` marker (BUG-212 fix, TSK-215) |
 | `src/commands/accounts.rs` | `accounts_routine()` `assignee::` path — writes or clears `_active_{machine}_{user}` for any `USER@MACHINE` pair without credential rotation (Feature 065: renamed from `active::` which replaced former `assign::1` + `for::` params) |
 | `src/usage/refresh.rs`, `src/usage/touch.rs` | `apply_refresh` and `apply_touch` snapshot/restore the `_active` marker around per-account processing; snapshot+restore removed by BUG-211 fix (`save()` now writes conditionally via `update_marker=false` — see AC-15 in [002_account_save.md](002_account_save.md)); reads removed in Phases 3/4 of TSK-214 |
 | `.gitignore` | `_active_*` pattern excludes per-machine markers from version control |

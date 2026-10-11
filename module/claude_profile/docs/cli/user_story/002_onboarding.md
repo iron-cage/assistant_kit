@@ -8,7 +8,7 @@
 ### Acceptance Criteria
 
 - [ ] `clp .account.save` captures `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`
-- [ ] Name auto-inferred from `oauthAccount.emailAddress` when omitted; falls back to active marker; exits 1 if neither present
+- [ ] Name auto-inferred when omitted: the one saved slot holding the live session first (BUG-582), then `oauthAccount.emailAddress`, then the active marker; exits 1 if none gives a name
 - [ ] `host::` and `role::` metadata captured in `{name}.json`; `dry::1` previews without writing
 - [ ] `clp .account.delete` removes `.credentials.json` + `.json` + legacy satellite files
 - [ ] `clp .account.relogin` spawns `claude` with TTY; propagates fresh credentials to store on exit

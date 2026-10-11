@@ -11,6 +11,7 @@
 //! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
 //! | ft15 | `ft15_accounts_refresh_touch_inert` | `refresh::1 touch::1` inert — no fetch/touch trace | N |
 //! | ft19 | `ft19_owner_column_default_visible` | Owner: line visible by default | P |
+//! | ft19 | `ft19_usage_owner_cells_match_accounts` | `.usage` Owner matches `.accounts` | P |
 //! | ft20 | `ft20_accounts_unclaim_force_bypasses_g8` | `unclaim::1 force::1` → clears regardless | P |
 //! | ft21 | `ft21_force_no_effect_without_unclaim` | `force::1` alone → accepted, no mutation | P |
 //! | it_batch_unclaim_force | `it_batch_unclaim_force_clears_non_owned` | `unclaim::1 force::1` → clears ALL | P |
@@ -303,7 +304,7 @@ fn ft15_accounts_refresh_touch_inert()
 /// Case C: `.accounts cols::-owner` — no Owner: line. Case B (`.usage`) is
 /// `ft19_usage_owner_cells_match_accounts`.
 ///
-/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-19]
+/// Spec: [`tests/docs/feature/037_accounts_usage_param_unification.md` FT-19]
 fn ft19_owner_column_default_visible()
 {
   let dir  = TempDir::new().unwrap();
@@ -372,6 +373,8 @@ fn ft19_owner_column_default_visible()
 /// # Pitfall
 /// When one field is shown by two commands, test them against each other, not each against a
 /// loose pattern of its own.
+///
+/// Spec: [`tests/docs/feature/037_accounts_usage_param_unification.md` FT-19]
 #[ doc = "bug_reproducer(BUG-588)" ]
 fn ft19_usage_owner_cells_match_accounts()
 {
@@ -391,6 +394,10 @@ fn ft19_usage_owner_cells_match_accounts()
   let out        = run_cs_with_env( &[ ".usage", only_owner ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let usage      = stdout( &out );
+  assert!(
+    usage.contains( "Owner" ),
+    "FT-19B: .usage must show the Owner column header by default; got:\n{usage}",
+  );
 
   let account_lines : Vec< &str > = accounts.lines().collect();
   for ( name, owner ) in [ ( "alice@acme.com", "testuser@testmachine" ), ( "bob@acme.com", "\u{2014}" ) ]
@@ -398,12 +405,18 @@ fn ft19_usage_owner_cells_match_accounts()
     let at = account_lines.iter().position( | l | *l == name )
       .unwrap_or_else( || panic!( "FT-19B: .accounts has no block for {name}; got:\n{accounts}" ) );
     let owner_line = account_lines.get( at + 1 ).copied().unwrap_or_default().trim();
-    assert_eq!( owner_line, format!( "Owner:   {owner}" ), "FT-19B: .accounts Owner line for {name}; got:\n{accounts}" );
+    assert_eq!(
+      owner_line, format!( "Owner:   {owner}" ),
+      "FT-19B: .accounts Owner line for {name}; got:\n{accounts}",
+    );
     let row = usage.lines()
       .find( | l | l.contains( name ) )
       .unwrap_or_else( || panic!( "FT-19B: .usage has no row for {name}; got:\n{usage}" ) )
       .trim_end();
-    assert!( row.ends_with( owner ), "FT-19B: .usage Owner cell for {name} must match .accounts ({owner}); got row: {row:?}\n{usage}" );
+    assert!(
+      row.ends_with( owner ),
+      "FT-19B: .usage Owner cell for {name} must match .accounts ({owner}); got row: {row:?}\n{usage}",
+    );
   }
 }
 

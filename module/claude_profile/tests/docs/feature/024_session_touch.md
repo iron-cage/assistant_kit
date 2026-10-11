@@ -23,8 +23,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-09 | `trace=true` emits timestamped diagnostic lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
 | FT-10 | `touch::` appears in `.usage.help` with default `1` | AC-10 | Integration |
 | FT-11 | Account with any timer absent IS touched (positive trigger) | AC-02 | Trigger |
-| FT-12 | In `live::1` mode, touch fires each cycle when any timer absent | AC-11 | Live Mode |
-| FT-13 | All three timers running → account NOT touched ("already active") | AC-02, AC-12 | Trigger Guard |
+| FT-12 | In `live::1` mode, touch fires each cycle when a timer's `resets_at` is absent | AC-11 | Live Mode |
+| FT-13 | All three timers running → account NOT touched ("already active"); a cached reset that already passed isn't running | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each account not qualifying for touch | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; `_active` unchanged confirms no restore occurred | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
@@ -52,8 +52,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-09 | Trace shows touch lifecycle | AC-09 | Trace |
 | FT-10 | touch:: in help with default 1 | AC-10 | Help Output |
 | FT-11 | Valid account with resets_at absent IS touched | AC-02 | Trigger |
-| FT-12 | live::1 touch fires each cycle when resets_at absent | AC-11 | Live Mode |
-| FT-13 | All three timers running → account NOT touched (already active) | AC-02, AC-12 | Trigger Guard |
+| FT-12 | live::1 touch fires each cycle when resets_at is absent | AC-11 | Live Mode |
+| FT-13 | All three timers running → account NOT touched (already active); a lapsed cached reset is touched | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each non-qualifying account | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; _active unchanged confirms no restore | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
@@ -79,7 +79,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 ### FT-01: `touch::0` — no subprocess spawned; idle accounts not activated when suppressed
 
 - **Given:** One account with valid quota data and `five_hour.resets_at` absent (idle — no active 5h window; would be touched with `touch::1`).
-- **When:** `clp .usage touch::0`
+- **When:** `clp .usage touch::0 cols::-owner`. The account has no owner, so its Owner cell would also render `—`; hiding the column leaves the 5h Reset `—` as the one checked.
+  <!-- BUG-588 — FT-01's test hides the Owner column, whose unowned cell renders `—` too -->
 - **Then:** Exits 0. No subprocess spawned for touch. Account row shows `5h Reset = —` unchanged (still idle).
 - **Exit:** 0
 - **Source fn:** `it109_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `usage_touch_test.rs`)
@@ -91,7 +92,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** One account with valid quota data (result=Ok) and `five_hour.resets_at` absent (idle — no active 5h session).
 - **When:** `clp .usage touch::1`
-- **Then:** `refresh_account_token()` is called for that account (observable via `trace::1` output showing subprocess lifecycle). Accounts with `resets_at` present (already active) are not touched.
+- **Then:** `refresh_account_token()` is called for that account (observable via `trace::1` output showing subprocess lifecycle).
+  Accounts whose timers are all running (present and still ahead of now, or a weekly field the plan lacks) are not touched.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
 - **Source fn:** `it110_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `usage_touch_test.rs`)
@@ -196,7 +198,10 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** One account with valid quota data (`result=Ok`) where `five_hour.resets_at` is absent (None) — meaning the account is idle with no active 5h session.
 - **When:** `clp .usage touch::1`
-- **Then:** Exits 0. Subprocess is spawned for this account. After touch, the `5h Reset` column shows a concrete countdown value (~5h) — transitioned from `—` to active. The trigger condition `resets_at.is_none()` fires for this account.
+- **Then:** Exits 0.
+  Subprocess is spawned for this account.
+  After touch, the `5h Reset` column shows a concrete countdown value (~5h) — transitioned from `—` to active.
+  The trigger fires for this account because its 5h `resets_at` is absent, so that timer isn't running.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires idle account)
 - **Source fn:** `it116_lim_it_account_with_resets_at_absent_is_touched` (in `usage_touch_test.rs`)
@@ -206,9 +211,11 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-12: In `live::1` mode, touch fires each cycle for accounts with `resets_at` absent
 
-- **Given:** One account that becomes idle between cycles (`resets_at` becomes absent after session expires); `live::1 touch::1`.
+- **Given:** One account that becomes idle between cycles (`resets_at` becomes absent after the session expires); `live::1 touch::1`.
 - **When:** `clp .usage live::1 touch::1` (observed over two cycles via trace output or structural assertion)
-- **Then:** On each cycle where `resets_at` is absent (account became idle), the touch trigger fires (subprocess spawned) and a new 5h session is started. The trigger does not fire for accounts with `resets_at` present (still active).
+- **Then:** On each cycle where `resets_at` is absent (account became idle), the touch trigger fires (subprocess spawned) and a new 5h session is started.
+  The trigger does not fire for accounts whose timers are all running (present and still ahead of now, or a weekly field the plan lacks).
+  A reset that's present but already past fires the same trigger; it120 only sees an absent one, so FT-13 case B covers that.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window + two live::1 cycles)
 - **Source fn:** `it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` (in `usage_touch_test.rs`)
@@ -218,11 +225,17 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-13: All three quota timers running → account NOT touched ("already active")
 
-- **Given:** `apply_touch` is called directly (not via CLI) with one account from `mk_aq_with_resets_at(Some("2099-01-01T00:00:00Z"))`: `five_hour.resets_at` is `Some(...)` (active), and `seven_day`/`seven_day_sonnet` are both `None` (absent entirely — treated as "running" by the `map_or(true, ...)` default, not because either field is itself "present"). `trace=false`.
-- **When:** `apply_touch(&mut aq, &store, Some(&paths), false, SubprocessModel::Auto, SubprocessEffort::Auto, false)` processes the account.
-- **Then:** `apply_touch` returns early without calling `refresh_account_token` — the live session credentials file (`.claude/.credentials.json`) is NOT written. No subprocess is spawned.
+- **Given (case A):** `apply_touch` is called directly (not via CLI) with one account from `mk_aq_with_resets_at(Some("2099-01-01T00:00:00Z"))`:
+  `five_hour.resets_at` is `Some(...)` (active, still ahead of now), and `seven_day`/`seven_day_sonnet` are both `None`
+  (absent entirely — treated as "running" by the `map_or(true, ...)` default, not because either field is itself "present"). `trace=false`.
+- **When (case A):** `touch_skip_reason(&aq, &store, false)` judges the row, then `apply_touch(&mut aq, &store, Some(&paths), false, …)` processes it.
+- **Then (case A):** `touch_skip_reason` returns `skipped (reason: already active)`, so `apply_touch` returns before `refresh_account_token` and spawns no subprocess.
+- **Given (case B):** a cache-rendered row (`cached: true`) from `mk_aq_with_resets_at` whose 5h `resets_at` passed 30 min ago, with `seven_day`/`seven_day_sonnet` absent.
+- **When (case B):** `touch_skip_reason(&aq, store, false)` and `quota_cells_for(&aq, data, now, PctStyle::Emoji)` both judge the row.
+- **Then (case B):** `touch_skip_reason` returns `None`, not "already active": the 5h window has ended, so the touch fires. The same row's 5h Reset cell is `(stale)`.
+  <!-- BUG-584 — a running timer's resets_at must still be ahead of now; case B pins one that has passed -->
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` (in `touch_tests_b.rs`)
+- **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` (case A), `mre_bug584_lapsed_cached_5h_window_is_not_already_active` (case B) (in `touch_tests_b.rs`)
 - **Source:** [feature/024_session_touch.md AC-02, AC-12](../../../docs/feature/024_session_touch.md)
 
 ---
@@ -277,9 +290,13 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_post_switch_touch` has executed its post-subprocess `write_quota_cache` call (Fix(BUG-288)). The cache for the target account now records `five_hour.resets_at = Some(...)` — the subprocess activated the 5h session window and the re-fetch persisted it to disk. This is the state verified by Feature 027 FT-21 (`mre_bug288_post_switch_touch_refetch_updates_quota`, structural block).
 - **When:** `apply_touch` is subsequently called for that account and evaluates the trigger condition.
-- **Then:** `all_running = true` (5h `resets_at` is Some — active session); `apply_touch` skips the account with reason `already active` and does NOT spawn a second subprocess. Behavior is identical to FT-13 (`it_apply_touch_trigger_skips_resets_at_some`).
+- **Then:** `all_running = true` (5h `resets_at` is a fresh instant ahead of now — active session);
+  `apply_touch` skips the account with reason `already active` and does NOT spawn a second subprocess.
+  Behavior is identical to FT-13 case A (`it_apply_touch_trigger_skips_resets_at_some`).
 - **Exit:** N/A (structural cross-reference — no separate test code; covered compositionally by FT-21 × FT-13)
-- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `tests/usage/api_tests_b.rs`, structural block — asserts `write_quota_cache` is called in `apply_post_switch_touch` fn body) + `it_apply_touch_trigger_skips_resets_at_some` (in `tests/usage/touch_tests_b.rs` — corrected file path; asserts `apply_touch` skips when `resets_at = Some`).
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `tests/usage/api_tests_b.rs`, structural block
+  — asserts `write_quota_cache` is called in `apply_post_switch_touch` fn body) + `it_apply_touch_trigger_skips_resets_at_some` (in `tests/usage/touch_tests_b.rs`
+  — corrected file path; asserts `touch_skip_reason` returns `already active` when the 5h `resets_at` is `Some` and still ahead of now on a row with no weekly fields).
 - **Note:** BUG-288 cross-feature interaction. AC-03 re-fetch requirement applies to ALL touch paths — both `apply_touch` (this feature) and `apply_post_switch_touch` (Feature 027 AC-21). Before the fix, `apply_post_switch_touch` omitted the re-fetch: the on-disk cache still showed `resets_at = None`, so `apply_touch` saw a qualifying idle account and spawned a redundant second subprocess. After Fix A: `apply_post_switch_touch` writes updated quota (including `resets_at = Some`) to the cache, and `apply_touch` skips the account. End-to-end live coverage is provided by Feature 027 FT-01 (live integration test, marked `lim_it`).
 - **Source:** [feature/024_session_touch.md AC-03](../../../docs/feature/024_session_touch.md)
 
@@ -299,7 +316,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ### FT-20: `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires on both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE)
 
-- **Given (two-call design, two separate stores):** Two `TempDir` stores (`store_a`, `store_b`), each with its own fresh `mk_aq_with_son_idle()` account overridden with `seven_day=Some(PeriodUsage{utilization:0.0, resets_at:Some(...)})` — explicit `d7_running=true` (not the `map_or(true)` default path). Both accounts have `five_h_running=true`, `d7_running=true`, `son_running=false` (Sonnet 7d field present, `resets_at=None`).
+- **Given (two-call design, two separate stores):** Two `TempDir` stores (`store_a`, `store_b`), each with its own fresh `mk_aq_with_son_idle()` account
+  overridden with `seven_day=Some(PeriodUsage{utilization:0.0, resets_at:Some(<3 days ahead of now>)})` — explicit `d7_running=true` (not the `map_or(true)` default path).
+  Both accounts have `five_h_running=true` (the helper's 5h reset is an hour ahead), `d7_running=true`, `son_running=false` (Sonnet 7d field present, `resets_at=None`).
 - **Call A (store_a):** `touch_skip_reason(&aq_a, store_a.path(), false)`.
 - **Then A:** Returns `None` — touch would fire (no guard skips). Ensures the `son_running=false` trigger is non-vacuous: this call proves no guard fires for the given account state.
 - **Call B (store_b):** `touch_skip_reason(&aq_b, store_b.path(), false)` — fresh store and fresh `AccountQuota`, identical state to Call A.

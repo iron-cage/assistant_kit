@@ -11,7 +11,7 @@ is in place and prevents the described account identity failure mode.
 | ID | Pitfall | Bug | Guard Verified By |
 |----|---------|-----|-------------------|
 | PP-1 | Active marker fixture names must not collide with real machine identity | BUG-308 | `test_write_quota_cache_preserves_touch_idle_false` (synthetic hostnames in all touch tests) |
-| PP-2 | Account name from `oauthAccount.emailAddress`, not `_active` marker | BUG-212 | `mre_bug_212_account_save_stale_marker_uses_oauth_email` |
+| PP-2 | Account name from the slot holding the live session, then `oauthAccount.emailAddress`, then the `_active` marker | BUG-212, BUG-582 | `mre_bug_212_account_save_stale_marker_uses_oauth_email`, `mre_bug_582_bare_save_files_live_session_under_its_own_slot` |
 
 ---
 
@@ -40,9 +40,11 @@ is in place and prevents the described account identity failure mode.
 - **When:** `.account.save` runs WITHOUT an explicit `name::` parameter.
 - **Then:** The account name is inferred from `oauthAccount.emailAddress` (`work@acme.com`),
   NOT from the `_active_{host}_{user}` marker content (`alice@acme.com`). Fix BUG-212.
-- **Rule:** Account name inference priority: (1) `name::` param → (2)
-  `oauthAccount.emailAddress` from `~/.claude.json` → (3) `_active_*` marker as last resort.
-  The marker may be stale (pointing to a previously active account).
+- **Rule:** Account name inference priority: (1) `name::` param → (2) the one saved slot
+  holding the live session (BUG-582) → (3) `oauthAccount.emailAddress` from `~/.claude.json` →
+  (4) `_active_*` marker as last resort. The marker may be stale (pointing to a previously
+  active account); this case's live session matches no slot, so (2) names nothing.
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` in
-  `tests/cli/account_relogin_test_b.rs`
+  `tests/cli/account_relogin_test_b.rs`; (2) is covered by
+  `mre_bug_582_bare_save_files_live_session_under_its_own_slot` in the same file
 - **Source:** [pitfall/004_account_identity_pitfalls.md §P2](../../../docs/pitfall/004_account_identity_pitfalls.md)
