@@ -150,11 +150,12 @@ pub( super ) fn run_isolated_command
 ) -> !
 {
   // Fix(BUG-485): resolve `IsolatedModel::Default`'s config preference (project
-  //   `.clr.toml` → user `~/.clr/config.toml`) once, here at entry — upstream of the
+  //   `.clr.toml` → user `config.toml`) once, here at entry — upstream of the
   //   fan-out into emit_credential_trace() (preview), run_isolated_ext(), and
   //   run_isolated_with_stdin_file(), so all three --model sites see the same value.
-  //   run_isolated_ext()'s own consultation remains as a fallback for direct
-  //   core-API callers; it is a no-op here since Default never reaches it anymore.
+  //   run_isolated_ext()'s own consultation remains as a fallback for direct core-API
+  //   callers; here it sees Default only when this lookup found nothing (no model set, or
+  //   no user tier, so `.clr.toml` is skipped too: open decision D-14), and finds nothing again.
   // Root cause: the preference was consulted only inside run_isolated_ext(), so the
   //   preview showed DEFAULT_MODEL and the --file path ran it, while the
   //   no-file real path used the configured preference — three sibling --model

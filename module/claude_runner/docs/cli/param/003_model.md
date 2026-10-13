@@ -4,7 +4,7 @@ Select the Claude model for this invocation.
 
 - **Type:** [`ModelName`](../type/04_model_name.md)
 - **Default:** `claude-sonnet-5` (`DEFAULT_MODEL` in `claude_runner_core`) — an explicit ID, not the `sonnet` alias, which the Claude Code binary resolves per release and per settings
-- **Fallback:** when `--model` is absent and `CLR_MODEL` is unset: `model` from `.clr.toml` (project) / `~/.clr/config.toml` (user, project overrides user) if set; falls through to the built-in `claude-sonnet-5` when neither config-file tier sets a value. Exception: while the seat's env block pins `ANTHROPIC_MODEL` (`~/.claude/settings.json`), both the config-tier `model` and the built-in default are withheld for `run`/`ask`/`topic` — no `--model` is emitted and the seat's own binding applies — see [Provider Gate](../config_param.md#provider-gate); `isolated`'s separate lookup is unaffected.
+- **Fallback:** when no model comes from `--model` (on the command line or as `--args-file`'s `"model"` key) or `CLR_MODEL`: `model` from `.clr.toml` (project) / the user `config.toml` (`$CLR_CONFIG_DIR/config.toml` while that override is non-empty, else `$HOME/.clr/config.toml` — see [`CLR_CONFIG_DIR`](../config_param.md#clr_config_dir); project overrides user) if set; falls through to the built-in `claude-sonnet-5` when neither config-file tier sets a value. Exception: while the seat's env block pins `ANTHROPIC_MODEL` (`~/.claude/settings.json`), both the config-tier `model` and the built-in default are withheld for `run`/`ask`/`topic` — no `--model` is emitted and the seat's own binding applies — see [Provider Gate](../config_param.md#provider-gate); `isolated`'s separate lookup is unaffected. A second exception: with no user tier at all (`CLR_CONFIG_DIR` and `HOME` both unset or empty), `isolated` reads neither file and uses the built-in default (open decision D-14).
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--model` at end of argv → error
@@ -33,7 +33,7 @@ clr --model opus "Fix bug"
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | `claude-sonnet-5` (via config tiers then fallback) | Withheld on a non-anthropic seat ([Provider Gate](../config_param.md#provider-gate)) |
 | 5 | [`ask`](../command/05_ask.md) | `claude-sonnet-5` (via config tiers then fallback) | Same as `run` |
-| 3 | [`isolated`](../command/03_isolated.md) | `claude-sonnet-5` (via config tiers then fallback) | Native flag; when absent falls back to project `.clr.toml` → user `~/.clr/config.toml` → `claude-sonnet-5`; never provider-gated; env: `CLR_MODEL` |
+| 3 | [`isolated`](../command/03_isolated.md) | `claude-sonnet-5` (via config tiers then fallback) | Native flag; when absent falls back to project `.clr.toml` → user `config.toml` → `claude-sonnet-5`, and with no user tier (`CLR_CONFIG_DIR` and `HOME` both unset or empty) skips `.clr.toml` too (open decision D-14); never provider-gated; env: `CLR_MODEL` |
 | 11 | [`topic`](../command/11_topic.md) | `claude-sonnet-5` (via config tiers then fallback) | Identical to `ask`; delegates to `run`'s handler |
 
 ### Referenced User Stories

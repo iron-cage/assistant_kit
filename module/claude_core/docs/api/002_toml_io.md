@@ -35,6 +35,8 @@ Removes a single key from the user-tier file. Every other key's raw value text i
 - `set_user_tier` and `remove_user_tier` never alter any key other than the one targeted — sibling keys' raw text (including comments-adjacent formatting quirks aside) survive read-modify-write byte-for-byte.
 - Only plain double-quoted string values are ever returned by `get_tiered`; every other TOML value type is preserved on write but never surfaced as a string.
 
+<!-- BUG-593 — `clr run` parses this file as full TOML, not the subset in :12 and :36; a write also moves `[table]` keys to the top level, despite :35. -->
+
 ### Sources
 
 | File | Relationship |

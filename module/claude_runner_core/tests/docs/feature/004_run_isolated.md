@@ -19,7 +19,7 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 | FT-4 | `DEFAULT_MODEL` constant → `"claude-sonnet-5"` | Unit |
 | FT-5 | `run_isolated()` writes `CLAUDE.md` with immediate-response instruction to temp HOME | Unit |
 | FT-6 | `ClaudeCommand` built with `with_home_isolation()` does not include `--chrome` in args | Unit |
-| FT-7 | `resolve_isolated_default_model()` reads the user tier from `$CLR_CONFIG_DIR/config.toml` when set, `HOME` optional; project `.clr.toml` still wins | Unit |
+| FT-7 | `resolve_isolated_default_model()` reads the user tier from `$CLR_CONFIG_DIR/config.toml` when set, `HOME` optional; project still wins; no user tier → no file read | Unit |
 | FT-8 | `user_config_path()` → `$CLR_CONFIG_DIR/config.toml`, else `$HOME/.clr/config.toml`, else `None` (empty counts as unset) | Unit |
 | FT-9 | Timeout-with-refreshed-credentials result preserves recovered `stdout`/`stderr` on both timeout branches (BUG-005) | Unit |
 
@@ -93,10 +93,18 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ### FT-7: `resolve_isolated_default_model()` honors `CLR_CONFIG_DIR` for the user tier (BUG-007)
 
-- **Given:** `$CLR_CONFIG_DIR/config.toml` sets `model`; `$HOME/.clr/config.toml` sets a different `model` (`t8`), or a project `.clr.toml` sets a third value (`t9`), or `HOME` is unset (`t10`)
+- **Given:** `$CLR_CONFIG_DIR/config.toml` sets `model`; `$HOME/.clr/config.toml` sets a different `model` (`t8`), or a project `.clr.toml` sets a third value (`t9`), or `HOME` is unset (`t10`).
+  `t11`: no user tier (`CLR_CONFIG_DIR` unset, `HOME` unset or empty) and a project `.clr.toml` that sets `model`.
+  `t12`: the override has no `config.toml`, in a directory that exists and then in one that doesn't, and `$HOME/.clr/config.toml` sets `model`; `t13`: the same `HOME` file with the override empty.
+  `t14`: the same `HOME` file with an override `config.toml` that sets only `effort`, is empty, or holds only a comment.
 - **When:** `resolve_isolated_default_model()` called from the project directory
-- **Then:** `t8` and `t10` return the override's value; `t9` returns the project value — the override relocates the user tier only (AC-43)
-- **Source fn:** `t8_clr_config_dir_overrides_home_user_tier`, `t9_project_tier_overrides_clr_config_dir_user_tier`, `t10_clr_config_dir_honored_without_home` (in `tests/isolated_model_resolution_test.rs`)
+- **Then:** `t8` and `t10` return the override's value; `t9` returns the project value — the override relocates the user tier only (AC-43).
+  `t11` returns `None`: with no user tier the project file isn't read either (open decision D-14).
+  `t12` returns `None` both times (a set override is the user tier even without a file or a directory); `t13` returns `HOME`'s value (an empty override counts as unset).
+  `t14` returns `None` all three times: an override `config.toml` without `model` is still the whole user tier, so `HOME`'s file isn't read.
+- **Source fn:** `t8_clr_config_dir_overrides_home_user_tier`, `t9_project_tier_overrides_clr_config_dir_user_tier`, `t10_clr_config_dir_honored_without_home`,
+  `t11_no_user_tier_skips_project_tier`, `t12_clr_config_dir_without_file_does_not_fall_back_to_home`, `t13_empty_clr_config_dir_falls_back_to_home`,
+  `t14_clr_config_dir_file_without_model_does_not_fall_back_to_home` (in `tests/isolated_model_resolution_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-43
 
 ---
@@ -105,8 +113,9 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 - **Given:** every combination of `CLR_CONFIG_DIR` and `HOME` as set, empty, or unset
 - **When:** `user_config_path_from()` called with those values, and `user_config_path()` called against the process env
-- **Then:** a non-empty override yields `<override>/config.toml` (a relative override is taken verbatim); otherwise a non-empty `HOME` yields `<HOME>/.clr/config.toml`; otherwise `None` — never a cwd-relative path (AC-43)
-- **Source fn:** `t01_override_wins_over_home` through `t11_wrapper_none_without_env` (in `tests/config_path_test.rs`)
+- **Then:** a non-empty override yields `<override>/config.toml`, and a relative override is taken verbatim.
+  Otherwise a non-empty `HOME` yields `<HOME>/.clr/config.toml`, and otherwise the result is `None`, not a cwd-relative `.clr/config.toml` (AC-43).
+- **Source fn:** `t01_override_wins_over_home` through `t12_empty_override_unset_home_is_none` (in `tests/config_path_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-43
 
 ---

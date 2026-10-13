@@ -39,6 +39,7 @@
 
 use claude_core::toml_io::{ get_tiered, set_user_tier, remove_user_tier };
 
+// BUG-593 — no fixture has a trailing comment, a literal string, a table or a duplicate key.
 fn write_toml( dir : &std::path::Path, name : &str, raw : &str ) -> std::path::PathBuf
 {
   let path = dir.join( name );

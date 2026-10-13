@@ -7,8 +7,8 @@
 //! with an empty `HOME`, produced a cwd-relative path), so this table pins every
 //! combination of the two inputs in one place.
 //!
-//! `user_config_path_from()` takes the variable values as arguments, so T01-T09 need
-//! no environment mutation. T10-T11 exercise the env-reading wrapper; each test runs
+//! `user_config_path_from()` takes the variable values as arguments, so T01-T09 and T12
+//! need no environment mutation. T10-T11 exercise the env-reading wrapper; each test runs
 //! in its own process under cargo-nextest, so setting `HOME`/`CLR_CONFIG_DIR` there is
 //! safe — the same pattern as `isolated_model_resolution_test.rs`.
 //!
@@ -27,6 +27,7 @@
 //! | T09 | relative `cfg` | unset | `cfg/config.toml` — the override is taken verbatim |
 //! | T10 | env: set | env: set | wrapper reads the process environment, override wins |
 //! | T11 | env: unset | env: unset | wrapper returns `None` |
+//! | T12 | empty | unset | `None` |
 
 use claude_runner_core::{ user_config_path, user_config_path_from };
 use std::ffi::OsStr;
@@ -98,6 +99,13 @@ fn t07_both_unset_is_none()
 fn t08_unset_override_empty_home_is_none()
 {
   assert_eq!( resolve( None, Some( "" ) ), None );
+}
+
+/// T12: empty override and unset `HOME` → no user tier.
+#[ test ]
+fn t12_empty_override_unset_home_is_none()
+{
+  assert_eq!( resolve( Some( "" ), None ), None );
 }
 
 /// T09: the override is used verbatim — a relative value stays relative, since the

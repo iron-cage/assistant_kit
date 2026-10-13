@@ -84,6 +84,7 @@ pub fn remove_user_tier( user_path : &Path, key : &str ) -> Result< (), io::Erro
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
+// BUG-593 — these helpers parse a TOML subset; `clr run` reads the same file as full TOML.
 fn read_string_key( path : &Path, key : &str ) -> Option< String >
 {
   let pairs = read_or_empty( path ).ok()?;

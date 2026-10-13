@@ -147,7 +147,7 @@ levels, highest to lowest:
 | 1 (highest) | CLI flag | `--flag value` on the command line |
 | 2 | JSON config | `--args-file` / `CLR_ARGS_FILE` / stdin JSON pipe — see [../../feature/004_json_config.md](../../feature/004_json_config.md) |
 | 3 | `CLR_*` env var | See [003_env_param.md](../003_env_param.md) |
-| 4 | Config file | Project `.clr.toml`, then user `~/.clr/config.toml` — see [config_param.md](../config_param.md) |
+| 4 | Config file | Project `.clr.toml`, then the user `config.toml` (`$CLR_CONFIG_DIR/config.toml`, else `~/.clr/config.toml`) — see [config_param.md](../config_param.md) |
 | 5 (lowest) | Hardcoded default | Built into source code |
 
 All 20 retry parameters (§ Strategy Configuration — 3-Tier Parameter Hierarchy above) are eligible

@@ -125,7 +125,8 @@ pub use crate::isolated::run_isolated_ext;
 /// Resolves `IsolatedModel::Default`'s model preference across both tiers:
 /// project `.clr.toml` → the user `config.toml` located by [`user_config_path`]
 /// (`$CLR_CONFIG_DIR/config.toml`, else `~/.clr/config.toml`).
-/// Returns `None` if nothing is set at either tier. Used by `run_isolated_ext()`'s
-/// `IsolatedModel::Default` match arm.
+/// Returns `None` if nothing is set at either tier, or if no user tier is located,
+/// in which case the project file isn't read either. Used by `run_isolated_ext()`'s
+/// `IsolatedModel::Default` match arm and by `clr isolated`'s entry in `claude_runner`.
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::resolve_isolated_default_model;

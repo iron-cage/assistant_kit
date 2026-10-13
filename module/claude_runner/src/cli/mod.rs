@@ -534,7 +534,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     eprintln!( "Error: {e}" );
     std::process::exit( 1 );
   }
-  // Config-file tier 4 (final tier): `.clr.toml` (project) / `~/.clr/config.toml` (user),
+  // Config-file tier 4 (final tier): `.clr.toml` (project) / `user_config_path()` (user),
   // applied AFTER CLR_* env vars (tier 3) — apply_config_defaults' is_none() / !bool checks
   // ensure higher tiers are never overwritten. Task 408 removed the BUG-008 prefs.json
   // fallback that previously ran after this tier, since it was a no-op for anyone using

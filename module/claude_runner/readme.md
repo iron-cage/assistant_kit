@@ -44,7 +44,7 @@ additionally exposes `COMMANDS_YAML` for consumers that register `clr` as a comm
   atomic slot-reservation scheme (race-free under concurrent launches); `0` disables the gate. See
   [docs/invariant/012_gate_slot_atomicity.md](docs/invariant/012_gate_slot_atomicity.md).
 - **Layered configuration** — five-level precedence (CLI flag → `--args-file`/`CLR_ARGS_FILE` JSON →
-  `CLR_*` env var → `.clr.toml`/`~/.clr/config.toml` → built-in default). See
+  `CLR_*` env var → `.clr.toml`/user `config.toml` → built-in default). See
   [Configuration](#configuration) below.
 - **Automatic journaling** — every execution boundary (subprocess exit, credential ops, gate waits,
   retries, timeouts, interactive start/end) is recorded via `claude_journal`, best-effort and

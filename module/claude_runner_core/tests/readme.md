@@ -27,7 +27,7 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `execution_output_test.rs` | Test ExecutionOutput struct fields and Display formatting |
 | `skip_permissions_test.rs` | Test skip_permissions flag and --dangerously-skip-permissions arg |
 | `session_dir_tests.rs` | Test SessionManager directory creation and Strategy string parsing |
-| `process_test.rs` | Process scanner: `/proc` scan, signal sending (TC-061–TC-071) |
+| `process_test.rs` | Process scanner: `/proc` scan, signal sending (TC-061–TC-071; TC-063 reproduces BUG-006) |
 | `dry_run_test.rs` | Test dry_run mode and describe_compact() output (TSK-071) |
 | `io_params_test.rs` | Test I/O parameter builder methods (TSK-072) |
 | `tool_dir_params_test.rs` | Test tool and directory parameter builder methods (TSK-073) |
@@ -39,8 +39,8 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
-| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T10, BUG-007) |
-| `config_path_test.rs` | Test `user_config_path()` decision table over `CLR_CONFIG_DIR` × `HOME` (T01–T11, BUG-007/BUG-560) |
+| `isolated_model_resolution_test.rs` | Test `resolve_isolated_default_model()` tiered config.toml resolution + prefs.json regression guard (tasks 407/410, T4–T14, BUG-007) |
+| `config_path_test.rs` | Test `user_config_path()` decision table over `CLR_CONFIG_DIR` × `HOME` (T01–T12, BUG-007/BUG-560) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `bug_005_test.rs` | BUG-005 reproducer: timeout-with-credentials branch preserves partial stdout |
 | `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
@@ -86,8 +86,9 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
   - Layer 5 - Negative criteria (15 checks): forbidden patterns = 0
   - Layer 6 - Positive tests (65 tests): new pattern works
 - Process scanning and signal delivery (1 test file):
-  - `/proc` enumeration: returns Vec without panic, excludes self PID, finds spawned processes, handles deleted CWD, skips a live process whose argv[0] is not `claude` (TC-061–TC-066, TC-071)
-  - Signal sending: `send_sigterm` / `send_sigkill` with valid and invalid PIDs (TC-067–TC-070)
+  - `/proc` enumeration: excludes self PID, finds live `claude`-named processes, skips a live process whose argv[0] is not `claude` (TC-062–TC-064, TC-071)
+  - `/proc` enumeration, no-panic checks only: TC-061; TC-065 with a deleted-CWD `sleep` running; TC-066 and TC-070, whose unreadable cmdline and missing `/proc` aren't set up
+  - Signal sending: `send_sigterm` with a valid and a non-existent PID, `send_sigkill` with a valid PID (TC-067–TC-069)
 - Bug reproducers with 5-section documentation:
   - issue-token-limit-default: Migration from factory pattern didnt preserve 200K default (later corrected to 128K, BUG-429)
   - Root Cause, Why Not Caught Initially, Fix Applied, Prevention, Pitfall documented

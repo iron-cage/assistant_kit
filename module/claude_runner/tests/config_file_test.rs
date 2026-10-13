@@ -25,7 +25,7 @@
 //! | T07 | everything absent → hardcoded default, no error                | Bool Handling   |
 //! | T08 | malformed TOML → exit 1, stderr names the file                 | Error Handling  |
 //! | T09 | unknown key silently ignored; other keys still apply            | Forward Compat  |
-//! | T10 | `CLR_CONFIG_DIR` redirects user-level discovery                 | Test Injection  |
+//! | T10 | `CLR_CONFIG_DIR` redirects user-level discovery away from `HOME` | Test Injection  |
 //! | T11 | project discovery unaffected when `CLR_CONFIG_DIR` is unset      | Test Injection  |
 //! | T12 | `--dry-run` reflects a config-supplied value                    | Dry Run         |
 //! | T13 | invalid `output_style` config value → exit 1                    | Error Handling  |
@@ -38,7 +38,8 @@
 //! | T20 | `--trace` names the suppressed config model and the seat's pinned model  | Provider Gate |
 //! | T21 | stale `provider` pin alone no longer suppresses (MRE BUG-548)            | Provider Gate |
 //! | T22 | live seat env block withholds the built-in default model too             | Provider Gate |
-//! | T23 | no `HOME`, no `CLR_CONFIG_DIR` → no user tier (cwd `.clr/` not read)     | Test Injection |
+//! | T23 | `HOME` unset or empty, no `CLR_CONFIG_DIR` → no user tier (cwd `.clr/` not read) | Test Injection |
+//! | T24 | live seat env block doesn't gate `isolated`'s config `model`             | Provider Gate |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -429,18 +430,29 @@ fn t09_unknown_key_silently_ignored_others_apply()
 // ── T10: CLR_CONFIG_DIR redirects user-level discovery ───────────────────────────
 
 /// T10: `CLR_CONFIG_DIR` set to a tempdir containing `config.toml` with
-/// `model = "claude-opus-4-8"` → the effective value comes from that redirected
-/// location. Observed via `--dry-run`'s printed command (the only eligible config
-/// field that appears directly in dry-run output without further plumbing).
+/// `model = "claude-opus-4-8"`, and `HOME` set to a tempdir whose `.clr/config.toml`
+/// says `model = "claude-haiku-4-5"` → the effective value comes from the redirected
+/// location. Five more runs keep that `HOME` and point the override at directories whose
+/// `config.toml` sets `effort` but no `model`, is missing, is empty or holds only a comment,
+/// then at a directory that doesn't exist. `HOME`'s model applies in none of the six, so a
+/// `run` that reads it first, or falls back to it in any of these cases, fails here. With no
+/// `.claude/` in the temp `HOME`, the Provider Gate sees an anthropic seat and doesn't withhold
+/// the config model. Observed via `--dry-run`'s printed `--model` and `--effort` values.
 #[ test ]
 fn t10_clr_config_dir_redirects_user_level_discovery()
 {
   let config_dir = tempfile::TempDir::new().expect( "redirected config dir" );
   write_config_file( config_dir.path(), "model = \"claude-opus-4-8\"\n" );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  std::fs::create_dir( home.path().join( ".clr" ) ).expect( "create HOME/.clr" );
+  write_config_file( &home.path().join( ".clr" ), "model = \"claude-haiku-4-5\"\n" );
 
   let out = run_cli_with_env(
     &[ "--dry-run", "task" ],
-    &[ ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ) ],
+    &[
+      ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
   );
   assert_eq!( exit_code( &out ), 0, "T10: must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
@@ -448,6 +460,78 @@ fn t10_clr_config_dir_redirects_user_level_discovery()
     stdout.contains( "claude-opus-4-8" ),
     "T10: CLR_CONFIG_DIR-redirected config must be effective. Got:\n{stdout}"
   );
+  assert!(
+    !stdout.contains( "claude-haiku-4-5" ),
+    "T10: HOME's config.toml must not win over CLR_CONFIG_DIR's. Got:\n{stdout}"
+  );
+
+  // Same HOME, override whose config.toml sets `effort` but no `model`: `--effort high` shows
+  // the override's file is read, and HOME's model must not fill the gap below it.
+  let effort_dir = tempfile::TempDir::new().expect( "effort-only config dir" );
+  write_config_file( effort_dir.path(), "effort = \"high\"\n" );
+  let out_effort = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[
+      ( "CLR_CONFIG_DIR", effort_dir.path().to_str().expect( "utf8" ) ),
+      ( "HOME", home.path().to_str().expect( "utf8" ) ),
+    ],
+  );
+  assert_eq!(
+    exit_code( &out_effort ), 0,
+    "T10: second run must exit 0; stderr: {}", stderr_str( &out_effort )
+  );
+  let stdout_effort = stdout_str( &out_effort );
+  assert!(
+    stdout_effort.contains( "--effort high" ),
+    "T10: the override's config.toml must be read. Got:\n{stdout_effort}"
+  );
+  assert!(
+    !stdout_effort.contains( "claude-haiku-4-5" ),
+    "T10: HOME's model must not fill in for an override file without one. Got:\n{stdout_effort}"
+  );
+  assert!(
+    stdout_effort.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+    "T10: an override file without `model` leaves the built-in default. Got:\n{stdout_effort}"
+  );
+
+  // Same HOME, override naming a directory with no config.toml, then ones whose config.toml is
+  // empty or holds only a comment, then a directory that doesn't exist: none gives a `model`,
+  // so each run shows the built-in default only if it doesn't read HOME's file.
+  let no_file_dir = tempfile::TempDir::new().expect( "config dir without config.toml" );
+  let blank_dir = tempfile::TempDir::new().expect( "empty config.toml dir" );
+  write_config_file( blank_dir.path(), "" );
+  let comment_dir = tempfile::TempDir::new().expect( "comment-only config.toml dir" );
+  write_config_file( comment_dir.path(), "# no keys yet\n" );
+  let missing_dir = blank_dir.path().join( "missing" );
+  for ( case, dir ) in
+  [
+    ( "an override directory with no config.toml", no_file_dir.path() ),
+    ( "an empty override config.toml", blank_dir.path() ),
+    ( "an override config.toml with only a comment", comment_dir.path() ),
+    ( "an override directory that doesn't exist", missing_dir.as_path() ),
+  ]
+  {
+    let out_case = run_cli_with_env(
+      &[ "--dry-run", "task" ],
+      &[
+        ( "CLR_CONFIG_DIR", dir.to_str().expect( "utf8" ) ),
+        ( "HOME", home.path().to_str().expect( "utf8" ) ),
+      ],
+    );
+    assert_eq!(
+      exit_code( &out_case ), 0,
+      "T10 ({case}): must exit 0; stderr: {}", stderr_str( &out_case )
+    );
+    let stdout_case = stdout_str( &out_case );
+    assert!(
+      !stdout_case.contains( "claude-haiku-4-5" ),
+      "T10 ({case}): HOME's model must not apply. Got:\n{stdout_case}"
+    );
+    assert!(
+      stdout_case.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+      "T10 ({case}): the built-in default applies. Got:\n{stdout_case}"
+    );
+  }
 }
 
 // ── T11: project discovery unaffected when CLR_CONFIG_DIR is unset ──────────────
@@ -909,12 +993,13 @@ fn t22_seat_env_block_withholds_builtin_default_model()
 
 // ── T23: no HOME and no CLR_CONFIG_DIR → no user tier ───────────────────────────
 
-/// T23: with `HOME` and `CLR_CONFIG_DIR` both unset there is no user tier, so a
+/// T23: with `CLR_CONFIG_DIR` and `HOME` both unset there is no user tier, so a
 /// `.clr/config.toml` under the cwd is not read and `--dry-run` shows the built-in
-/// default. The user tier comes from `claude_runner_core::user_config_path()` (BUG-007),
-/// which returns no path here. The `clr`-private resolver it replaced fell back to a
+/// default. A second run sets `HOME` but leaves it empty, which counts as unset. The user
+/// tier comes from `claude_runner_core::user_config_path()` (BUG-007), which returns no
+/// path in either case. The `clr`-private resolver it replaced fell back to a
 /// cwd-relative `.clr/`, so any directory's `.clr/config.toml` acted as the user tier
-/// whenever `HOME` was missing.
+/// whenever `HOME` was missing or empty.
 #[ test ]
 fn t23_no_home_no_override_reads_no_user_tier()
 {
@@ -923,22 +1008,83 @@ fn t23_no_home_no_override_reads_no_user_tier()
   std::fs::create_dir_all( &stray_dir ).expect( "create cwd .clr dir" );
   write_config_file( &stray_dir, "model = \"cwd-relative-model\"\n" );
 
-  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
-    .args( [ "--dry-run", "hi" ] )
-    .current_dir( cwd.path() )
-    .env_remove( "HOME" )
-    .env_remove( "CLR_CONFIG_DIR" )
-    .env_remove( "CLR_MODEL" )
-    .output()
-    .expect( "invoke clr" );
-  assert_eq!( exit_code( &out ), 0, "T23: must exit 0; stderr: {}", stderr_str( &out ) );
+  for ( case, home ) in [ ( "HOME unset", None ), ( "HOME empty", Some( "" ) ) ]
+  {
+    let mut cmd = Command::new( env!( "CARGO_BIN_EXE_clr" ) );
+    cmd
+      .args( [ "--dry-run", "hi" ] )
+      .current_dir( cwd.path() )
+      .env_remove( "CLR_CONFIG_DIR" )
+      .env_remove( "CLR_MODEL" );
+    match home
+    {
+      Some( value ) => { cmd.env( "HOME", value ); }
+      None => { cmd.env_remove( "HOME" ); }
+    }
+    let out = cmd.output().expect( "invoke clr" );
+    assert_eq!( exit_code( &out ), 0, "T23 ({case}): must exit 0; stderr: {}", stderr_str( &out ) );
+    let stdout = stdout_str( &out );
+    assert!(
+      !stdout.contains( "cwd-relative-model" ),
+      "T23 ({case}): with no CLR_CONFIG_DIR, a cwd `.clr/config.toml` must not act as the \
+       user tier. Got:\n{stdout}"
+    );
+    assert!(
+      stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+      "T23 ({case}): with no config tier the built-in default model applies. Got:\n{stdout}"
+    );
+  }
+}
+
+// ── T24: live seat env block doesn't gate `isolated`'s config model ────────────────
+
+/// T24: `HOME/.claude/settings.json` pins `ANTHROPIC_MODEL=kimi-k3` and the cwd's
+/// `.clr.toml` sets `model = "cfg-pinned-model"`. `clr isolated` resolves that model in
+/// `resolve_isolated_default_model()`, outside `apply_config_defaults()`, so the Provider
+/// Gate doesn't apply and its `--dry-run` preview still carries the model. `run` in the
+/// same directory and environment withholds it, which shows the seat block is live
+/// (`docs/cli/config_param.md § Provider Gate`). `isolated`'s subprocess gets its own temp
+/// `HOME`, so the seat binding never reaches it.
+#[ test ]
+fn t24_seat_env_block_does_not_gate_isolated_config_model()
+{
+  let project = tempfile::TempDir::new().expect( "project dir" );
+  std::fs::write( project.path().join( ".clr.toml" ), "model = \"cfg-pinned-model\"\n" )
+    .expect( "write .clr.toml" );
+  let home = tempfile::TempDir::new().expect( "home dir" );
+  write_seat_settings( home.path(), KIMI_SEAT_ENV );
+  // The helpers pass the parent environment through, so pin the override to a directory with
+  // no `config.toml`: an inherited `CLR_CONFIG_DIR` can't add config of its own here.
+  let config_dir = tempfile::TempDir::new().expect( "empty config dir" );
+  let creds_dir = tempfile::TempDir::new().expect( "creds dir" );
+  let creds = creds_dir.path().join( "creds.json" );
+  std::fs::write( &creds, "{}" ).expect( "write creds" );
+  let env =
+  [
+    ( "CLR_CONFIG_DIR", config_dir.path().to_str().expect( "utf8" ) ),
+    ( "HOME", home.path().to_str().expect( "utf8" ) ),
+  ];
+
+  let out = run_cli_in_dir(
+    &[ "isolated", "--creds", creds.to_str().expect( "utf8" ), "--dry-run", "msg" ],
+    project.path(),
+    &env,
+  );
+  assert_eq!( exit_code( &out ), 0, "T24: isolated must exit 0; stderr: {}", stderr_str( &out ) );
   let stdout = stdout_str( &out );
   assert!(
-    !stdout.contains( "cwd-relative-model" ),
-    "T23: with no HOME and no CLR_CONFIG_DIR, a cwd `.clr/config.toml` must not act as the user tier. Got:\n{stdout}"
+    stdout.contains( "--model cfg-pinned-model" ),
+    "T24: a live seat env block must not withhold `isolated`'s config model. Got:\n{stdout}"
   );
+
+  let out_run = run_cli_in_dir( &[ "--dry-run", "task" ], project.path(), &env );
+  assert_eq!(
+    exit_code( &out_run ), 0,
+    "T24: run must exit 0; stderr: {}", stderr_str( &out_run )
+  );
+  let stdout_run = stdout_str( &out_run );
   assert!(
-    stdout.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
-    "T23: with no config tier the built-in default model applies. Got:\n{stdout}"
+    stdout_run.contains( " claude " ) && !stdout_run.contains( "--model" ),
+    "T24: sanity — `run` must withhold the model while the seat block is live. Got:\n{stdout_run}"
   );
 }

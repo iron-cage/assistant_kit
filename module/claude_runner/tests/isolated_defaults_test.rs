@@ -466,33 +466,18 @@ mod isolated_defaults_test
 
   // ── BUG-007 : `CLR_CONFIG_DIR` must redirect `isolated`'s user tier too ────
 
-  /// # Root Cause
-  /// `resolve_isolated_default_model()` (`claude_runner_core::isolated`) built the
-  /// user tier as `$HOME/.clr/config.toml` itself and never read `CLR_CONFIG_DIR`.
-  /// The override was honored only by `config.rs`'s private `user_config_dir()`, so
-  /// with the override set `clr run` read `$CLR_CONFIG_DIR/config.toml` while
-  /// `clr isolated` read `$HOME/.clr/config.toml`.
-  ///
-  /// # Why Not Caught
-  /// ISD-14 removes `CLR_CONFIG_DIR` and BUG-485's test uses the project tier, so no
-  /// isolated test ever set the override. `config_file_test.rs` T10 sets it, but only
-  /// for `clr run`.
-  ///
-  /// # Fix Applied
-  /// `claude_runner_core::user_config_path()` is the one resolver for the user
-  /// `config.toml`. `resolve_isolated_default_model()` and `discover_config_paths()`
-  /// both call it, and `user_config_dir()` is gone.
-  ///
-  /// # Prevention
-  /// This test gives `HOME` and `CLR_CONFIG_DIR` different models, so an isolated path
-  /// that reads `HOME` alone previews the wrong one. The resolver's own decision table
-  /// is `claude_runner_core/tests/config_path_test.rs`.
-  ///
-  /// # Pitfall
-  /// An env override implemented inside one consumer redirects that consumer only.
-  /// The file's other readers keep agreeing with each other, not with the override,
-  /// and the split shows up only when the override is set.
-  // test_kind: bug_reproducer(BUG-007)
+  /// BUG-007 where it shows: with `CLR_CONFIG_DIR` set, `clr isolated --dry-run` previews
+  /// the model from `$CLR_CONFIG_DIR/config.toml`, the file `clr run` reads, and not the one
+  /// in `$HOME/.clr/config.toml`. Before `cc988323` it previewed the `HOME` one. The two
+  /// files get different models, so a lookup that reads `HOME` alone previews the wrong one.
+  /// Five more runs keep that `HOME` and point the override at a `config.toml` that sets only
+  /// `effort`, is empty or holds only a comment, at a directory with no `config.toml`, and at
+  /// one that doesn't exist: with the first run, the six cases `config_file_test.rs` T10 runs
+  /// for `clr run`. None gives a `model`, so each preview must show the built-in default, and a
+  /// lookup that falls back to `HOME`'s file in any of them fails here.
+  /// The bug's reproducer, with the full fix documentation, is core's
+  /// `isolated_model_resolution_test.rs` T8 (LC009 Rule 3: this test is the manifestation);
+  /// the resolver's decision table is core's `config_path_test.rs`.
   #[ test ]
   fn bug007_isolated_dry_run_reads_user_tier_through_clr_config_dir()
   {
@@ -529,7 +514,58 @@ mod isolated_defaults_test
     );
     assert!(
       !stdout.contains( "--model home-model" ),
-      "BUG-007: $HOME/.clr/config.toml must not be read while CLR_CONFIG_DIR is set. Got:\n{stdout}"
+      "BUG-007: $HOME/.clr/config.toml must not win over the override's file. Got:\n{stdout}"
     );
+
+    // Same HOME, override directories that give no `model`: each preview shows the built-in
+    // default only if `HOME`'s file isn't read.
+    let effort_dir = tempfile::tempdir().expect( "effort-only config.toml dir" );
+    std::fs::write( effort_dir.path().join( "config.toml" ), "effort = \"high\"\n" )
+      .expect( "write effort-only config.toml" );
+    let blank_dir = tempfile::tempdir().expect( "empty config.toml dir" );
+    std::fs::write( blank_dir.path().join( "config.toml" ), "" )
+      .expect( "write empty config.toml" );
+    let comment_dir = tempfile::tempdir().expect( "comment-only config.toml dir" );
+    std::fs::write( comment_dir.path().join( "config.toml" ), "# no keys yet\n" )
+      .expect( "write comment-only config.toml" );
+    let no_file_dir = tempfile::tempdir().expect( "config dir without config.toml" );
+    let missing_dir = blank_dir.path().join( "missing" );
+    for ( case, dir ) in
+    [
+      ( "an override config.toml with only `effort`", effort_dir.path() ),
+      ( "an empty override config.toml", blank_dir.path() ),
+      ( "an override config.toml with only a comment", comment_dir.path() ),
+      ( "an override directory with no config.toml", no_file_dir.path() ),
+      ( "an override directory that doesn't exist", missing_dir.as_path() ),
+    ]
+    {
+      let creds = temp_creds();
+      let out_case = clr()
+        .current_dir( project.path() )
+        .env( "HOME", home.path() )
+        .env( "CLR_CONFIG_DIR", dir )
+        .env_remove( "CLR_MODEL" )
+        .args( [ "isolated", "--creds", creds.to_str().unwrap(), "--dry-run", "msg" ] )
+        .output()
+        .expect( "spawn clr" );
+      let _ = std::fs::remove_file( &creds );
+      assert_eq!(
+        out_case.status.code(),
+        Some( 0 ),
+        "({case}) expected exit 0 from --dry-run; stderr: {}",
+        String::from_utf8_lossy( &out_case.stderr )
+      );
+      let stdout_case = String::from_utf8_lossy( &out_case.stdout );
+      assert!(
+        !stdout_case.contains( "--model home-model" ),
+        "BUG-007 ({case}): $HOME/.clr/config.toml must not stand in for the override's file. \
+         Got:\n{stdout_case}"
+      );
+      assert!(
+        stdout_case.contains( &format!( "--model {DEFAULT_MODEL}" ) ),
+        "BUG-007 ({case}): with no `model` in the user tier the built-in default applies. \
+         Got:\n{stdout_case}"
+      );
+    }
   }
 }

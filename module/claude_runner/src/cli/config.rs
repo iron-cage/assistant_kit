@@ -112,7 +112,7 @@ pub( crate ) fn discover_config_paths() -> ( Option< PathBuf >, Option< PathBuf 
 
   // Fix(BUG-007): share core's resolver instead of a private `user_config_dir()` copy.
   // Root cause: the private copy honored `CLR_CONFIG_DIR` but `clr isolated`'s lookup in
-  //   core did not, and with `HOME` unset the copy fell back to a cwd-relative `.clr/`.
+  //   core did not, and with `HOME` unset or empty the copy fell back to a cwd-relative `.clr/`.
   // Pitfall: `None` means "no user tier" — never substitute a relative `.clr/config.toml`.
   let user = claude_runner_core::user_config_path().filter( | p | p.is_file() );
 

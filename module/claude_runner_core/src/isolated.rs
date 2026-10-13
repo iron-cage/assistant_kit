@@ -218,7 +218,8 @@ pub fn run_isolated
 /// project `.clr.toml` → the user `config.toml` located by
 /// [`crate::user_config_path`] (`$CLR_CONFIG_DIR/config.toml`, else
 /// `~/.clr/config.toml`). Returns `None` if nothing is set at either tier, or when
-/// there is no user tier at all (neither variable set) — callers fall back to
+/// there is no user tier at all (neither variable set to a non-empty value; the
+/// project tier isn't read then either) — callers fall back to
 /// [`DEFAULT_MODEL`] via `IsolatedModel::model_id()`.
 ///
 /// Task 410 retired the prior `~/.clr/prefs.json` fallback tier (and the
@@ -346,8 +347,9 @@ pub fn run_isolated_ext
 
   // Step 3: Build command — prepend --model flag then user args
   //
-  // When IsolatedModel::Default, check project `.clr.toml` / user `~/.clr/config.toml`
-  // for a pinned model preference before falling back to DEFAULT_MODEL.
+  // When IsolatedModel::Default, resolve_isolated_default_model() checks project `.clr.toml`,
+  // then the user `config.toml`, before falling back to DEFAULT_MODEL; with no user tier
+  // (`$CLR_CONFIG_DIR` and `$HOME` both unset or empty) it reads neither (open decision D-14).
   let pref_override = match &model
   {
     IsolatedModel::Default => resolve_isolated_default_model(),

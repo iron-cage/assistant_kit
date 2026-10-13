@@ -357,8 +357,10 @@ point, not a user-facing feature in its own right.
 
   Project-level `.clr.toml` discovery in the current directory is unaffected for
   `run`/`ask`/`topic`. For `isolated`, it is unaffected only when a user tier also resolves
-  (`CLR_CONFIG_DIR` set, or `HOME` set) — with neither set, `resolve_isolated_default_model()`
-  returns before checking project `.clr.toml` at all (predates BUG-007, not decided by it).
+  (`CLR_CONFIG_DIR` or `HOME` set and non-empty) — with neither, `resolve_isolated_default_model()`
+  returns before checking project `.clr.toml` at all. With `HOME` unset that predates BUG-007;
+  with `HOME` empty BUG-007's fix introduced it (an empty `HOME` used to give a cwd-relative
+  user path). Left open under decision D-14.
 - **Mechanism:** `claude_runner_core::user_config_path()` is the one resolver all of them
   call (BUG-007, BUG-560):
   - a non-empty value gives `$CLR_CONFIG_DIR/config.toml`;

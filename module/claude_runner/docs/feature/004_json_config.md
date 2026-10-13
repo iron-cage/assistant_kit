@@ -209,7 +209,7 @@ Columns: JSON Key | CLI Flag | CLR_* Env Var | Type | Supported By
 `isolated` is gated by the same `--max-sessions`/`"max-sessions"`/`CLR_MAX_SESSIONS` 3-tier chain as
 run/ask (CLI flag + JSON key + env var — `apply_json_config_isolated()` handles `"max-sessions"`
 identically to every other `IsolatedArgs` field), just with no config-file tier. `--model` is the
-sole exception across all of `isolated`: it falls through to the same `.clr.toml` / `~/.clr/config.toml`
+sole exception across all of `isolated`: it falls through to the same `.clr.toml` / user `config.toml`
 files, via `resolve_isolated_default_model()` rather than the `ConfigDefaults` tier that serves
 `run`/`ask`/`topic` (see [../cli/config_param.md § Out of Scope](../cli/config_param.md) and
 [../cli/parity/001_run_ask_isolated.md](../cli/parity/001_run_ask_isolated.md)). `refresh` reaches
