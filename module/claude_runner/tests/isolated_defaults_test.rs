@@ -472,9 +472,10 @@ mod isolated_defaults_test
   /// files get different models, so a lookup that reads `HOME` alone previews the wrong one.
   /// Five more runs keep that `HOME` and point the override at a `config.toml` that sets only
   /// `effort`, is empty or holds only a comment, at a directory with no `config.toml`, and at
-  /// one that doesn't exist: with the first run, the six cases `config_file_test.rs` T10 runs
-  /// for `clr run`. None gives a `model`, so each preview must show the built-in default, and a
-  /// lookup that falls back to `HOME`'s file in any of them fails here.
+  /// one that doesn't exist — together with the first run, the six cases `config_file_test.rs`
+  /// T10 runs for `clr run`. None of these five sets a `model`, so each of their previews must
+  /// show the built-in default, and a lookup that falls back to `HOME`'s file in any of them
+  /// fails here.
   /// The bug's reproducer, with the full fix documentation, is core's
   /// `isolated_model_resolution_test.rs` T8 (LC009 Rule 3: this test is the manifestation);
   /// the resolver's decision table is core's `config_path_test.rs`.
